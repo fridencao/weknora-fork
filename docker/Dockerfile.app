@@ -1,17 +1,32 @@
 # Build extension and daemon from the same pinned source on the runtime architecture.
+# WITH_BROWSERSKILL=0 skips the whole Rust/Chrome-extension toolchain (the
+# browser-skill feature is optional); a stub dir keeps the final-stage COPY valid.
 FROM --platform=$TARGETPLATFORM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS browserskill
 WORKDIR /build
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git python3 ca-certificates curl build-essential cmake pkg-config && \
-    rm -rf /var/lib/apt/lists/*
+ARG WITH_BROWSERSKILL=1
+RUN if [ "$WITH_BROWSERSKILL" = "1" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends git python3 ca-certificates curl build-essential cmake pkg-config && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
 ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
-ENV PATH=/usr/local/cargo/bin:$PATH
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/usr/local/cargo/bin:$PATH"
+# rustup 国内镜像（清华 TUNA）；经 build-arg 可覆盖回官方源
+ARG RUSTUP_DIST_SERVER_ARG=https://mirrors.tuna.tsinghua.edu.cn/rustup
+ENV RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER_ARG}
+ENV RUSTUP_UPDATE_ROOT=${RUSTUP_DIST_SERVER_ARG}/rustup
+RUN if [ "$WITH_BROWSERSKILL" = "1" ]; then \
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable; \
+    fi
 COPY scripts/build_browserskill.sh scripts/browserskill-release.json ./scripts/
 COPY patches/browserskill ./patches/browserskill
 ARG TARGETOS
 ARG TARGETARCH
-RUN bash scripts/build_browserskill.sh /opt/weknora/browserskill "${TARGETOS}/${TARGETARCH}"
+RUN if [ "$WITH_BROWSERSKILL" = "1" ]; then \
+        bash scripts/build_browserskill.sh /opt/weknora/browserskill "${TARGETOS}/${TARGETARCH}"; \
+    else \
+        mkdir -p /opt/weknora/browserskill && touch /opt/weknora/browserskill/.disabled; \
+    fi
 
 # Build stage
 FROM golang:1.26-bookworm AS builder
@@ -23,11 +38,15 @@ ARG GOPRIVATE_ARG
 ARG GOPROXY_ARG
 ARG GOSUMDB_ARG=off
 ARG APK_MIRROR_ARG
+# anydoc / browserskill 阶段共用的 rustup 镜像（TUNA）
+ARG RUSTUP_DIST_SERVER_ARG=https://mirrors.tuna.tsinghua.edu.cn/rustup
 
 # 设置Go环境变量
 ENV GOPRIVATE=${GOPRIVATE_ARG}
 ENV GOPROXY=${GOPROXY_ARG}
 ENV GOSUMDB=${GOSUMDB_ARG}
+ENV RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER_ARG}
+ENV RUSTUP_UPDATE_ROOT=${RUSTUP_DIST_SERVER_ARG}/rustup
 
 # Install dependencies
 RUN if [ -n "$APK_MIRROR_ARG" ]; then \
@@ -106,6 +125,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Then switch to mirror if specified and install other packages
+ARG PIP_INDEX_ARG
 RUN if [ -n "$APK_MIRROR_ARG" ]; then \
         sed -i "s@deb.debian.org@${APK_MIRROR_ARG}@g" /etc/apt/sources.list.d/debian.sources; \
     fi && \
@@ -117,12 +137,9 @@ RUN if [ -n "$APK_MIRROR_ARG" ]; then \
         nodejs npm \
         gosu \
         ffmpeg && \
-    python3 -m pip install --break-system-packages --upgrade pip setuptools wheel && \
-    mkdir -p /home/appuser/.local/bin && \
-    curl -LsSf https://astral.sh/uv/install.sh | CARGO_HOME=/home/appuser/.cargo UV_INSTALL_DIR=/home/appuser/.local/bin sh && \
-    chown -R appuser:appuser /home/appuser && \
-    ln -sf /home/appuser/.local/bin/uvx /usr/local/bin/uvx && \
-    chmod +x /usr/local/bin/uvx && \
+    if [ -n "$PIP_INDEX_ARG" ]; then PIP_INDEX_OPT="-i ${PIP_INDEX_ARG}"; else PIP_INDEX_OPT=""; fi && \
+    python3 -m pip install --break-system-packages $PIP_INDEX_OPT --upgrade pip setuptools wheel && \
+    python3 -m pip install --break-system-packages $PIP_INDEX_OPT uv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

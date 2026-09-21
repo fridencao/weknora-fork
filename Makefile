@@ -141,6 +141,8 @@ docker-build-app:
 		--build-arg BUILD_TIME_ARG="$$BUILD_TIME" \
 		--build-arg GO_VERSION_ARG="$$GO_VERSION" \
 		--build-arg WITH_ANYDOC=$${WITH_ANYDOC:-1} \
+		--build-arg WITH_BROWSERSKILL=$${WITH_BROWSERSKILL:-1} \
+		--build-arg PIP_INDEX_ARG=$${PIP_INDEX_ARG:-} \
 		-f docker/Dockerfile.app -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 # Build docreader Docker image
