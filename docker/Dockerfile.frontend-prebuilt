@@ -1,0 +1,22 @@
+# 前端镜像（预构建 dist 版）——供低资源构建机使用。
+# 与 Dockerfile.frontend 的区别：跳过容器内 npm ci + vite build（2 核 4G VM 会
+# less 超时/OOM-137），dist 在宿主机构建后直接打包：
+#   cd frontend && npm ci --registry=https://registry.npmmirror.com
+#   VITE_IS_DOCKER=true VITE_FRONTEND_COMMIT=$(git rev-parse --short HEAD) npm run build
+#   docker build -f docker/Dockerfile.frontend-prebuilt -t wechatopenai/weknora-ui:latest .
+# 运行时阶段与 Dockerfile.frontend 完全一致（同一 pin 版 nginx 基底与配置）。
+FROM nginx:1.30.3-alpine@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1
+
+COPY frontend/dist /usr/share/nginx/html
+
+COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+COPY frontend/nginx-api-proxy.conf /etc/nginx/api-proxy.conf
+COPY frontend/nginx-http.conf /etc/nginx/conf.d/00-weknora-http.conf
+COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENV MAX_FILE_SIZE_MB=50
+
+EXPOSE 80
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
