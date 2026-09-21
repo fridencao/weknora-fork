@@ -41,6 +41,8 @@ services:
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
         - WITH_ANYDOC=${WITH_ANYDOC:-1}
+        # Go 模块代理（国内环境必需；默认走 goproxy.cn，可经 .env 覆盖为直连）
+        - GOPROXY_ARG=${GOPROXY_ARG:-https://goproxy.cn,direct}
     container_name: WeKnora-app
     ports:
       - "${APP_PORT:-8080}:8080"
@@ -491,6 +493,10 @@ services:
       - DOCREADER_PDF_MIN_CHART_REGION_CHARS=${DOCREADER_PDF_MIN_CHART_REGION_CHARS:-}
       - DOCREADER_PDF_MAX_CHART_REGION_AREA=${DOCREADER_PDF_MAX_CHART_REGION_AREA:-}
       - DOCREADER_PDF_MAX_FIGURE_HEIGHT_RATIO=${DOCREADER_PDF_MAX_FIGURE_HEIGHT_RATIO:-}
+      # ========== StarKB (WS1) ==========
+      # starkb 引擎后端：docreader 内 StarkbParser → starkb-api（契约归一层 + MinerU 档位路由）。
+      # 未设置时 registry 中 starkb 引擎不可用（UI 不展示）。
+      - STARKB_API_URL=${STARKB_API_URL:-http://starkb-api:8300}
     healthcheck:
       test: ["CMD", "grpc_health_probe", "-addr=localhost:50051"]
       interval: 30s
@@ -502,6 +508,41 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # StarKB (WS1) 服务侧：解析任务编排 / 档位路由 / 复核队列 / 源注册表 / 配置中心。
+  # 本地构建，不发布 Docker Hub。MinerU api-server 跑在宿主机（模型在 .venv-mineru），
+  # 地址经 .env 的 MINERU_BASE_URL 注入（lima/docker-in-vm 环境用宿主网关 IP，
+  # 而非 host.docker.internal）；契约包与 sqlite 落在宿主 data/ 目录，与批处理共享。
+  starkb-api:
+    build:
+      context: ../../services/starkb-api
+      dockerfile: Dockerfile
+      additional_contexts:
+        # 契约归一层包（starkb_contract）在主仓另一目录，经附加上下文进镜像
+        - contract=../../contract
+    image: starkb-api:local
+    container_name: WeKnora-starkb-api
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - STARKB_API_DB=/data/starkb-api.db
+      - STARKB_CONTRACT_ROOT=/data/processed
+      - MINERU_BASE_URL=${MINERU_BASE_URL:-http://host.docker.internal:8310}
+      - MINERU_API_KEY=${MINERU_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ../../data:/data
+    ports:
+      - "127.0.0.1:8300:8300"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8300/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
 
   # OpenDataLoader hybrid backend (optional). Default --no-ocr (no EasyOCR/libGL).
   # Local build only — not published to Docker Hub; use --profile odl-hybrid --build.

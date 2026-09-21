@@ -57,7 +57,7 @@ class StarkbParser(BaseParser):
                 f"Content-Type: application/octet-stream\r\n\r\n"
             ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
             req = urllib.request.Request(
-                STARKB_API_URL.rstrip("/") + "/parse/jobs",
+                STARKB_API_URL.rstrip("/") + "/parse/jobs/upload",
                 data=body, method="POST",
                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
             with urllib.request.urlopen(req, timeout=120) as r:
