@@ -489,6 +489,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Invoke(chatpipeline.NewPluginExtractEntity))
 	must(container.Invoke(chatpipeline.NewPluginSearchEntity))
 	must(container.Invoke(chatpipeline.NewPluginSearchGraph))
+	must(container.Invoke(chatpipeline.NewPluginProvenanceGate))
 	must(container.Invoke(chatpipeline.NewPluginSearchParallel))
 	must(container.Invoke(chatpipeline.NewPluginWikiBoost))
 	must(container.Invoke(chatpipeline.NewPluginMemoryAffinity))
