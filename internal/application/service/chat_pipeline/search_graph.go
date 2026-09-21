@@ -17,11 +17,11 @@ import (
 // （chunk key 定长 {doc36}-{chunk36}，无损解析回 WeKnora chunk），补入检索结果；
 // 权限继承：仅返回当前租户/KB 范围内可读的 chunk（下推 ListChunksByID + KB 过滤）。
 type PluginSearchGraph struct {
-	lightrag   *LightragClient
-	chunkRepo  interfaces.ChunkRepository
+	lightrag      *LightragClient
+	chunkRepo     interfaces.ChunkRepository
 	knowledgeRepo interfaces.KnowledgeRepository
-	enabled    bool
-	topK       int
+	enabled       bool
+	topK          int
 }
 
 // NewPluginSearchGraph 创建图谱召回通道插件（container.Invoke 接线）。
@@ -74,11 +74,11 @@ func (p *PluginSearchGraph) OnEvent(
 		return next()
 	}
 
-	// 证据 chunk key → WeKnora chunk（跨权限双重过滤：KB 集合校验 + 租户查询）
-	allowed := make(map[string]struct{}, len(chatManage.EntityKBIDs))
-	for _, id := range chatManage.EntityKBIDs {
-		allowed[id] = struct{}{}
-	}
+	// 证据 chunk key → WeKnora chunk（跨权限双重过滤：KB 范围文档校验 + 租户查询）。
+	// M3 口径对齐（与 service 层 knowledgebase_search_graph.go 一致）：建图时
+	// LightRAG 的 document_id = WeKnora knowledge doc_id，因此 key 前段必须对照
+	// KB 范围内的**文档 ID** 集合——M2 直接用 KB ID 对照，真实数据上全部命中被过滤。
+	allowed := expandAllowedDocIDs(ctx, p.knowledgeRepo, tenantID, chatManage.EntityKBIDs)
 	chunkIDs := make([]string, 0, len(data.Data.Chunks))
 	keyToKB := make(map[string]string)
 	for _, c := range data.Data.Chunks {
@@ -110,18 +110,18 @@ func (p *PluginSearchGraph) OnEvent(
 		}
 		seen[c.ID] = true
 		chatManage.SearchResult = append(chatManage.SearchResult, &types.SearchResult{
-			ID:             c.ID,
-			Content:        c.Content,
-			KnowledgeID:    c.KnowledgeID,
-			ChunkIndex:     c.ChunkIndex,
-			StartAt:        c.StartAt,
-			EndAt:          c.EndAt,
-			Seq:            c.ChunkIndex,
-			Score:          1.0,
-			MatchType:      types.MatchTypeGraph,
-			ChunkType:      string(c.ChunkType),
-			ParentChunkID:  c.ParentChunkID,
-			ChunkMetadata:  c.Metadata,
+			ID:            c.ID,
+			Content:       c.Content,
+			KnowledgeID:   c.KnowledgeID,
+			ChunkIndex:    c.ChunkIndex,
+			StartAt:       c.StartAt,
+			EndAt:         c.EndAt,
+			Seq:           c.ChunkIndex,
+			Score:         1.0,
+			MatchType:     types.MatchTypeGraph,
+			ChunkType:     string(c.ChunkType),
+			ParentChunkID: c.ParentChunkID,
+			ChunkMetadata: c.Metadata,
 		})
 		appended++
 	}
@@ -131,3 +131,25 @@ func (p *PluginSearchGraph) OnEvent(
 
 // 并发安全占位：LightRAG 查询在各 KB 并行时由 http.Client 保证连接复用。
 var _ = sync.Mutex{}
+
+// expandAllowedDocIDs 把 KB ID 集合展开为允许回跳的文档 ID 集合（M3 口径）。
+// 单 KB 列举失败仅跳过该 KB（降级，不阻断通道）。
+func expandAllowedDocIDs(
+	ctx context.Context,
+	repo interfaces.KnowledgeRepository,
+	tenantID uint64,
+	kbIDs []string,
+) map[string]struct{} {
+	allowed := make(map[string]struct{}, len(kbIDs))
+	for _, kbID := range kbIDs {
+		knowles, err := repo.ListKnowledgeByKnowledgeBaseID(ctx, tenantID, kbID)
+		if err != nil {
+			logger.Warnf(ctx, "graph search: 列 KB 文档失败（跳过 %s）: %v", kbID, err)
+			continue
+		}
+		for _, k := range knowles {
+			allowed[k.ID] = struct{}{}
+		}
+	}
+	return allowed
+}
