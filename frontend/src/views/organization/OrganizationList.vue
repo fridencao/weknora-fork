@@ -1,24 +1,24 @@
 <template>
   <div class="org-list-container">
     <div class="org-list-content">
-      <div class="header" style="--wails-draggable: drag">
-        <div class="header-title" style="--wails-draggable: drag">
-          <div class="title-row" style="--wails-draggable: drag">
-            <h2 style="--wails-draggable: drag">
+      <div class="header">
+        <div class="header-title">
+          <div class="title-row">
+            <h2>
               <ResourceIcon type="organization" :size="24" />
               {{ $t('organization.title') }}
             </h2>
-            <div class="header-actions" style="--wails-draggable: no-drag">
+            <div class="header-actions">
               <t-tooltip :content="canManageOrg ? $t('organization.joinOrg') : noPermissionTip" placement="bottom">
                 <t-button variant="text" theme="default" size="small" class="header-action-btn"
-                  style="--wails-draggable: no-drag" :disabled="!canManageOrg" @click="handleJoinOrganization">
+                  :disabled="!canManageOrg" @click="handleJoinOrganization">
                   <template #icon><t-icon name="enter" size="16px" /></template>
                 {{ $t('organization.joinOrg') }}
                 </t-button>
               </t-tooltip>
               <t-tooltip :content="canManageOrg ? $t('organization.createOrg') : noPermissionTip" placement="bottom">
                 <t-button variant="text" theme="default" size="small" class="header-action-btn"
-                  style="--wails-draggable: no-drag" :disabled="!canManageOrg" @click="handleCreateOrganization">
+                  :disabled="!canManageOrg" @click="handleCreateOrganization">
                   <template #icon><img src="@/assets/img/organization-green.svg" class="org-create-icon" alt=""
                       aria-hidden="true" /></template>
                 {{ $t('organization.createOrg') }}
@@ -26,7 +26,7 @@
               </t-tooltip>
             </div>
           </div>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('organization.subtitle') }}</p>
+          <p class="header-subtitle">{{ $t('organization.subtitle') }}</p>
         </div>
       </div>
       <ResourceListToolbar mode="organization" :model-value="spaceSelection" @update:model-value="value => spaceSelection = value === 'created' || value === 'joined' ? value : 'all'" v-model:query="keyword" :count-all="organizations.length"

@@ -1,22 +1,22 @@
 <template>
   <div class="kb-list-container">
     <div class="kb-list-content">
-      <div class="header" style="--wails-draggable: drag">
-        <div class="header-title" style="--wails-draggable: drag">
-          <div class="title-row" style="--wails-draggable: drag">
-            <h2 style="--wails-draggable: drag">
+      <div class="header">
+        <div class="header-title">
+          <div class="title-row">
+            <h2>
               <ResourceIcon type="knowledge" :size="24" />
               {{ $t('knowledgeBase.title') }}
             </h2>
             <t-tooltip v-if="authStore.hasRole('contributor')" :content="$t('knowledgeList.create')" placement="bottom">
               <t-button variant="text" theme="default" size="small" class="header-action-btn"
-                data-guide="kb-list-create" style="--wails-draggable: no-drag" @click="handleCreateKnowledgeBase">
+                data-guide="kb-list-create" @click="handleCreateKnowledgeBase">
                 <template #icon><t-icon name="folder-add" size="16px" /></template>
               {{ $t('knowledgeList.create') }}
               </t-button>
             </t-tooltip>
           </div>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('knowledgeList.subtitle') }}</p>
+          <p class="header-subtitle">{{ $t('knowledgeList.subtitle') }}</p>
         </div>
       </div>
       <ResourceListToolbar :hide-scopes="authStore.isLiteMode" v-model="spaceSelection" v-model:query="keyword" :count-all="allKnowledgeBases"

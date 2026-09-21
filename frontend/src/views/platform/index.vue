@@ -54,21 +54,6 @@ const reloadApp = () => {
 }
 provide('app:reload', reloadApp)
 
-// 仅在 Wails 桌面端运行时拦截 Cmd/Ctrl+R：
-// 桌面端没有浏览器地址栏，整页重载会白屏，所以用前端软刷新替代。
-// 浏览器（含 Web 版 / 非 Lite 部署）里不拦截，交给浏览器做真正的整页刷新，
-// 否则会出现左侧菜单、全局设置、Pinia store 等不随"刷新"一起重置的问题。
-// @ts-ignore
-const isWailsDesktop = typeof window !== 'undefined' && !!(window as any).runtime?.EventsOn
-
-const handleGlobalKeyDown = (e: KeyboardEvent) => {
-    if (!isWailsDesktop) return
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
-        e.preventDefault()
-        reloadApp()
-    }
-}
-
 // 用于跟踪拖拽进入/离开的计数器，解决子元素触发 dragleave 的问题
 let dragCounter = 0;
 
@@ -200,13 +185,6 @@ onMounted(() => {
     document.addEventListener('dragover', handleGlobalDragOver, true);
     document.addEventListener('dragleave', handleGlobalDragLeave, true);
     document.addEventListener('drop', handleGlobalDrop, true);
-    if (isWailsDesktop) {
-        window.addEventListener('keydown', handleGlobalKeyDown);
-        // @ts-ignore
-        window.runtime.EventsOn('app:reload', () => {
-            reloadApp()
-        })
-    }
     // 支持通过 URL 查询参数打开全局命令面板，例如旧路径
     // /platform/knowledge-search?q=foo 重定向后携带 ?cmdk=foo
     maybeOpenCmdkFromRoute()
@@ -235,14 +213,6 @@ onUnmounted(() => {
     document.removeEventListener('dragover', handleGlobalDragOver, true);
     document.removeEventListener('dragleave', handleGlobalDragLeave, true);
     document.removeEventListener('drop', handleGlobalDrop, true);
-    if (isWailsDesktop) {
-        window.removeEventListener('keydown', handleGlobalKeyDown);
-        // @ts-ignore
-        if (window.runtime?.EventsOff) {
-            // @ts-ignore
-            window.runtime.EventsOff('app:reload')
-        }
-    }
     dragCounter = 0;
 });
 </script>

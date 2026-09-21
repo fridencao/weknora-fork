@@ -30,6 +30,5 @@ import (
 	_ "github.com/Tencent/WeKnora/internal/models/vendors/requesty"
 	_ "github.com/Tencent/WeKnora/internal/models/vendors/siliconflow"
 	_ "github.com/Tencent/WeKnora/internal/models/vendors/volcengine"
-	_ "github.com/Tencent/WeKnora/internal/models/vendors/weknoracloud"
 	_ "github.com/Tencent/WeKnora/internal/models/vendors/zhipu"
 )

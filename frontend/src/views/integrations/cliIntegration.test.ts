@@ -7,7 +7,7 @@ test('CLI hosts preserve proxy prefixes and omit the SDK API suffix', () => {
   for (const [base, origin, host] of [
     ['https://kb.example.com/api/v1', 'https://ui.example.com', 'https://kb.example.com'],
     ['/app/weknora/api/v1', 'https://kb.example.com', 'https://kb.example.com/app/weknora'],
-    ['http://127.0.0.1:19321/api/v1/', 'wails://wails.localhost', 'http://127.0.0.1:19321'],
+    ['http://127.0.0.1:19321/api/v1/', 'app://localhost', 'http://127.0.0.1:19321'],
     ['http://127.0.0.1:19321/api/v1', 'null', 'http://127.0.0.1:19321'],
   ]) {
     const command = buildCLIConnectCommand(base!, origin!)
@@ -15,9 +15,9 @@ test('CLI hosts preserve proxy prefixes and omit the SDK API suffix', () => {
   }
 })
 
-test('unresolved desktop URLs use an explicit server placeholder', () => {
+test('unresolved origins use an explicit server placeholder', () => {
   assert.ok(buildCLIConnectCommand('/api/v1', 'null').includes("--host 'https://your-server.com'"))
-  assert.ok(buildCLIConnectCommand('/api/v1', 'wails://wails.localhost').includes("--host 'https://your-server.com'"))
+  assert.ok(buildCLIConnectCommand('/api/v1', 'app://localhost').includes("--host 'https://your-server.com'"))
 })
 
 test('copyable host arguments remain literal in a POSIX shell', () => {

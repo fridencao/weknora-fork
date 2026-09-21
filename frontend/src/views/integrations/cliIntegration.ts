@@ -8,7 +8,7 @@ export function buildCLIConnectCommand(apiBaseUrl: string, origin: string): stri
       host = `${url.origin}${path}`
     }
   } catch {
-    // Desktop bindings can still be loading when the page first renders.
+    // Non-http origins (e.g. embedded webviews) can't form a host.
   }
   // POSIX shell quoting prevents URL characters from becoming shell syntax.
   const quotedHost = `'${host.replace(/'/g, `'"'"'`)}'`

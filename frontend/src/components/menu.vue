@@ -3,7 +3,7 @@
         <!-- 展开时：Logo + 搜索/折叠按钮同行 -->
         <div class="logo_row" v-if="!uiStore.sidebarCollapsed">
             <div class="logo_box" @click="router.push('/platform/knowledge-bases')" style="cursor: pointer;">
-                <img class="logo" src="@/assets/img/weknora.png" alt="">
+                <img class="logo" src="@/assets/img/starkb.png" alt="StarKB">
                 <sup v-if="isLiteEdition" class="lite-badge">Lite</sup>
             </div>
             <div class="logo_actions">
@@ -1241,11 +1241,6 @@ const resizeSidebar = (delta: number, keyboard: boolean) => {
     box-shadow: 1px 0 0 rgba(0, 0, 0, 0.02);
     transition: width 0.25s ease, min-width 0.25s ease;
     position: relative;
-
-    // macOS Wails 桌面：红绿灯位于 HiddenInset 标题栏区域，需让出顶部空间
-    html.wails-desktop & {
-        padding-top: 30px;
-    }
 
     &--resizing {
         transition: none;

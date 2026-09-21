@@ -65,12 +65,7 @@ func sampleSecretTenant() *types.Tenant {
 			APIKey:   "legacy-search-secret-999",
 			ProxyURL: "http://proxy.internal:8080",
 		},
-		Credentials: &types.CredentialsConfig{
-			WeKnoraCloud: &types.WeKnoraCloudCredentials{
-				AppID:     "wk-app-id-abc",
-				AppSecret: "wk-app-secret-def",
-			},
-		},
+		Credentials: &types.CredentialsConfig{},
 		ParserEngineConfig: &types.ParserEngineConfig{
 			MinerUAPIKey:          "parser-secret-123",
 			PaddleOCRVLCloudToken: "paddle-secret-456",

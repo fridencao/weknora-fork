@@ -150,9 +150,9 @@ type ModelParameters struct {
 	// process-wide model.max_concurrency". Interactive user-facing calls are
 	// never gated. Only chat / vlm / embedding honour this (see limiter.Gate).
 	MaxConcurrency int `yaml:"max_concurrency,omitempty" json:"max_concurrency,omitempty"`
-	// WeKnoraCloud 厂商专用凭证
+	// 厂商专用凭证（部分厂商需要第二段密钥，如 LKEAP / Volcengine Rerank）
 	AppID     string `yaml:"app_id,omitempty"     json:"app_id,omitempty"`
-	AppSecret string `yaml:"app_secret,omitempty" json:"app_secret,omitempty"` // AES-256 加密存储，实际承载上游 API Key
+	AppSecret string `yaml:"app_secret,omitempty" json:"app_secret,omitempty"` // AES-256 加密存储
 	// Spec overrides the catalog entry for this row: protocol, capability
 	// flags and the flat protocol compat object. Everything omitted is
 	// inherited from the vendor catalog (see internal/models/catalog).

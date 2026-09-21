@@ -14,7 +14,7 @@ type uiReply struct {
 
 var errGatewayUIUnsupported = &RPCError{
 	Code:    "gateway_ui_unsupported",
-	Message: "BrowserSkill extension lacks WeKnora task controls; install the companion extension",
+	Message: "BrowserSkill extension lacks StarKB task controls; install the companion extension",
 }
 
 // Focus is user initiated. Only the server-owned task ID is sent to Chrome.

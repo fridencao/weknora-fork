@@ -68,7 +68,7 @@ type Config struct {
 
 // ConfigFromModel 根据 types.Model 构造 embedding.Config。
 // 生产路径（从 DB 拉起）和测试连接路径（临时表单）共享这份映射。
-// appID / appSecret 是已解密的 WeKnoraCloud 凭证，调用方负责传入。
+// appID / appSecret 是已解密的厂商第二段密钥，调用方负责传入。
 func ConfigFromModel(m *types.Model, appID, appSecret string) Config {
 	if m == nil {
 		return Config{}
@@ -264,9 +264,6 @@ func newEmbedder(config Config, pooler EmbedderPooler, ollamaService *ollama.Oll
 				zhipuEmb.SetCustomHeaders(config.CustomHeaders)
 			}
 			embedder, err = zhipuEmb, zErr
-			return embedder, err
-		case provider.ProviderWeKnoraCloud:
-			embedder, err = NewWeKnoraCloudEmbedder(config, pooler)
 			return embedder, err
 		default:
 			// Use OpenAI-compatible embedder for other providers

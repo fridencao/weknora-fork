@@ -79,7 +79,7 @@ func (w *weaviateRepository) ensureCollection(ctx context.Context, dimension int
 		//定义class结构
 		classObj := models.Class{
 			Class:       collectionName,
-			Description: fmt.Sprintf("WeKnora embeddings collection with dimension %d", dimension),
+			Description: fmt.Sprintf("StarKB embeddings collection with dimension %d", dimension),
 			VectorConfig: map[string]models.VectorConfig{
 				fieldEmbedding: {
 					VectorIndexType: "hnsw",

@@ -40,12 +40,10 @@ const (
 	ProviderNvidia       ProviderName = "nvidia"
 	ProviderNovita       ProviderName = "novita"
 	ProviderAzureOpenAI  ProviderName = "azure_openai"
-	ProviderWeKnoraCloud ProviderName = "weknoracloud"
 )
 
 // Base URLs still referenced by embedding / rerank / service code.
 const (
-	WeKnoraCloudBaseURL     = "https://weknora.weixin.qq.com"
 	ZhipuEmbeddingBaseURL   = "https://open.bigmodel.cn/api/paas/v4"
 	VolcengineRerankBaseURL = "https://api-knowledgebase.mlp.cn-beijing.volces.com"
 	DeepSeekBaseURL         = "https://api.deepseek.com/v1"

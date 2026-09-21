@@ -454,9 +454,6 @@ func (s *temporaryDocumentService) parse(ctx context.Context, document *types.Te
 		request.ParserEngineOverrides = tenant.ParserEngineConfig.ToOverridesMap()
 	}
 	deps := docparser.ReaderDeps{Overrides: request.ParserEngineOverrides, Remote: s.documentReader}
-	if s.tenantService != nil {
-		deps.WeKnoraCloudCredentials = s.tenantService.GetWeKnoraCloudCredentials
-	}
 	reader, err := docparser.NewReader(ctx, parserEngine, strings.TrimPrefix(ext, "."), false, deps)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("parse document: %w", err)

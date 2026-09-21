@@ -1,12 +1,12 @@
 <template>
   <div class="artifact-library">
-    <div class="header" style="--wails-draggable: drag">
-      <div class="header-title" style="--wails-draggable: drag">
-        <h2 style="--wails-draggable: drag">
+    <div class="header">
+      <div class="header-title">
+        <h2>
           <ResourceIcon type="artifact" :size="24" />
           {{ $t('artifactLibrary.title') }}
         </h2>
-        <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('artifactLibrary.subtitle') }}</p>
+        <p class="header-subtitle">{{ $t('artifactLibrary.subtitle') }}</p>
       </div>
     </div>
 

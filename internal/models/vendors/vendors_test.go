@@ -12,7 +12,7 @@ import (
 
 // expectedIDs is every built-in vendor this package links.
 var expectedIDs = []string{
-	"generic", "weknoracloud",
+	"generic",
 	"aliyun", "zhipu", "volcengine", "hunyuan", "siliconflow", "deepseek",
 	"minimax", "moonshot", "mimo", "modelscope", "qianfan", "qiniu", "longcat", "lkeap",
 	"openai", "azure_openai", "anthropic", "gemini",
@@ -21,8 +21,8 @@ var expectedIDs = []string{
 }
 
 func TestAllVendorsRegistered(t *testing.T) {
-	if len(expectedIDs) != 27 {
-		t.Fatalf("expected 27 vendor ids in the spec, got %d", len(expectedIDs))
+	if len(expectedIDs) != 26 {
+		t.Fatalf("expected 26 vendor ids in the spec, got %d", len(expectedIDs))
 	}
 	for _, id := range expectedIDs {
 		v, ok := catalog.Get(id)
@@ -354,20 +354,6 @@ func TestHooks(t *testing.T) {
 	}
 	if q["api-version"] != "2024-10-21" {
 		t.Errorf("azure legacy embedding api-version = %q", q["api-version"])
-	}
-
-	wk, _ := catalog.Get("weknoracloud")
-	u, _ = wk.Endpoint(catalog.EndpointRequest{
-		BaseURL: "https://weknora.weixin.qq.com/", ModelType: types.ModelTypeKnowledgeQA,
-	})
-	if u != "https://weknora.weixin.qq.com/api/v1/chat/completions" {
-		t.Errorf("weknoracloud endpoint = %q", u)
-	}
-	if wk.Auth != catalog.AuthSigned || wk.Signer == nil {
-		t.Error("weknoracloud should use a signer")
-	}
-	if err := wk.ValidateConfig(&catalog.Config{}); err != nil {
-		t.Errorf("weknoracloud validate should pass without key: %v", err)
 	}
 
 	generic, _ := catalog.Get("generic")
