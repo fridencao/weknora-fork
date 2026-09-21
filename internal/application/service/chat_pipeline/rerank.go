@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Tencent/WeKnora/internal/models/rerank"
 	"github.com/Tencent/WeKnora/internal/searchutil"
@@ -436,6 +439,36 @@ func safeTopScore(results []rerank.RankResult) float64 {
 }
 
 // compositeScore calculates the composite score for a search result
+// reliabilityWeightShare 可靠度因子在综合分中的权重（方案 §9.2：默认 0.25，
+// 下限锁定 0.25；STARKB_RELIABILITY_WEIGHT 覆盖）。
+func reliabilityWeightShare() float64 {
+	var once sync.Once
+	var v float64
+	once.Do(func() {
+		v = 0.25
+		if raw := strings.TrimSpace(os.Getenv("STARKB_RELIABILITY_WEIGHT")); raw != "" {
+			if parsed, err := strconv.ParseFloat(raw, 64); err == nil && parsed >= 0.25 && parsed <= 0.6 {
+				v = parsed
+			}
+		}
+	})
+	return v
+}
+
+// reliabilityNorm 结果可靠度归一（1–5 级 → 0.2–1.0）。
+// 读 chunk.Metadata.reliability（入库时由源注册表写入，等级随源不可篡改）；
+// 缺失按中性 3/5 处理，不奖不罚。
+func reliabilityNorm(sr *types.SearchResult) float64 {
+	if sr != nil && sr.Metadata != nil {
+		if raw, ok := sr.Metadata["reliability"]; ok {
+			if n, err := strconv.Atoi(strings.TrimSpace(raw)); err == nil && n >= 1 && n <= 5 {
+				return float64(n) / 5.0
+			}
+		}
+	}
+	return 0.6
+}
+
 func compositeScore(sr *types.SearchResult, modelScore, baseScore float64) float64 {
 	sourceWeight := 1.0
 	switch strings.ToLower(sr.KnowledgeSource) {
@@ -444,7 +477,10 @@ func compositeScore(sr *types.SearchResult, modelScore, baseScore float64) float
 	default:
 		sourceWeight = 1.0
 	}
-	composite := 0.6*modelScore + 0.3*baseScore + 0.1*sourceWeight
+	// 可靠度因子独立成项（权重默认 25%，锁定下限），其余按原比例缩放
+	base := 0.6*modelScore + 0.3*baseScore + 0.1*sourceWeight
+	rw := reliabilityWeightShare()
+	composite := (1-rw)*base + rw*reliabilityNorm(sr)
 	if composite < 0 {
 		composite = 0
 	}
