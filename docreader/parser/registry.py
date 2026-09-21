@@ -16,6 +16,7 @@ from docreader.parser.opendataloader_parser import (
     opendataloader_available,
 )
 from docreader.parser.pdf_parser import PDFParser
+from docreader.parser.starkb_parser import StarkbParser
 from docreader.parser.xmind_parser import XMindParser
 
 logger = logging.getLogger(__name__)
@@ -193,6 +194,23 @@ def _build_default_registry() -> ParserEngineRegistry:
             "csv": MarkitdownParser,
         },
         description="MarkItDown 解析引擎（微软 MarkItDown 库）",
+    )
+
+    reg.register(
+        "starkb",
+        {
+            "pdf": StarkbParser,
+            "docx": StarkbParser,
+            "doc": StarkbParser,
+            "pptx": StarkbParser,
+            "xlsx": StarkbParser,
+        },
+        description="StarKB 全管线解析引擎（MinerU 档位路由 + 契约归一层，溯源坐标系）",
+        check_available=lambda overrides: (
+            bool(os.environ.get("STARKB_API_URL")),
+            "请配置 STARKB_API_URL 指向 starkb-api 服务",
+        ),
+        unavailable_hint="starkb-api 服务不可达",
     )
 
     reg.register(

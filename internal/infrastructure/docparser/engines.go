@@ -13,6 +13,9 @@ import (
 const (
 	// BuiltinEngineName is the DocReader (Python) parser suite.
 	BuiltinEngineName = "builtin"
+	// StarkbEngineName is the DocReader-backed StarKB full-pipeline parser
+	// (MinerU tier routing + contract normalization, provenance-ready).
+	StarkbEngineName = "starkb"
 	// SimpleEngineName is Go-native handling of text formats and images.
 	SimpleEngineName = "simple"
 	// AnydocEngineName is the in-process anydoc office-document converter.
@@ -39,6 +42,7 @@ func init() {
 	RegisterEngine(&mineruCloudEngine{})
 	RegisterEngine(&paddleOCRVLEngine{})
 	RegisterEngine(&paddleOCRVLCloudEngine{})
+	RegisterEngine(&starkbEngine{})
 }
 
 // preferAnydocWhenAvailable is the type-level default override: when the
@@ -84,6 +88,34 @@ func (e *builtinEngine) CheckAvailable(docreaderConnected bool, _ map[string]str
 // NewReader returns the docreader client. Selecting "builtin" explicitly means
 // the docreader is wanted even for formats the simple reader could handle.
 func (e *builtinEngine) NewReader(_ context.Context, deps ReaderDeps) (interfaces.DocReader, error) {
+	return remoteReader(deps)
+}
+
+// ---------------------------------------------------------------------------
+// starkb — DocReader-backed StarKB full-pipeline parser (MinerU tiers +
+// contract normalization + provenance anchors). Routing mirrors builtin.
+// ---------------------------------------------------------------------------
+
+type starkbEngine struct{}
+
+func (e *starkbEngine) Name() string { return StarkbEngineName }
+
+func (e *starkbEngine) Description() string {
+	return "StarKB full-pipeline parser (MinerU + contract normalization)"
+}
+
+func (e *starkbEngine) FileTypes(_ bool) []string {
+	return []string{"pdf", "docx", "doc", "pptx", "xlsx"}
+}
+
+func (e *starkbEngine) CheckAvailable(docreaderConnected bool, _ map[string]string) (bool, string) {
+	if docreaderConnected {
+		return true, ""
+	}
+	return false, "DocReader service not connected"
+}
+
+func (e *starkbEngine) NewReader(_ context.Context, deps ReaderDeps) (interfaces.DocReader, error) {
 	return remoteReader(deps)
 }
 
