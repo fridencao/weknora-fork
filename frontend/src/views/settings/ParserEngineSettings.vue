@@ -374,6 +374,17 @@
             </div>
           </div>
         </section>
+
+        <!-- Section 3 — starkb 服务拓扑（零租户配置：地址由部署环境注入 docreader） -->
+        <section v-if="currentEngine.Name === 'starkb'" class="setting-drawer__section">
+          <h4 class="setting-drawer__section-title">{{ $t('settings.parser.configSection', '配置') }}</h4>
+          <div class="form-item">
+            <label class="form-label">STARKB_API_URL</label>
+            <p class="form-desc">
+              {{ $t('settings.parser.starkbTopology', '服务端地址由部署环境注入（STARKB_API_URL），租户侧零配置。解析链路：docreader → starkb-api（MinerU 档位路由 + 契约归一层）→ MinerU api-server；档位与通道开关在 starkb-api 配置中心（/config）管理。') }}
+            </p>
+          </div>
+        </section>
       </div>
     </SettingDrawer>
   </div>
