@@ -35,6 +35,10 @@ type RetrievalConfig struct {
 	RRFVectorWeight float64 `json:"rrf_vector_weight,omitempty"`
 	// RRFKeywordWeight is the keyword counterpart. Default: 0.3.
 	RRFKeywordWeight float64 `json:"rrf_keyword_weight,omitempty"`
+	// RRFGraphWeight is the LightRAG graph channel weight (M3 three-way RRF,
+	// docs/07 G3). The graph channel is additive — vector/keyword keep their
+	// defaults so the graph acts as a supplement, not a dilution. Default: 0.2.
+	RRFGraphWeight float64 `json:"rrf_graph_weight,omitempty"`
 }
 
 // DefaultRetrievalTopK is the retrieval depth used when a caller supplies no
@@ -106,6 +110,17 @@ func (c *RetrievalConfig) GetEffectiveRRFWeights() (vector, keyword float64) {
 		k = 0.3
 	}
 	return v, k
+}
+
+// GetEffectiveRRFGraphWeight returns the graph channel weight (default 0.2).
+// A zero/negative value falls back to the default, never to "disabled" —
+// disabling is the graph channel's own switch (GRAPH_CHANNEL_ENABLED), which
+// simply yields an empty graph candidate set.
+func (c *RetrievalConfig) GetEffectiveRRFGraphWeight() float64 {
+	if c == nil || c.RRFGraphWeight <= 0 {
+		return 0.2
+	}
+	return c.RRFGraphWeight
 }
 
 // Value implements the driver.Valuer interface for database serialization

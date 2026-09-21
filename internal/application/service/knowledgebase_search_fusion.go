@@ -28,16 +28,18 @@ func classifyRetrievalResults(ctx context.Context, retrieveResults []*types.Retr
 	return
 }
 
-// fuseOrDeduplicate either fuses vector+keyword results via RRF or deduplicates vector-only results.
-// retrievalCfg may be nil — defaults are then used for RRF parameters.
-func fuseOrDeduplicate(ctx context.Context, vectorResults, keywordResults []*types.IndexWithScore, retrievalCfg *types.RetrievalConfig) []*types.IndexWithScore {
-	if len(keywordResults) == 0 {
+// fuseOrDeduplicate fuses vector+keyword(+graph) results via RRF or deduplicates
+// single-channel results. retrievalCfg may be nil — defaults are then used for
+// RRF parameters. graphResults may be nil (channel disabled / degraded): the
+// fusion then behaves exactly as the legacy two-way form.
+func fuseOrDeduplicate(ctx context.Context, vectorResults, keywordResults, graphResults []*types.IndexWithScore, retrievalCfg *types.RetrievalConfig) []*types.IndexWithScore {
+	if len(keywordResults) == 0 && len(graphResults) == 0 {
 		// Vector-only: keep original embedding scores (important for FAQ)
 		result := deduplicateByScore(vectorResults)
 		logger.Infof(ctx, "Result count after deduplication: %d", len(result))
 		return result
 	}
-	if len(vectorResults) == 0 {
+	if len(vectorResults) == 0 && len(graphResults) == 0 {
 		// Keyword-only: keep relative BM25 order, but fold unbounded
 		// scores into [0, 1] before they reach rerank/MMR. Raw BM25
 		// (often >10) saturates compositeScore's 0.3*base term.
@@ -46,8 +48,14 @@ func fuseOrDeduplicate(ctx context.Context, vectorResults, keywordResults []*typ
 		logger.Infof(ctx, "Result count after deduplication: %d", len(result))
 		return result
 	}
-	// Hybrid: use RRF fusion to merge vector + keyword results
-	result := fuseWithRRF(ctx, vectorResults, keywordResults, retrievalCfg)
+	if len(vectorResults) == 0 && len(keywordResults) == 0 {
+		// Graph-only: unranked 1.0 scores carry no relative order; keep as-is.
+		result := deduplicateByScore(graphResults)
+		logger.Infof(ctx, "Result count after graph-only deduplication: %d", len(result))
+		return result
+	}
+	// Multi-channel: use RRF fusion to merge vector + keyword (+ graph) results
+	result := fuseWithRRF(ctx, vectorResults, keywordResults, graphResults, retrievalCfg)
 	logger.Infof(ctx, "Result count after RRF fusion: %d", len(result))
 	return result
 }
@@ -122,13 +130,16 @@ func rescaleUnboundedScores(results []*types.IndexWithScore) {
 	}
 }
 
-// fuseWithRRF merges vector and keyword retrieval results using Reciprocal Rank Fusion.
-// RRF score = vectorWeight/(k+vectorRank) + keywordWeight/(k+keywordRank).
-// k, vectorWeight and keywordWeight are sourced from retrievalCfg (with defaults).
+// fuseWithRRF merges vector, keyword and (optional) graph retrieval results using
+// Reciprocal Rank Fusion.
+// RRF score = vectorWeight/(k+vectorRank) + keywordWeight/(k+keywordRank)
+//           + graphWeight/(k+graphRank).
+// k, the weights and the graph weight are sourced from retrievalCfg (with defaults).
 // The merged results are sorted by RRF score descending.
-func fuseWithRRF(ctx context.Context, vectorResults, keywordResults []*types.IndexWithScore, retrievalCfg *types.RetrievalConfig) []*types.IndexWithScore {
+func fuseWithRRF(ctx context.Context, vectorResults, keywordResults, graphResults []*types.IndexWithScore, retrievalCfg *types.RetrievalConfig) []*types.IndexWithScore {
 	rrfK := retrievalCfg.GetEffectiveRRFK()
 	vectorWeight, keywordWeight := retrievalCfg.GetEffectiveRRFWeights()
+	graphWeight := retrievalCfg.GetEffectiveRRFGraphWeight()
 
 	// Build rank maps for each retriever (already sorted by score from retriever)
 	vectorRanks := make(map[string]int, len(vectorResults))
@@ -141,6 +152,12 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults []*types.Ind
 	for i, r := range keywordResults {
 		if _, exists := keywordRanks[r.ChunkID]; !exists {
 			keywordRanks[r.ChunkID] = i + 1
+		}
+	}
+	graphRanks := make(map[string]int, len(graphResults))
+	for i, r := range graphResults {
+		if _, exists := graphRanks[r.ChunkID]; !exists {
+			graphRanks[r.ChunkID] = i + 1
 		}
 	}
 
@@ -156,6 +173,11 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults []*types.Ind
 			chunkInfoMap[r.ChunkID] = r
 		}
 	}
+	for _, r := range graphResults {
+		if _, exists := chunkInfoMap[r.ChunkID]; !exists {
+			chunkInfoMap[r.ChunkID] = r
+		}
+	}
 
 	// Compute weighted RRF scores and assign to each chunk
 	result := make([]*types.IndexWithScore, 0, len(chunkInfoMap))
@@ -166,6 +188,9 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults []*types.Ind
 		}
 		if rank, ok := keywordRanks[chunkID]; ok {
 			rrfScore += keywordWeight / float64(rrfK+rank)
+		}
+		if rank, ok := graphRanks[chunkID]; ok {
+			rrfScore += graphWeight / float64(rrfK+rank)
 		}
 		info.Score = rrfScore
 		result = append(result, info)
@@ -179,8 +204,9 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults []*types.Ind
 		}
 		vRank, vOk := vectorRanks[chunk.ChunkID]
 		kRank, kOk := keywordRanks[chunk.ChunkID]
-		logger.Debugf(ctx, "RRF rank %d: chunk_id=%s, rrf_score=%.6f, vector_rank=%v(%v), keyword_rank=%v(%v)",
-			i, chunk.ChunkID, chunk.Score, vRank, vOk, kRank, kOk)
+		gRank, gOk := graphRanks[chunk.ChunkID]
+		logger.Debugf(ctx, "RRF rank %d: chunk_id=%s, rrf_score=%.6f, vector_rank=%v(%v), keyword_rank=%v(%v), graph_rank=%v(%v)",
+			i, chunk.ChunkID, chunk.Score, vRank, vOk, kRank, kOk, gRank, gOk)
 	}
 
 	return result

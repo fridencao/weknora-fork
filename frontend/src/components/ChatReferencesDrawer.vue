@@ -71,6 +71,16 @@
                     <div class="reference-item__document-main">
                       <div class="reference-item__title-row">
                         <h5 class="reference-item__title" :title="item.title">{{ item.title }}</h5>
+                        <button
+                          v-if="canOpenProvenance(item)"
+                          type="button"
+                          class="reference-item__provenance"
+                          :aria-label="t('chat.provenance.title')"
+                          :title="t('chat.provenance.title')"
+                          @click.stop="openProvenance(item)"
+                        >
+                          {{ t('chat.provenance.badge') }}
+                        </button>
                         <a
                           v-if="item.knowledgeBaseId && !embeddedMode"
                           class="reference-item__open"
@@ -140,6 +150,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useChatReferencesDrawer } from '@/composables/useChatReferencesDrawer'
+import { useProvenancePanel } from '@/composables/useProvenancePanel'
 import ArtifactFileIcon from '@/views/chat/components/ArtifactFileIcon.vue'
 import {
   buildReferenceSections,
@@ -147,6 +158,7 @@ import {
   resolveReferenceHighlightKey,
   type ReferenceListItem,
 } from '@/utils/referenceSources'
+import type { ProvenanceInput } from '@/utils/provenance'
 
 const props = defineProps<{
   embeddedMode?: boolean
@@ -156,6 +168,7 @@ const props = defineProps<{
 const { t } = useI18n()
 const router = useRouter()
 const drawer = useChatReferencesDrawer()
+const provenancePanel = useProvenancePanel()
 
 const listElement = ref<HTMLElement | null>(null)
 const itemElements = new Map<string, HTMLElement>()
@@ -276,6 +289,37 @@ function shouldShowItemTitle(item: ReferenceListItem) {
   const title = item.title?.trim()
   const domain = item.domain?.trim()
   return Boolean(title && title !== domain)
+}
+
+// 溯源面板入口：抽屉里的引用卡片是合并后的文档视图，需要还原成底层的
+// 原始引用行（SearchResult JSON），面板才能读到 metadata / chunk_metadata。
+function collectProvenanceInputs(item: ReferenceListItem): ProvenanceInput[] {
+  const refs = references.value || []
+  const matched = refs.filter((ref) => {
+    if (!ref) return false
+    if (item.knowledgeId && ref.knowledge_id === item.knowledgeId) return true
+    if (item.chunkId && ref.id === item.chunkId) return true
+    if (item.chunkIds?.length && ref.id && item.chunkIds.includes(ref.id)) return true
+    return false
+  })
+  if (matched.length) return matched
+  // 高亮回退场景（历史消息的 chunk 已不在列表里）至少把标题带过去，
+  // 面板仍能渲染 L2 并给出其余层的空态。
+  if (item.knowledgeId || item.title) {
+    return [{ knowledge_id: item.knowledgeId, knowledge_title: item.title }]
+  }
+  return []
+}
+
+function canOpenProvenance(item: ReferenceListItem) {
+  return Boolean(provenancePanel) && item.kind === 'document'
+}
+
+function openProvenance(item: ReferenceListItem) {
+  provenancePanel?.open({
+    inputs: collectProvenanceInputs(item),
+    title: item.title,
+  })
 }
 
 async function scrollToHighlight() {
@@ -589,6 +633,31 @@ watch(visible, (open) => {
 
 .reference-item__open:hover {
   color: var(--td-text-color-primary);
+}
+
+.reference-item__provenance {
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--td-brand-color) 35%, transparent);
+  border-radius: var(--app-radius-pill);
+  background: color-mix(in srgb, var(--td-brand-color) 6%, transparent);
+  color: var(--td-brand-color);
+  font-size: var(--app-text-xs);
+  line-height: 18px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--app-motion-fast) ease, background var(--app-motion-fast) ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--td-brand-color) 14%, transparent);
+  }
+}
+
+.reference-item:hover .reference-item__provenance,
+.reference-item:focus-within .reference-item__provenance,
+.reference-item.is-highlighted .reference-item__provenance {
+  opacity: 1;
 }
 
 .reference-item__snippet {

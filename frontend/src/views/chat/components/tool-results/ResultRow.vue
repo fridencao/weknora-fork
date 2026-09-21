@@ -4,6 +4,17 @@
     <span class="result-row__title" :title="title">{{ title }}</span>
     <span v-if="meta" class="result-row__meta">{{ meta }}</span>
 
+    <button
+      v-if="hasProvenanceEntry"
+      type="button"
+      class="result-row__provenance"
+      :title="$t('chat.provenance.title')"
+      :aria-label="$t('chat.provenance.title')"
+      @click.stop="openProvenance"
+    >
+      {{ $t('chat.provenance.badge') }}
+    </button>
+
     <t-popup
       v-if="showPopup"
       :overlayClassName="`tool-result-popup tool-result-popup-${popupKey}`"
@@ -31,8 +42,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { BrowseIcon } from 'tdesign-icons-vue-next';
 import ContentPopup from './ContentPopup.vue';
+import { useProvenancePanel } from '@/composables/useProvenancePanel';
+import type { ProvenanceInput } from '@/utils/provenance';
 
 interface ChunkContent {
   content: string;
@@ -40,7 +55,7 @@ interface ChunkContent {
   knowledge_id?: string;
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     index: number;
     title: string;
@@ -53,9 +68,27 @@ withDefaults(
     knowledgeId?: string;
     highlight?: string;
     regex?: boolean;
+    // StarKB 溯源（WS2）：宿主（如 SearchResults）提供的原始结果行，
+    // 面板自行判断字段是否随下发，缺失时显示空态。
+    provenanceInputs?: ProvenanceInput[];
+    provenanceTitle?: string;
   }>(),
   { showPopup: true },
 );
+
+const { t } = useI18n();
+const provenancePanel = useProvenancePanel();
+
+const hasProvenanceEntry = computed(
+  () => Boolean(provenancePanel) && Array.isArray(props.provenanceInputs) && props.provenanceInputs.length > 0,
+);
+
+function openProvenance() {
+  provenancePanel?.open({
+    inputs: props.provenanceInputs || [],
+    title: props.provenanceTitle || props.title,
+  });
+}
 </script>
 
 <style lang="less" scoped>
@@ -123,6 +156,25 @@ withDefaults(
   font-size: var(--app-text-xs);
   font-weight: 400;
   color: var(--td-text-color-placeholder);
+}
+
+.result-row__provenance {
+  flex-shrink: 0;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--td-brand-color) 35%, transparent);
+  border-radius: var(--app-radius-pill);
+  background: color-mix(in srgb, var(--td-brand-color) 6%, transparent);
+  color: var(--td-brand-color);
+  font-size: var(--app-text-xs);
+  line-height: 18px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity var(--app-motion-fast) ease, background var(--app-motion-fast) ease;
+
+  &:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--td-brand-color) 14%, transparent);
+  }
 }
 </style>
 

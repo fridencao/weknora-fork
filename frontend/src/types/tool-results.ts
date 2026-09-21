@@ -51,6 +51,10 @@ export interface SearchResultItem {
     faq_standard_question?: string;
     faq_similar_questions?: string[];
     faq_answers?: string[];
+    // StarKB 溯源（WS2）：契约归一层写入的 chunk 级/源级元数据。
+    // 当前 search 工具行尚未下发这些字段，缺失时溯源面板显示空态。
+    metadata?: Record<string, string>;
+    chunk_metadata?: Record<string, unknown>;
 }
 
 // Chunk item

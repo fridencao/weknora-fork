@@ -110,6 +110,7 @@
       />
     </div>
     <ChatReferencesDrawer embedded-mode />
+    <ProvenancePanel />
   </div>
 </template>
 
@@ -128,7 +129,9 @@ import EmbedInputField from '@/components/EmbedInputField.vue'
 import EmbedBotMessage from '@/views/embed/EmbedBotMessage.vue'
 import EmbedUserMessage from '@/views/embed/EmbedUserMessage.vue'
 import ChatReferencesDrawer from '@/components/ChatReferencesDrawer.vue'
+import ProvenancePanel from '@/components/ProvenancePanel.vue'
 import { provideChatReferencesDrawer } from '@/composables/useChatReferencesDrawer'
+import { provideProvenancePanel } from '@/composables/useProvenancePanel'
 import { useEmbedChatSession } from '@/composables/useEmbedChatSession'
 import FollowUpSuggestions from '@/components/chat/FollowUpSuggestions.vue'
 import MessageTimestamp from '@/components/chat/MessageTimestamp.vue'
@@ -136,6 +139,7 @@ import { shouldShowConversationTimestamp } from '@/utils/messageTimestamp'
 import type { MessageSuggestionItem, MessageSuggestionSet } from '@/api/message-suggestion'
 
 provideChatReferencesDrawer()
+provideProvenancePanel()
 
 type EmbedImage = { url?: string; data?: string }
 type EmbedAttachment = { file_name: string; file_size?: number }

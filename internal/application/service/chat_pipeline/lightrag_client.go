@@ -42,6 +42,9 @@ func NewLightragClientFromEnv() *LightragClient {
 	}
 }
 
+// BaseURL 返回服务地址（空 = 未配置，调用方可据此降级跳过图谱通道）。
+func (c *LightragClient) BaseURL() string { return c.baseURL }
+
 // LightragQueryData /query/data 响应（c7e7a24 实测：外层包 data）。
 type LightragQueryData struct {
 	Data struct {

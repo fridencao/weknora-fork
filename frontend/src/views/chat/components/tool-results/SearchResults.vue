@@ -13,6 +13,8 @@
         :chunk-id="group.chunks.length === 1 ? group.chunks[0].chunk_id : undefined"
         :knowledge-id="group.knowledge_id"
         :highlight="highlightQuery"
+        :provenance-inputs="provenanceInputsFor(group)"
+        :provenance-title="group.title"
       />
     </div>
 
@@ -26,6 +28,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { SearchResultsData, SearchResultItem, RelevanceLevel } from '@/types/tool-results';
+import type { ProvenanceInput } from '@/utils/provenance';
 import { getMatchTypeIcon } from '@/utils/tool-icons';
 import ResultRow from './ResultRow.vue';
 import { useI18n } from 'vue-i18n';
@@ -40,11 +43,36 @@ const { t } = useI18n();
 const results = computed(() => props.data.results || []);
 const kbCounts = computed(() => props.data.kb_counts);
 
+interface GroupedChunk {
+  content: string;
+  chunk_id: string;
+  knowledge_id: string;
+  knowledge_title?: string;
+  knowledge_base_id?: string;
+  metadata?: Record<string, string>;
+  chunk_metadata?: Record<string, unknown>;
+}
+
 interface GroupedResult {
   key: string;
   knowledge_id: string;
   title: string;
-  chunks: { content: string; chunk_id: string; knowledge_id: string }[];
+  chunks: GroupedChunk[];
+}
+
+// 溯源面板取数：把分组后的原始 chunk 行还原成 ProvenanceInput。
+// 工具结果行当前不携带 chunk_metadata，面板会渲染“未随下发”空态；
+// 后端一旦透传即可直接点亮，无需再改这里。
+function provenanceInputsFor(group: GroupedResult): ProvenanceInput[] {
+  return group.chunks.map((chunk) => ({
+    id: chunk.chunk_id,
+    content: chunk.content,
+    knowledge_id: chunk.knowledge_id || group.knowledge_id,
+    knowledge_title: chunk.knowledge_title || group.title,
+    knowledge_base_id: chunk.knowledge_base_id,
+    metadata: chunk.metadata,
+    chunk_metadata: chunk.chunk_metadata,
+  }));
 }
 
 // Hybrid retrieval can return several chunks from the same document; collapse
@@ -71,6 +99,10 @@ const groupedResults = computed<GroupedResult[]>(() => {
       content: r.content,
       chunk_id: r.chunk_id,
       knowledge_id: r.knowledge_id,
+      knowledge_title: r.knowledge_title,
+      knowledge_base_id: r.knowledge_base_id,
+      metadata: r.metadata,
+      chunk_metadata: r.chunk_metadata,
     });
   }
   return order.map((k) => map.get(k)!);

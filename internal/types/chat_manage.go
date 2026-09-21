@@ -131,6 +131,9 @@ type PipelineState struct {
 	// MemoryPrompt is the long-term memory envelope appended to the system
 	// prompt for this turn, empty when memory is off or nothing matched.
 	MemoryPrompt string `json:"-"`
+	// ClaimReport is the WS3.3 answer-level claim audit result (M3 G4),
+	// attached after chat completion when STARKB_CLAIM_GATE is enabled.
+	ClaimReport *ClaimReport `json:"-"`
 	// UsedMemories mirrors MemoryPrompt in structured form so the answer can
 	// tell the user which memories it saw.
 	UsedMemories UsedMemories `json:"-"`
