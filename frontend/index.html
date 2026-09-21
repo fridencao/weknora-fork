@@ -27,18 +27,6 @@
   document.documentElement.style.colorScheme=t==='dark'?'dark':'light';
   document.body.style.background=bg;
   document.body.style.minHeight='100%';
-  try{
-    var w=window.runtime;
-    if(w){
-      if(t==='dark'){
-        if(w.WindowSetDarkTheme)w.WindowSetDarkTheme();
-        if(w.WindowSetBackgroundColour)w.WindowSetBackgroundColour(24,24,24,255);
-      }else{
-        if(w.WindowSetLightTheme)w.WindowSetLightTheme();
-        if(w.WindowSetBackgroundColour)w.WindowSetBackgroundColour(238,238,238,255);
-      }
-    }
-  }catch(_){}
 })();
 </script>
 <script>

@@ -771,7 +771,7 @@ onMounted(async () => {
   min-height: 100%;
   overflow: hidden;
   position: relative;
-  background: linear-gradient(225deg, #022c22 0%, #064e3b 15%, #065f46 25%, #047857 38%, #059669 50%, #07C05F 65%, #10B981 78%, #34D399 90%, #6EE7B7 100%);
+  background: linear-gradient(225deg, #02112c 0%, #061f4e 15%, #06255f 25%, #042d78 38%, #053896 50%, #0748c0 65%, #104bb9 78%, #346cd3 90%, #6e98e7 100%);
 
   &::before {
     content: '';
@@ -807,7 +807,7 @@ onMounted(async () => {
   border: 2px solid rgba(255, 255, 255, 0.3);
   box-shadow:
     0 0 15px rgba(255, 255, 255, 0.35),
-    0 0 30px rgba(16, 185, 129, 0.2),
+    0 0 30px rgba(16, 75, 185, 0.2),
     inset 0 0 8px rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
@@ -1689,7 +1689,7 @@ onMounted(async () => {
 <style lang="less">
 html[theme-mode="dark"] {
   .login-layout {
-    background: linear-gradient(225deg, #011a14 0%, #032e22 15%, #043a2c 25%, #05503d 38%, #046647 50%, #038a56 65%, #049b60 78%, #06a06a 90%, #07b074 100%);
+    background: linear-gradient(225deg, #010a1a 0%, #03122e 15%, #04173a 25%, #051f50 38%, #042666 50%, #03328a 65%, #04399b 78%, #063ca0 90%, #0742b0 100%);
   }
 
   .knowledge-node {
@@ -1757,7 +1757,7 @@ html[theme-mode="dark"] {
   }
 
   .login-features .feature-icon {
-    background: rgba(6, 176, 77, 0.15);
+    background: rgba(6, 66, 176, 0.15);
   }
 }
 </style>

@@ -3441,7 +3441,7 @@ const getImgSrc = (url: string) => {
     position: absolute;
     top: -2px;
     right: -2px;
-    background: #07C05F;
+    background: #0748c0;
     color: #fff;
     font-size: var(--app-text-2xs);
     width: 14px;
@@ -3480,7 +3480,7 @@ const getImgSrc = (url: string) => {
     position: absolute;
     top: -2px;
     right: -2px;
-    background: #07C05F;
+    background: #0748c0;
     color: #fff;
     font-size: var(--app-text-2xs);
     width: 14px;
