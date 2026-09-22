@@ -50,18 +50,35 @@ const renderedContent = computed(() => {
 
 <style lang="less">
 @import './css/chat-citations.less';
+</style>
+
+<!-- markdown 排版必须 scoped：mixin 内 85 条 :deep() 规则只在 scoped 下编译生效，
+     Teleport 到 body 的节点带本组件 data-v，:deep 能命中 v-html 内容 -->
+<style lang="less" scoped>
 @import './css/chat-markdown.less';
 
-// 预览模式：原文是 markdown，交给排版 mixin；关闭 pre-wrap 让块级元素自然流式排布
 .chat-citation-float__body--md {
   white-space: normal;
   .chat-markdown-typography();
 
-  > :first-child {
+  // 卡片场景压扁标题层级：chunk 里的 #/## 只作分段强调，不按文档标题渲染
+  :deep(h1),
+  :deep(h2),
+  :deep(h3),
+  :deep(h4),
+  :deep(h5),
+  :deep(h6) {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0.875em 0 0.25em;
+    line-height: 1.5;
+  }
+
+  :deep(*:first-child) {
     margin-top: 0;
   }
 
-  > :last-child {
+  :deep(*:last-child) {
     margin-bottom: 0;
   }
 }
