@@ -126,7 +126,7 @@
         </dl>
         <div v-if="model.chunk.content" class="provenance-panel__excerpt">
           <span class="provenance-panel__excerpt-label">{{ t('chat.provenance.excerpt') }}</span>
-          <p>{{ excerpt }}</p>
+          <div class="provenance-panel__excerpt-body" v-html="excerptHtml"></div>
         </div>
       </section>
 
@@ -140,8 +140,11 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { marked } from 'marked'
 import { useProvenancePanel } from '@/composables/useProvenancePanel'
 import { extractProvenance, type ProvenanceModel } from '@/utils/provenance'
+import { configureMarkedForChatMarkdown } from '@/utils/chatMarkdownRenderer'
+import { sanitizeMarkdownHTML } from '@/utils/security'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -162,9 +165,19 @@ const panelTitle = computed(() =>
   panel?.title.value || t('chat.provenance.title'),
 )
 
-const excerpt = computed(() => {
-  const content = model.value?.chunk.content || ''
-  return content.length > 320 ? `${content.slice(0, 320)}…` : content
+// 摘录按 markdown 预览渲染（与引用悬浮卡同一管线）；先剥离 sbk 溯源注释，
+// 避免 320 字符截断切在注释中间时残留「<!--sbk:xxx」碎片
+const excerptHtml = computed(() => {
+  const raw = model.value?.chunk.content || ''
+  const truncated = raw.length > 320 ? `${raw.slice(0, 320)}…` : raw
+  const cleaned = truncated.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+  if (!cleaned.trim()) return ''
+  try {
+    configureMarkedForChatMarkdown()
+    return sanitizeMarkdownHTML(marked.parse(cleaned, { breaks: true, async: false }) as string)
+  } catch {
+    return ''
+  }
 })
 
 const methodLabel = computed(() => {
@@ -350,7 +363,7 @@ function close() {
     margin-bottom: 4px;
   }
 
-  p {
+  .provenance-panel__excerpt-body {
     margin: 0;
     padding: 8px 10px;
     border-radius: var(--app-radius-xs);
@@ -358,10 +371,42 @@ function close() {
     font-size: var(--app-text-sm);
     line-height: 1.6;
     color: var(--td-text-color-secondary);
-    white-space: pre-wrap;
     word-break: break-word;
     max-height: 180px;
     overflow-y: auto;
+
+    // markdown 预览模式：块级元素自然流式排布 + 标题压扁为加粗正文
+    :deep(p),
+    :deep(h1),
+    :deep(h2),
+    :deep(h3),
+    :deep(h4),
+    :deep(h5),
+    :deep(h6),
+    :deep(ul),
+    :deep(ol) {
+      margin: 0 0 0.375em;
+      font-size: inherit;
+      white-space: normal;
+    }
+
+    :deep(h1),
+    :deep(h2),
+    :deep(h3),
+    :deep(h4),
+    :deep(h5),
+    :deep(h6) {
+      font-weight: 600;
+      color: var(--td-text-color-primary);
+    }
+
+    :deep(*:first-child) {
+      margin-top: 0;
+    }
+
+    :deep(*:last-child) {
+      margin-bottom: 0;
+    }
   }
 }
 
