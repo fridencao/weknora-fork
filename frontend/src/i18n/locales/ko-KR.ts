@@ -6334,6 +6334,7 @@ export default {
       capabilityUnconfigured: '미구성'
     },
     editor: {
+      allKnowledgeBases: '전체 지식 베이스',
       reasoningEffortUnsupported: '선택한 모델은 사고를 지원하지 않습니다. "끄기" 외의 옵션은 무시됩니다.',
       reasoningEffortAlwaysOn: '선택한 모델은 항상 사고하며 끌 수 없습니다. 강도만 조정할 수 있습니다.',
       createTitle: '에이전트 만들기',

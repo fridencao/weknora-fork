@@ -6336,6 +6336,7 @@ export default {
       capabilityUnconfigured: '未配置'
     },
     editor: {
+      allKnowledgeBases: '全部知识库',
       reasoningEffortUnsupported: '当前所选模型不支持思考，除「关闭」外的选项将被忽略。',
       reasoningEffortAlwaysOn: '当前所选模型始终开启思考，无法关闭，只能调整思考强度。',
       createTitle: '创建智能体',

@@ -6334,6 +6334,7 @@ export default {
       capabilityUnconfigured: 'Not set'
     },
     editor: {
+      allKnowledgeBases: 'Все базы знаний',
       reasoningEffortUnsupported: 'Выбранная модель не поддерживает размышления; все варианты, кроме «Выкл», игнорируются.',
       reasoningEffortAlwaysOn: 'Выбранная модель всегда размышляет, её нельзя отключить — можно менять только уровень усилий.',
       createTitle: 'Create Agent',
