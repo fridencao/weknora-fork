@@ -2009,8 +2009,9 @@ onBeforeRouteUpdate((to, from, next) => {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    max-width: 960px;
-    padding: 16px 0;
+    max-width: 100%;
+    padding: 16px var(--chat-content-inset, 20px);
+    box-sizing: border-box;
     animation: contentFadeIn 0.3s ease-out;
 }
 
@@ -2031,13 +2032,12 @@ onBeforeRouteUpdate((to, from, next) => {
     flex-shrink: 0;
     margin: 0 auto;
     width: 100%;
-    max-width: 960px;
+    max-width: 100%;
     box-sizing: border-box;
     position: relative;
 
     &:not(.is-embedded) {
         padding: 0 var(--chat-content-inset, 20px);
-        max-width: calc(960px + 2 * var(--chat-content-inset, 20px));
     }
 
     &.is-embedded {
@@ -2055,7 +2055,7 @@ onBeforeRouteUpdate((to, from, next) => {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: 960px;
+    max-width: 100%;
     flex: 1;
     margin: 0 auto;
     width: 100%;
@@ -2063,7 +2063,6 @@ onBeforeRouteUpdate((to, from, next) => {
 
     &:not(.is-embedded) {
         padding: 0 var(--chat-content-inset, 20px);
-        max-width: calc(960px + 2 * var(--chat-content-inset, 20px));
     }
 
     /*
