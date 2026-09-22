@@ -126,7 +126,7 @@
         </dl>
         <div v-if="model.chunk.content" class="provenance-panel__excerpt">
           <span class="provenance-panel__excerpt-label">{{ t('chat.provenance.excerpt') }}</span>
-          <div class="provenance-panel__excerpt-body" v-html="excerptHtml"></div>
+          <div ref="excerptBody" class="provenance-panel__excerpt-body" v-html="excerptHtml"></div>
         </div>
       </section>
 
@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
@@ -161,16 +161,27 @@ const model = computed<ProvenanceModel | null>(() =>
   panel ? extractProvenance(panel.inputs.value) : null,
 )
 
+const claimContext = computed(() => panel?.context.value || '')
+
 const panelTitle = computed(() =>
   panel?.title.value || t('chat.provenance.title'),
 )
 
-// 摘录按 markdown 预览渲染（与引用悬浮卡同一管线）；先剥离 sbk 溯源注释，
-// 避免 320 字符截断切在注释中间时残留「<!--sbk:xxx」碎片
+// 摘录按 markdown 预览渲染（与引用悬浮卡同一管线），展示父 chunk 全文——
+// 旧版开头截 320 字常常只剩相邻章节，与问句「对不上」。
+// 渲染完成后用角标所在句子（claimContext）做二元组相似度定位，滚动 + 高亮相关段。
+const excerptBody = ref<HTMLElement | null>(null)
+
+const bigrams = (s: string): Set<string> => {
+  const t = (s || '').replace(/\s+/g, '')
+  const out = new Set<string>()
+  for (let i = 0; i < t.length - 1; i++) out.add(t.slice(i, i + 2))
+  return out
+}
+
 const excerptHtml = computed(() => {
   const raw = model.value?.chunk.content || ''
-  const truncated = raw.length > 320 ? `${raw.slice(0, 320)}…` : raw
-  const cleaned = truncated.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+  const cleaned = raw.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
   if (!cleaned.trim()) return ''
   try {
     configureMarkedForChatMarkdown()
@@ -179,6 +190,39 @@ const excerptHtml = computed(() => {
     return ''
   }
 })
+
+const locateRelevantBlock = async () => {
+  await nextTick()
+  const body = excerptBody.value
+  if (!body) return
+  body.querySelectorAll('.provenance-panel__hit').forEach((el) => {
+    el.classList.remove('provenance-panel__hit')
+  })
+  const context = claimContext.value
+  const ctxGrams = bigrams(context)
+  if (!ctxGrams.size) return
+  let best: Element | null = null
+  let bestScore = 0
+  body.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6').forEach((block) => {
+    const grams = bigrams(block.textContent || '')
+    if (!grams.size) return
+    let hit = 0
+    grams.forEach((g) => {
+      if (ctxGrams.has(g)) hit++
+    })
+    const score = hit / Math.sqrt(grams.size)
+    if (score > bestScore) {
+      bestScore = score
+      best = block
+    }
+  })
+  if (!best || bestScore < 0.5) return
+  const el = best as HTMLElement
+  el.classList.add('provenance-panel__hit')
+  body.scrollTop = Math.max(0, (el as HTMLElement).offsetTop - body.clientHeight / 3)
+}
+
+watch([excerptHtml, claimContext], locateRelevantBlock)
 
 const methodLabel = computed(() => {
   const method = model.value?.chunk.method || ''
@@ -406,6 +450,13 @@ function close() {
 
     :deep(*:last-child) {
       margin-bottom: 0;
+    }
+
+    :deep(.provenance-panel__hit) {
+      background: var(--td-brand-color-1);
+      border-radius: var(--app-radius-xs);
+      box-shadow: 0 0 0 3px var(--td-brand-color-1);
+      color: var(--td-text-color-primary);
     }
   }
 }

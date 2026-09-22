@@ -2404,10 +2404,13 @@ const onRootClick = (e: Event) => {
         { doc: title, kbId },
         getReferencesForDrawer(),
       ) || rawChunkId;
+    const context =
+      kbEl.closest('li, p, dd, h1, h2, h3, h4, h5, h6, tr')?.textContent?.trim() || '';
     if (openReferencesDrawer({
       chunkId,
       documentTitle: title,
       knowledgeBaseId: kbId,
+      context,
     })) {
       return;
     }
@@ -2477,10 +2480,13 @@ const onRootKeydown = (e: KeyboardEvent) => {
           { doc: title, kbId },
           getReferencesForDrawer(),
         ) || rawChunkId;
+      const context =
+        kbEl.closest('li, p, dd, h1, h2, h3, h4, h5, h6, tr')?.textContent?.trim() || '';
       if (openReferencesDrawer({
         chunkId,
         documentTitle: title,
         knowledgeBaseId: kbId,
+        context,
       })) {
         return;
       }

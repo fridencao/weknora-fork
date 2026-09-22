@@ -189,7 +189,7 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
     scheduleClose()
   }
 
-  const openDrawerForCitation = (payload: { url?: string; chunkId?: string }) => {
+  const openDrawerForCitation = (payload: { url?: string; chunkId?: string; context?: string }) => {
     const refs = options?.getKnowledgeReferences?.() || []
     if (!referencesDrawer || !refs.length) return false
     referencesDrawer.open({
@@ -216,7 +216,9 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
       e.preventDefault()
       e.stopPropagation()
       const chunkId = resolveChunkId(kbEl)
-      if (openDrawerForCitation({ chunkId })) return
+      const context =
+        kbEl.closest('li, p, dd, h1, h2, h3, h4, h5, h6, tr')?.textContent?.trim() || ''
+      if (openDrawerForCitation({ chunkId, context })) return
       void openKb(kbEl)
       return
     }
