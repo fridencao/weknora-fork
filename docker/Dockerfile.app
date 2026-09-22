@@ -95,8 +95,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
         ./scripts/build-anydoc-lib.sh; \
     fi
 
-# Build the application with version info
+# Build the application with version info.
+# GOMAXPROCS/GOFLAGS 限并发：小内存宿主（≤6GB VM）并行编译会被 OOM killer 杀
+# （实测 elasticsearch types 包 compile: signal: killed），降为 2 路并行换稳定。
 RUN --mount=type=cache,target=/go/pkg/mod \
+    export GOMAXPROCS=2 GOFLAGS="-p=2"; \
     if [ "$WITH_ANYDOC" = "1" ]; then \
         make build-prod GO_BUILD_TAGS=anydoc; \
     else \

@@ -4664,7 +4664,7 @@ export default {
     originsHint: 'Укажите сайты, которым разрешено встраивание (A), а не адрес StarKB (B). Один полный Origin на строку, например https://shop.example.com; минимум один. Поддерживается *.example.com.',
     originsRequired: 'Укажите хотя бы один разрешённый домен',
     originsInvalid: 'Неверный домен: {origin}',
-    originsWildcardProd: 'В production запрещён wildcard \'*\',
+    originsWildcardProd: "В production запрещён wildcard '*'",
     originsPlaceholder: 'https://shop.example.com',
     rateLimitLabel: 'Запросов в минуту',
     rateLimitDesc: 'На IP посетителя, макс. запросов к API встраивания в минуту; избыток временно отклоняется. По умолчанию 30.',
