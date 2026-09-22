@@ -5,12 +5,12 @@
 
     <div v-if="status !== 'connected'" class="sandbox-desktop__overlay">
       <div class="sandbox-desktop__overlay-card">
-        <t-icon v-if="status === 'starting'" name="loading" size="24px"
+        <t-icon v-if="status === 'starting'" name="loading" size="var(--app-icon-xl)"
                 class="sandbox-desktop__spinner" />
-        <t-icon v-else-if="status === 'unsupported'" name="error-circle" size="28px" />
-        <t-icon v-else-if="status === 'busy' || status === 'rebuilt'" name="info-circle" size="28px" />
-        <t-icon v-else-if="status === 'paused' || (status === 'idle' && hasConnected)" name="time" size="28px" />
-        <t-icon v-else name="desktop" size="28px" />
+        <t-icon v-else-if="status === 'unsupported'" name="error-circle" size="var(--app-icon-xl)" />
+        <t-icon v-else-if="status === 'busy' || status === 'rebuilt'" name="info-circle" size="var(--app-icon-xl)" />
+        <t-icon v-else-if="status === 'paused' || (status === 'idle' && hasConnected)" name="time" size="var(--app-icon-xl)" />
+        <t-icon v-else name="desktop" size="var(--app-icon-xl)" />
         <p class="sandbox-desktop__overlay-text">{{ statusText }}</p>
         <t-button v-if="actionLabel" size="small"
                   :theme="status === 'idle' || status === 'needs_provision' || status === 'paused' ? 'primary' : 'default'"

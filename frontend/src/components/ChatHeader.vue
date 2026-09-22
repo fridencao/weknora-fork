@@ -23,7 +23,7 @@
       :title="displayTitle"
       @dblclick="startTitleEdit"
     >
-      <t-icon v-if="session?.is_pinned" name="pin" size="12px" class="chat-header__pin" />
+      <t-icon v-if="session?.is_pinned" name="pin" size="var(--app-icon-xs)" class="chat-header__pin" />
       <span ref="titleTextRef" class="chat-header__title-text">{{ displayTitle }}</span>
     </h1>
     <t-popup
@@ -44,8 +44,8 @@
         :aria-label="t('chatHeader.moreActions')"
         @click.stop
       >
-        <t-icon v-if="busyAction" name="loading" size="14px" class="chat-header__menu-loading" />
-        <t-icon v-else name="ellipsis" size="16px" />
+        <t-icon v-if="busyAction" name="loading" size="var(--app-icon-sm)" class="chat-header__menu-loading" />
+        <t-icon v-else name="ellipsis" size="var(--app-icon-md)" />
       </button>
       <template #content>
         <div class="card-menu" @click.stop>

@@ -82,7 +82,7 @@
         </p>
 
         <div v-if="pairing" class="pairing-feedback" role="status">
-          <t-icon name="check-circle-filled" size="16px" />
+          <t-icon name="check-circle-filled" size="var(--app-icon-md)" />
           <span>{{ t(copyFallback ? 'localBrowser.manualCopy' : 'localBrowser.pairingReady') }}</span>
           <input v-if="copyFallback" type="password" readonly :value="pairing"
             :aria-label="t('localBrowser.copyPairing')" @focus="($event.target as HTMLInputElement).select()" />

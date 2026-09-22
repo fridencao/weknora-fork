@@ -11,7 +11,7 @@
             <t-tooltip v-if="authStore.hasRole('contributor')" :content="$t('knowledgeList.create')" placement="bottom">
               <t-button variant="text" theme="default" size="small" class="header-action-btn"
                 data-guide="kb-list-create" @click="handleCreateKnowledgeBase">
-                <template #icon><t-icon name="folder-add" size="16px" /></template>
+                <template #icon><t-icon name="folder-add" size="var(--app-icon-md)" /></template>
               {{ $t('knowledgeList.create') }}
               </t-button>
             </t-tooltip>
@@ -36,7 +36,7 @@
 
         <!-- 未初始化知识库提示 -->
         <div v-if="hasUninitializedKbs" class="warning-banner">
-          <t-icon name="info-circle" size="16px" />
+          <t-icon name="info-circle" size="var(--app-icon-md)" />
           <span>{{ $t('knowledgeList.uninitializedBanner') }}</span>
         </div>
 
@@ -69,11 +69,11 @@
             :aria-expanded="!isKbSectionCollapsed('pinned')" @click="toggleKbSection('pinned')"
             @keydown.enter.prevent="toggleKbSection('pinned')"
             @keydown.space.prevent="toggleKbSection('pinned')">
-            <t-icon name="pin-filled" size="14px" />
+            <t-icon name="pin-filled" size="var(--app-icon-sm)" />
             <span>{{ $t('knowledgeList.sections.pinned') }}</span>
             <span class="kb-section-count">{{ filteredKbSectionCounts.pinned }}</span>
             <t-icon class="kb-section-toggle" :name="isKbSectionCollapsed('pinned') ? 'chevron-right' : 'chevron-down'"
-              size="14px" />
+              size="var(--app-icon-sm)" />
           </div>
           <!-- 全部：我的知识库 + 共享给我的知识库。
                「已置顶」分组由顶部 header 接管。其余分段（我创建 / 本空间 ·
@@ -90,11 +90,11 @@
               tabindex="0" :aria-expanded="!isKbSectionCollapsed('mine')" @click="toggleKbSection('mine')"
               @keydown.enter.prevent="toggleKbSection('mine')"
               @keydown.space.prevent="toggleKbSection('mine')">
-              <t-icon name="user" size="14px" />
+              <t-icon name="user" size="var(--app-icon-sm)" />
               <span>{{ $t('knowledgeList.sections.mine') }}</span>
               <span class="kb-section-count">{{ filteredKbSectionCounts.mine }}</span>
               <t-icon class="kb-section-toggle" :name="isKbSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'"
-                size="14px" />
+                size="var(--app-icon-sm)" />
             </div>
             <!-- 本空间 · 仅查看：本空间里同事创建、对当前 contributor 不可编辑。
                  当前卡片必须是非置顶（否则归在「已置顶」），且前一张要么
@@ -110,11 +110,11 @@
               tabindex="0" :aria-expanded="!isKbSectionCollapsed('tenantOthers')" @click="toggleKbSection('tenantOthers')"
               @keydown.enter.prevent="toggleKbSection('tenantOthers')"
               @keydown.space.prevent="toggleKbSection('tenantOthers')">
-              <t-icon :name="tenantSectionIconName" size="14px" />
+              <t-icon :name="tenantSectionIconName" size="var(--app-icon-sm)" />
               <span>{{ $t(tenantSectionLabelKey) }}</span>
               <span class="kb-section-count">{{ filteredKbSectionCounts.tenantOthers }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 可编辑：从「我的（含同事）」首次过渡到共享 + 可编辑 -->
             <div v-if="!kb.isMine
@@ -123,12 +123,12 @@
               tabindex="0" :aria-expanded="!isKbSectionCollapsed('sharedEditable')" @click="toggleKbSection('sharedEditable')"
               @keydown.enter.prevent="toggleKbSection('sharedEditable')"
               @keydown.space.prevent="toggleKbSection('sharedEditable')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="edit-1" size="12px" class="kb-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="edit-1" size="var(--app-icon-xs)" class="kb-section-subicon" />
               <span>{{ $t('knowledgeList.sections.sharedEditable') }}</span>
               <span class="kb-section-count">{{ filteredKbSectionCounts.sharedEditable }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 仅查看：从「可编辑共享 / 我的」过渡到 viewer 共享 -->
             <div v-if="!kb.isMine
@@ -139,12 +139,12 @@
               class="kb-section-header" role="button" tabindex="0" :aria-expanded="!isKbSectionCollapsed('sharedReadonly')" @click="toggleKbSection('sharedReadonly')"
               @keydown.enter.prevent="toggleKbSection('sharedReadonly')"
               @keydown.space.prevent="toggleKbSection('sharedReadonly')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="browse" size="12px" class="kb-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="browse" size="var(--app-icon-xs)" class="kb-section-subicon" />
               <span>{{ $t('knowledgeList.sections.sharedReadonly') }}</span>
               <span class="kb-section-count">{{ filteredKbSectionCounts.sharedReadonly }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 我的知识库卡片 -->
             <div v-if="kb.isMine" v-show="!isKbSectionCollapsed(kbSectionOf(kb))" class="kb-card" :class="{
@@ -158,7 +158,7 @@
               <!-- 行尾收藏操作，与更多菜单分开。 -->
               <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 :aria-label="$t('listSpaceSidebar.favorites')" :aria-pressed="isKbFavorited(kb.id)" @click.stop="toggleFavoriteKb(kb.id, $event)">
-                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
+                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="var(--app-icon-sm)" />
               </button>
               <!-- 卡片头部 -->
               <div class="card-header">
@@ -217,34 +217,34 @@
                       placement="top">
                       <div class="feature-badge"
                         :class="{ 'type-document': (kb.type || 'document') === 'document', 'type-faq': kb.type === 'faq' }">
-                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="14px" />
+                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="var(--app-icon-sm)" />
                         <span class="badge-count">{{ kb.type === 'faq' ? (kb.chunk_count || 0) : (kb.knowledge_count ||
                           0) }}</span>
-                        <t-icon v-if="kb.isProcessing" name="loading" size="12px" class="processing-icon" />
+                        <t-icon v-if="kb.isProcessing" name="loading" size="var(--app-icon-xs)" class="processing-icon" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.extract_config?.enabled" :content="$t('knowledgeList.features.knowledgeGraph')"
                       placement="top">
                       <div class="feature-badge kg">
-                        <t-icon name="relation" size="14px" />
+                        <t-icon name="relation" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.vlm_config?.enabled" :content="$t('knowledgeList.features.multimodal')"
                       placement="top">
                       <div class="feature-badge multimodal">
-                        <t-icon name="image" size="14px" />
+                        <t-icon name="image" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.question_generation_config?.enabled"
                       :content="$t('knowledgeList.features.questionGeneration')" placement="top">
                       <div class="feature-badge question">
-                        <t-icon name="help-circle" size="14px" />
+                        <t-icon name="help-circle" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.share_count && kb.share_count > 0"
                       :content="$t('knowledgeList.sharedToOrgs', { count: kb.share_count })" placement="top">
                       <div class="feature-badge shared">
-                        <t-icon name="share" size="14px" />
+                        <t-icon name="share" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                   </div>
@@ -262,7 +262,7 @@
             }" role="link" tabindex="0" @keydown.enter.self.prevent="handleSharedKbClickFromAll(kb)" @keydown.space.self.prevent="handleSharedKbClickFromAll(kb)" @click="handleSharedKbClickFromAll(kb)">
               <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 :aria-label="$t('listSpaceSidebar.favorites')" :aria-pressed="isKbFavorited(kb.id)" @click.stop="toggleFavoriteKb(kb.id, $event)">
-                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
+                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="var(--app-icon-sm)" />
               </button>
               <!-- 卡片头部 -->
               <div class="card-header">
@@ -273,7 +273,7 @@
                 <t-tooltip :content="$t('knowledgeList.menu.viewDetails')" placement="top">
                   <button type="button" class="shared-detail-trigger" @click.stop="openSharedDetailFromAll(kb)"
                     :aria-label="$t('knowledgeList.menu.viewDetails')">
-                    <t-icon name="info-circle" size="16px" />
+                    <t-icon name="info-circle" size="var(--app-icon-md)" />
                   </button>
                 </t-tooltip>
               </div>
@@ -294,7 +294,7 @@
                       placement="top">
                       <div class="feature-badge"
                         :class="{ 'type-document': (kb.type || 'document') === 'document', 'type-faq': kb.type === 'faq' }">
-                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="14px" />
+                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="var(--app-icon-sm)" />
                         <span class="badge-count">{{ kb.type === 'faq' ? (kb.chunk_count || '-') : (kb.knowledge_count
                           || '-')
                         }}</span>
@@ -303,20 +303,20 @@
                     <t-tooltip v-if="kb.extract_config?.enabled" :content="$t('knowledgeList.features.knowledgeGraph')"
                       placement="top">
                       <div class="feature-badge kg">
-                        <t-icon name="relation" size="14px" />
+                        <t-icon name="relation" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip
                       v-if="kb.vlm_config?.enabled || (kb.storage_provider_config?.provider && kb.storage_provider_config.provider !== 'local')"
                       :content="$t('knowledgeList.features.multimodal')" placement="top">
                       <div class="feature-badge multimodal">
-                        <t-icon name="image" size="14px" />
+                        <t-icon name="image" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.question_generation_config?.enabled"
                       :content="$t('knowledgeList.features.questionGeneration')" placement="top">
                       <div class="feature-badge question">
-                        <t-icon name="help-circle" size="14px" />
+                        <t-icon name="help-circle" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                   </div>
@@ -341,11 +341,11 @@
             role="button" tabindex="0" :aria-expanded="!isKbSectionCollapsed('pinned')" @click="toggleKbSection('pinned')"
             @keydown.enter.prevent="toggleKbSection('pinned')"
             @keydown.space.prevent="toggleKbSection('pinned')">
-            <t-icon name="pin-filled" size="14px" />
+            <t-icon name="pin-filled" size="var(--app-icon-sm)" />
             <span>{{ $t('knowledgeList.sections.pinned') }}</span>
             <span class="kb-section-count">{{ mineKbSectionCounts.pinned }}</span>
             <t-icon class="kb-section-toggle" :name="isKbSectionCollapsed('pinned') ? 'chevron-right' : 'chevron-down'"
-              size="14px" />
+              size="var(--app-icon-sm)" />
           </div>
           <!-- 我的知识库。「已置顶」由顶部 header 接管；其余各分段各打各的
                标题——见「全部」tab 同处注释。 -->
@@ -359,11 +359,11 @@
               tabindex="0" :aria-expanded="!isKbSectionCollapsed('mine')" @click="toggleKbSection('mine')"
               @keydown.enter.prevent="toggleKbSection('mine')"
               @keydown.space.prevent="toggleKbSection('mine')">
-              <t-icon name="user" size="14px" />
+              <t-icon name="user" size="var(--app-icon-sm)" />
               <span>{{ $t('knowledgeList.sections.mine') }}</span>
               <span class="kb-section-count">{{ mineKbSectionCounts.mine }}</span>
               <t-icon class="kb-section-toggle" :name="isKbSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'"
-                size="14px" />
+                size="var(--app-icon-sm)" />
             </div>
             <!-- 本空间 · 仅查看：当前非置顶的同事 KB，且前一张要么不存在、
                  要么是我创建、要么是置顶卡片（置顶→非置顶过渡）。 -->
@@ -375,11 +375,11 @@
               :aria-expanded="!isKbSectionCollapsed('tenantOthers')" @click="toggleKbSection('tenantOthers')"
               @keydown.enter.prevent="toggleKbSection('tenantOthers')"
               @keydown.space.prevent="toggleKbSection('tenantOthers')">
-              <t-icon :name="tenantSectionIconName" size="14px" />
+              <t-icon :name="tenantSectionIconName" size="var(--app-icon-sm)" />
               <span>{{ $t(tenantSectionLabelKey) }}</span>
               <span class="kb-section-count">{{ mineKbSectionCounts.tenantOthers }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isKbSectionCollapsed(kbSectionOf(kb))" class="kb-card" :class="{
               'uninitialized': !isInitialized(kb),
@@ -391,7 +391,7 @@
               role="link" tabindex="0" @keydown.enter.self.prevent="handleCardClick(kb)" @keydown.space.self.prevent="handleCardClick(kb)" @click="handleCardClick(kb)">
               <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 :aria-label="$t('listSpaceSidebar.favorites')" :aria-pressed="isKbFavorited(kb.id)" @click.stop="toggleFavoriteKb(kb.id, $event)">
-                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
+                <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="var(--app-icon-sm)" />
               </button>
               <!-- 卡片头部 -->
               <div class="card-header">
@@ -448,36 +448,36 @@
                       placement="top">
                       <div class="feature-badge"
                         :class="{ 'type-document': (kb.type || 'document') === 'document', 'type-faq': kb.type === 'faq' }">
-                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="14px" />
+                        <t-icon :name="kb.type === 'faq' ? 'chat-bubble-help' : 'folder'" size="var(--app-icon-sm)" />
                         <span class="badge-count">{{ kb.type === 'faq' ? (kb.chunk_count || 0) : (kb.knowledge_count ||
                           0) }}</span>
-                        <t-icon v-if="kb.isProcessing" name="loading" size="12px" class="processing-icon" />
+                        <t-icon v-if="kb.isProcessing" name="loading" size="var(--app-icon-xs)" class="processing-icon" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.extract_config?.enabled" :content="$t('knowledgeList.features.knowledgeGraph')"
                       placement="top">
                       <div class="feature-badge kg">
-                        <t-icon name="relation" size="14px" />
+                        <t-icon name="relation" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip
                       v-if="kb.vlm_config?.enabled || (kb.storage_provider_config?.provider && kb.storage_provider_config.provider !== 'local')"
                       :content="$t('knowledgeList.features.multimodal')" placement="top">
                       <div class="feature-badge multimodal">
-                        <t-icon name="image" size="14px" />
+                        <t-icon name="image" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="kb.question_generation_config?.enabled"
                       :content="$t('knowledgeList.features.questionGeneration')" placement="top">
                       <div class="feature-badge question">
-                        <t-icon name="help-circle" size="14px" />
+                        <t-icon name="help-circle" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <!-- 共享状态图标 -->
                     <t-tooltip v-if="(kb.share_count ?? 0) > 0"
                       :content="$t('knowledgeList.sharedToOrgs', { count: kb.share_count ?? 0 })" placement="top">
                       <div class="feature-badge shared">
-                        <t-icon name="share" size="14px" />
+                        <t-icon name="share" size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                   </div>
@@ -504,11 +504,11 @@
               role="button" tabindex="0" :aria-expanded="!isKbSectionCollapsed('sharedByMe')" @click="toggleKbSection('sharedByMe')"
               @keydown.enter.prevent="toggleKbSection('sharedByMe')"
               @keydown.space.prevent="toggleKbSection('sharedByMe')">
-              <t-icon name="share" size="14px" />
+              <t-icon name="share" size="var(--app-icon-sm)" />
               <span>{{ $t('knowledgeList.sections.sharedByMe') }}</span>
               <span class="kb-section-count">{{ spaceKbSectionCounts.sharedByMe }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('sharedByMe') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('sharedByMe') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 可编辑：从「我的」首次进入「共享 + 可编辑」 -->
             <div v-if="!shared.is_mine
@@ -517,12 +517,12 @@
               role="button" tabindex="0" :aria-expanded="!isKbSectionCollapsed('sharedEditable')" @click="toggleKbSection('sharedEditable')"
               @keydown.enter.prevent="toggleKbSection('sharedEditable')"
               @keydown.space.prevent="toggleKbSection('sharedEditable')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="edit-1" size="12px" class="kb-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="edit-1" size="var(--app-icon-xs)" class="kb-section-subicon" />
               <span>{{ $t('knowledgeList.sections.sharedEditable') }}</span>
               <span class="kb-section-count">{{ spaceKbSectionCounts.sharedEditable }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 仅查看：从「可编辑共享 / 我的」首次进入「viewer」 -->
             <div v-if="!shared.is_mine
@@ -533,12 +533,12 @@
               role="button" tabindex="0" :aria-expanded="!isKbSectionCollapsed('sharedReadonly')" @click="toggleKbSection('sharedReadonly')"
               @keydown.enter.prevent="toggleKbSection('sharedReadonly')"
               @keydown.space.prevent="toggleKbSection('sharedReadonly')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="browse" size="12px" class="kb-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="browse" size="var(--app-icon-xs)" class="kb-section-subicon" />
               <span>{{ $t('knowledgeList.sections.sharedReadonly') }}</span>
               <span class="kb-section-count">{{ spaceKbSectionCounts.sharedReadonly }}</span>
               <t-icon class="kb-section-toggle"
-                :name="isKbSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isKbSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isSpaceKbCollapsed(shared)" class="kb-card shared-kb-card" :class="{
               'kb-type-document': (shared.knowledge_base.type || 'document') === 'document',
@@ -553,7 +553,7 @@
                 <t-tooltip v-if="!shared.is_mine" :content="$t('knowledgeList.menu.viewDetails')" placement="top">
                   <button type="button" class="shared-detail-trigger" @click.stop="openSharedDetail(shared)"
                     :aria-label="$t('knowledgeList.menu.viewDetails')">
-                    <t-icon name="info-circle" size="16px" />
+                    <t-icon name="info-circle" size="var(--app-icon-md)" />
                   </button>
                 </t-tooltip>
               </div>
@@ -575,7 +575,7 @@
                       <div class="feature-badge"
                         :class="{ 'type-document': (shared.knowledge_base.type || 'document') === 'document', 'type-faq': shared.knowledge_base.type === 'faq' }">
                         <t-icon :name="shared.knowledge_base.type === 'faq' ? 'chat-bubble-help' : 'folder'"
-                          size="14px" />
+                          size="var(--app-icon-sm)" />
                         <span class="badge-count">{{ shared.knowledge_base.type === 'faq' ?
                           (shared.knowledge_base.chunk_count ??
                             '-') : (shared.knowledge_base.knowledge_count ?? '-') }}</span>
@@ -642,7 +642,7 @@
               <h3 class="shared-detail-drawer-title">{{ $t('knowledgeList.detail.title') }}</h3>
               <button type="button" class="shared-detail-drawer-close" @click="closeSharedDetailPanel"
                 :aria-label="$t('general.close')">
-                <t-icon name="close" size="20px" />
+                <t-icon name="close" size="var(--app-icon-lg)" />
               </button>
             </div>
             <div class="shared-detail-drawer-body">

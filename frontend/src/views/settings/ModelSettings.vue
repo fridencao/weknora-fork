@@ -57,7 +57,7 @@
           @click="onModelCardClick($event, model._modelType, model)"
           @keydown.enter="onModelCardClick($event, model._modelType, model)">
           <div class="model-card__badge" :aria-label="typeLabel(model._modelType)">
-            <t-icon :name="typeIcon(model._modelType)" size="18px" />
+            <t-icon :name="typeIcon(model._modelType)" size="var(--app-icon-md)" />
           </div>
           <div class="model-card__body">
             <div class="model-card__header">
@@ -118,7 +118,7 @@
                 <span class="model-card__sep">·</span>
                 <span class="model-card__vision" :title="$t('model.editor.supportsVisionLabel')"
                   :aria-label="$t('model.editor.supportsVisionLabel')">
-                  <t-icon name="image" size="12px" />
+                  <t-icon name="image" size="var(--app-icon-xs)" />
                 </span>
               </template>
             </p>

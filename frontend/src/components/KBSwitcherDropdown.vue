@@ -19,14 +19,14 @@
             <t-icon
               :name="iconFor(item.type)"
               class="kb-switcher-row-icon"
-              size="16px"
+              size="var(--app-icon-md)"
             />
             <span class="kb-switcher-row-name" :title="item.name">{{ item.name }}</span>
             <t-icon
               v-if="item.id === currentKbId"
               name="check"
               class="kb-switcher-row-check"
-              size="14px"
+              size="var(--app-icon-sm)"
             />
           </button>
           <div v-if="!sortedList.length" class="kb-switcher-empty">

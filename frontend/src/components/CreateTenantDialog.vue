@@ -8,7 +8,7 @@
     :close-on-esc-keydown="!submitting" @update:visible="onVisibleUpdate">
     <template #header>
       <span class="create-tenant-dialog-header">
-        <t-icon name="system-sum" size="20px" class="create-tenant-dialog-header-icon" aria-hidden="true" />
+        <t-icon name="system-sum" size="var(--app-icon-lg)" class="create-tenant-dialog-header-icon" aria-hidden="true" />
         <span class="create-tenant-dialog-header-title">{{ $t('tenant.create.dialogTitle') }}</span>
       </span>
     </template>

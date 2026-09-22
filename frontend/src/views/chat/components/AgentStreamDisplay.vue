@@ -2679,7 +2679,7 @@ const getToolSummary = (event: any): string => {
       const completed = steps.filter((s: any) => s.status === 'completed').length;
 
       const parts = [];
-      if (inProgress > 0) parts.push(`🚀 ${t('agentStream.plan.inProgress')} ${inProgress}`);
+      if (inProgress > 0) parts.push(`${t('agentStream.plan.inProgress')} ${inProgress}`);
       if (pending > 0) parts.push(`📋 ${t('agentStream.plan.pending')} ${pending}`);
       if (completed > 0) parts.push(`✅ ${t('agentStream.plan.completed')} ${completed}`);
 
@@ -2750,7 +2750,7 @@ const getPlanStatusItems = (event: any) => {
 const getPlanStatusSummary = (event: any): string => {
   const parts = getPlanStatusParts(event);
   const textParts = [];
-  if (parts.inProgress > 0) textParts.push(`🚀 ${t('agentStream.plan.inProgress')} ${parts.inProgress}`);
+  if (parts.inProgress > 0) textParts.push(`${t('agentStream.plan.inProgress')} ${parts.inProgress}`);
   if (parts.pending > 0) textParts.push(`📋 ${t('agentStream.plan.pending')} ${parts.pending}`);
   if (parts.completed > 0) textParts.push(`✅ ${t('agentStream.plan.completed')} ${parts.completed}`);
   return textParts.length > 0 ? textParts.join(' · ') : '';

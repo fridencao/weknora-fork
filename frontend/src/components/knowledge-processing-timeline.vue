@@ -1553,7 +1553,7 @@ const processConfigLines = computed<string[]>(() => {
                 <button type="button" class="kp-icon-btn"
                   :title="t('knowledgeStages.processConfig.title')"
                   :aria-label="t('knowledgeStages.processConfig.title')">
-                  <t-icon name="info-circle" size="16px" />
+                  <t-icon name="info-circle" size="var(--app-icon-md)" />
                 </button>
                 <template #content>
                   <div class="kp-proccfg-pop">
@@ -1569,7 +1569,7 @@ const processConfigLines = computed<string[]>(() => {
                 :title="isLive ? t('knowledgeStages.autoRefreshOn') : t('knowledgeStages.refresh')"
                 :aria-label="isLive ? t('knowledgeStages.autoRefreshOn') : t('knowledgeStages.refresh')"
                 @click="onManualRefresh">
-                <t-icon name="refresh" size="16px" />
+                <t-icon name="refresh" size="var(--app-icon-md)" />
               </button>
               <t-popconfirm
                 v-if="canCancelParse"
@@ -1584,16 +1584,16 @@ const processConfigLines = computed<string[]>(() => {
                   :class="{ 'kp-icon-btn-spin': cancelling }" :disabled="cancelling"
                   :title="t('knowledgeBase.cancelParse')" :aria-label="t('knowledgeBase.cancelParse')"
                   @click.stop>
-                  <t-icon :name="cancelling ? 'loading' : 'close-circle'" size="15px" />
+                  <t-icon :name="cancelling ? 'loading' : 'close-circle'" size="var(--app-icon-sm)" />
                 </button>
               </t-popconfirm>
               <t-button v-if="showToolbarRetry" size="small" theme="danger" variant="outline" @click="onRetry">
-                <t-icon name="refresh" size="14px" />
+                <t-icon name="refresh" size="var(--app-icon-sm)" />
                 <span style="margin-left: 4px">{{ t('knowledgeStages.retry') }}</span>
               </t-button>
               <button v-if="showClose" type="button" class="kp-icon-btn" :aria-label="t('knowledgeStages.close')"
                 :title="t('knowledgeStages.close')" @click="emit('close')">
-                <t-icon name="close" size="16px" />
+                <t-icon name="close" size="var(--app-icon-md)" />
               </button>
             </div>
           </div>
@@ -1622,7 +1622,7 @@ const processConfigLines = computed<string[]>(() => {
               <span v-if="data.last_error.error_code" class="kp-err-code kp-mono">{{ data.last_error.error_code }}</span>
               <button type="button" class="kp-err-copy" :title="t('knowledgeStages.copyError')"
                 :aria-label="t('knowledgeStages.copyError')" @click="copyValue(data.last_error)">
-                <t-icon name="copy" size="14px" />
+                <t-icon name="copy" size="var(--app-icon-sm)" />
               </button>
             </div>
             <div v-if="data.last_error.error_message" class="kp-err-message">{{ data.last_error.error_message }}</div>
@@ -1631,7 +1631,7 @@ const processConfigLines = computed<string[]>(() => {
             </div>
             <div class="kp-err-actions">
               <button type="button" class="kp-err-btn" @click="onRetry">
-                <t-icon name="refresh" size="14px" />
+                <t-icon name="refresh" size="var(--app-icon-sm)" />
                 <span>{{ t('knowledgeStages.retry') }}</span>
               </button>
             </div>
@@ -1681,7 +1681,7 @@ const processConfigLines = computed<string[]>(() => {
                     <button v-if="row.hasChildren && !row.isRoot" type="button" class="kp-tree-toggle"
                       :aria-expanded="isRowExpanded(row.key)" :aria-label="treeToggleAriaLabel(row)"
                       @click="toggleTree(row, $event)">
-                      <t-icon :name="isRowExpanded(row.key) ? 'chevron-down' : 'chevron-right'" size="14px" />
+                      <t-icon :name="isRowExpanded(row.key) ? 'chevron-down' : 'chevron-right'" size="var(--app-icon-sm)" />
                     </button>
                     <span v-else class="kp-tree-toggle-spacer" />
                     <span class="kp-status-dot"
@@ -1766,10 +1766,10 @@ const processConfigLines = computed<string[]>(() => {
               <div class="kp-detail-actions">
                 <button type="button" class="kp-icon-btn" :title="t('knowledgeStages.copyDetails')"
                   @click.stop="copySpan(selectedRow.node)">
-                  <t-icon name="copy" size="18px" />
+                  <t-icon name="copy" size="var(--app-icon-md)" />
                 </button>
                 <button type="button" class="kp-icon-btn" :title="t('knowledgeStages.close')" @click="closeDetail">
-                  <t-icon name="close" size="18px" />
+                  <t-icon name="close" size="var(--app-icon-md)" />
                 </button>
               </div>
             </div>
@@ -1841,7 +1841,7 @@ const processConfigLines = computed<string[]>(() => {
                         <span class="kp-kv-text">{{ entry.value }}</span>
                         <button v-if="entry.copyable" type="button" class="kp-kv-copy"
                           :title="t('knowledgeStages.copy')" @click.stop="copyValue(entry.value)">
-                          <t-icon name="copy" size="14px" />
+                          <t-icon name="copy" size="var(--app-icon-sm)" />
                         </button>
                       </span>
                     </div>
@@ -1911,7 +1911,7 @@ const processConfigLines = computed<string[]>(() => {
                       <span class="kp-section-title">{{ t('knowledgeStages.detail.' + detailTab) }}</span>
                       <button type="button" class="kp-section-action"
                         @click="copyValue((selectedRow.node as any)[detailTab])">
-                        <t-icon name="copy" size="14px" />
+                        <t-icon name="copy" size="var(--app-icon-sm)" />
                         <span>{{ t('knowledgeStages.copy') }}</span>
                       </button>
                     </div>
@@ -1960,7 +1960,7 @@ const processConfigLines = computed<string[]>(() => {
                   <div class="kp-section-bar">
                     <span class="kp-section-title">{{ t('knowledgeStages.tab.raw') }}</span>
                     <button type="button" class="kp-section-action" @click="copyValue(selectedRow.node)">
-                      <t-icon name="copy" size="14px" />
+                      <t-icon name="copy" size="var(--app-icon-sm)" />
                       <span>{{ t('knowledgeStages.copy') }}</span>
                     </button>
                   </div>

@@ -5,7 +5,7 @@
       <header v-if="sessionId" class="embed-header">
         <span class="embed-header__badge" :style="badgeStyle">
           <span v-if="config.agent_avatar" class="embed-header__avatar">{{ config.agent_avatar }}</span>
-          <t-icon v-else :name="headerIcon" size="18px" />
+          <t-icon v-else :name="headerIcon" size="var(--app-icon-md)" />
         </span>
         <div class="embed-header__text">
           <h1 class="embed-header__title">{{ headerTitle }}</h1>

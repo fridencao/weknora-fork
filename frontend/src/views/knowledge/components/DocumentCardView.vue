@@ -365,7 +365,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
               @click.stop
               :class="[activeMenuIndex === index ? 'active-more' : '']"
             >
-              <t-icon name="more" size="16px" />
+              <t-icon name="more" size="var(--app-icon-md)" />
             </button>
             <template #content>
               <!-- Move: folder picker (must win over the normal menu while open) -->
@@ -406,7 +406,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
               <!-- Move: target KB list -->
               <div v-else-if="moveMenuMode === 'targets'" class="card-menu move-menu">
                 <div class="move-menu-header" @click.stop="emit('move-back')">
-                  <t-icon name="chevron-left" size="16px" />
+                  <t-icon name="chevron-left" size="var(--app-icon-md)" />
                   <span>{{ $t('knowledgeBase.moveToKnowledgeBase') }}</span>
                 </div>
                 <div v-if="moveTargetsLoading" class="move-menu-loading">
@@ -432,12 +432,12 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
               <!-- Move: confirm -->
               <div v-else-if="moveMenuMode === 'confirm'" class="card-menu move-menu">
                 <div class="move-menu-header" @click.stop="emit('move-back')">
-                  <t-icon name="chevron-left" size="16px" />
+                  <t-icon name="chevron-left" size="var(--app-icon-md)" />
                   <span>{{ $t('knowledgeBase.moveConfirmTitle') }}</span>
                 </div>
                 <div class="move-confirm-body">
                   <div class="move-target-info">
-                    <t-icon name="arrow-right" size="14px" />
+                    <t-icon name="arrow-right" size="var(--app-icon-sm)" />
                     <span>{{ moveSelectedTargetName }}</span>
                   </div>
                   <div
@@ -555,7 +555,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
                 :title="item.tags.slice(1).map(tag => tag.name).join('、')">+{{ item.tags.length - 1 }}</button>
             </template>
             <button v-else-if="canEdit" type="button" class="card-tag-add">
-              <t-icon name="add" size="12px" />{{ t('knowledgeBase.tagAddAction') }}
+              <t-icon name="add" size="var(--app-icon-xs)" />{{ t('knowledgeBase.tagAddAction') }}
             </button>
           </div>
         </KnowledgeTagPopover>
@@ -602,7 +602,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
         <template v-else>
           <div v-if="cardSummaries.get(hoveredCardItem.id)" class="card-popover-desc">{{ cardSummaries.get(hoveredCardItem.id) }}</div>
           <div v-if="(hoveredCardItem as any).source" class="card-popover-source" :title="(hoveredCardItem as any).source">
-            <t-icon name="link" size="12px" /> {{ (hoveredCardItem as any).source }}
+            <t-icon name="link" size="var(--app-icon-xs)" /> {{ (hoveredCardItem as any).source }}
           </div>
           <div class="card-popover-extra">
             <span v-if="(hoveredCardItem as any).created_at" class="card-popover-created">

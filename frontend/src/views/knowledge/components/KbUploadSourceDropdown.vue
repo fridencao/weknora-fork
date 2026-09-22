@@ -34,7 +34,7 @@
         >
           <template #icon>
             <component v-if="triggerIconComponent" :is="triggerIconComponent" size="18px" :stroke-width="1.7" class="kb-source-icon" />
-            <t-icon v-else :name="triggerIcon" size="18px" />
+            <t-icon v-else :name="triggerIcon" size="var(--app-icon-md)" />
           </template>
           <span v-if="triggerLabel">{{ triggerLabel }}</span>
         </t-button>

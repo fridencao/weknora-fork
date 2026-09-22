@@ -2,10 +2,10 @@
   <div class="embed-input-box" :class="{ 'is-replying': isReplying }">
     <div v-if="uploadedAttachments.length" class="embed-input-box__files">
       <div v-for="(att, index) in uploadedAttachments" :key="`${att.file.name}-${index}`" class="embed-file-chip">
-        <t-icon name="file" size="14px" />
+        <t-icon name="file" size="var(--app-icon-sm)" />
         <span class="embed-file-chip__name">{{ att.file.name }}</span>
         <button type="button" class="embed-file-chip__remove" @click="removeAttachment(index)">
-          <t-icon name="close" size="12px" />
+          <t-icon name="close" size="var(--app-icon-xs)" />
         </button>
       </div>
     </div>
@@ -13,7 +13,7 @@
       <div v-for="(img, index) in uploadedImages" :key="img.preview" class="embed-image-thumb">
         <img :src="img.preview" :alt="img.file.name" />
         <button type="button" class="embed-image-thumb__remove" @click="removeImage(index)">
-          <t-icon name="close" size="12px" />
+          <t-icon name="close" size="var(--app-icon-xs)" />
         </button>
       </div>
     </div>
@@ -75,7 +75,7 @@
             :aria-label="t('input.imageUpload.label')"
             @click="triggerImageUpload"
           >
-            <t-icon name="image" size="18px" />
+            <t-icon name="image" size="var(--app-icon-md)" />
           </button>
         </t-tooltip>
         <t-tooltip v-if="showFileUploadToggle" placement="top" :content="t('input.fileUpload.tooltip')">
@@ -86,7 +86,7 @@
             :aria-label="t('input.fileUpload.label')"
             @click="triggerFileUpload"
           >
-            <t-icon name="attach" size="18px" />
+            <t-icon name="attach" size="var(--app-icon-md)" />
           </button>
         </t-tooltip>
       </div>

@@ -74,7 +74,7 @@
                               v-if="(action ?? '') === item.value"
                               name="check"
                               class="kb-activity-filter-option-check"
-                              size="14px"
+                              size="var(--app-icon-sm)"
                             />
                           </button>
                         </div>
@@ -87,7 +87,7 @@
                       :aria-label="t('knowledgeEditor.activity.columns.action')"
                       @click.stop
                     >
-                      <t-icon name="filter" size="14px" />
+                      <t-icon name="filter" size="var(--app-icon-sm)" />
                     </button>
                   </t-popup>
                 </div>
@@ -119,7 +119,7 @@
                               v-if="(outcome ?? '') === item.value"
                               name="check"
                               class="kb-activity-filter-option-check"
-                              size="14px"
+                              size="var(--app-icon-sm)"
                             />
                           </button>
                         </div>
@@ -132,7 +132,7 @@
                       :aria-label="t('knowledgeEditor.activity.columns.outcome')"
                       @click.stop
                     >
-                      <t-icon name="filter" size="14px" />
+                      <t-icon name="filter" size="var(--app-icon-sm)" />
                     </button>
                   </t-popup>
                 </div>

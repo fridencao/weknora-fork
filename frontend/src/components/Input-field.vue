@@ -2906,7 +2906,7 @@ defineExpose({
                   :class="{ selected: model.id === selectedModelId }" @click="handleModelChange(model.id || '')">
                   <div class="model-option-left">
                     <div class="model-option-icon">
-                      <t-icon name="chat" size="14px" />
+                      <t-icon name="chat" size="var(--app-icon-sm)" />
                     </div>
                     <div class="model-option-name-wrap">
                       <span class="model-option-name">{{ modelDisplayName(model) }}</span>

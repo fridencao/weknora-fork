@@ -6,7 +6,7 @@
       <path class="file-fold" d="M19 1.5V8a3 3 0 0 0 3 3h6.5" />
       <path class="file-lines" d="M8 14h9M8 18h14" />
     </svg>
-    <span class="document-source-icon__badge"><t-icon :name="sourceType === 'manual' ? 'edit' : 'link'" size="13px" /></span>
+    <span class="document-source-icon__badge"><t-icon :name="sourceType === 'manual' ? 'edit' : 'link'" size="var(--app-icon-xs)" /></span>
   </span>
   <ArtifactFileIcon v-else :file-name="fileName" />
 </template>

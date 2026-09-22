@@ -1,6 +1,6 @@
 <template>
   <span class="resource-origin-badge" :class="variantClass" :title="tooltipText">
-    <t-icon :name="iconName" size="12px" class="badge-icon" />
+    <t-icon :name="iconName" size="var(--app-icon-xs)" class="badge-icon" />
     <span class="badge-text">{{ displayText }}</span>
   </span>
 </template>

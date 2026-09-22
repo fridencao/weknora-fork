@@ -14,7 +14,7 @@
             :aria-label="t('knowledgeBase.folderTree.collapse')"
             @click="emit('update:collapsed', true)"
           >
-            <t-icon name="chevron-left-double" size="15px" />
+            <t-icon name="chevron-left-double" size="var(--app-icon-sm)" />
           </button>
         </t-tooltip>
       </template>
@@ -25,7 +25,7 @@
           :aria-label="t('knowledgeBase.folderTree.expand')"
           @click="emit('update:collapsed', false)"
         >
-          <t-icon name="chevron-right-double" size="15px" />
+          <t-icon name="chevron-right-double" size="var(--app-icon-sm)" />
         </button>
       </t-tooltip>
     </div>

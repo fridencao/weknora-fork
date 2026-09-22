@@ -10,7 +10,7 @@
     <div ref="contentWrapperRef" class="content-wrapper" :class="{ 'is-create': isCreateMode }">
       <!-- 组织管理员但空间角色不足，给出只读提示 -->
       <div v-if="showTenantRoleHint" class="tenant-role-hint">
-        <t-icon name="info-circle" size="16px" />
+        <t-icon name="info-circle" size="var(--app-icon-md)" />
         <span>{{ $t('organization.rbac.needTenantAdminTip') }}</span>
       </div>
       <!-- 基本信息 -->
@@ -217,7 +217,7 @@
                 <td v-for="role in orgRoleMatrixOrder" :key="role">
                   <span v-if="orgRoleMatrix[role].find(item => item.key === permission.key)?.has"
                     class="permission-allowed" role="img" :aria-label="$t('common.yes')" :title="$t('common.yes')">
-                    <t-icon name="check" size="16px" />
+                    <t-icon name="check" size="var(--app-icon-md)" />
                   </span>
                   <span v-else class="permission-unavailable" role="img" :aria-label="$t('common.no')" :title="$t('common.no')">—</span>
                 </td>
@@ -243,7 +243,7 @@
                 <button type="button" class="permissions-trigger-btn"
                   :aria-label="$t('organization.editor.permissionsTitle')"
                   :title="$t('organization.settings.permissionsIconHint')">
-                  <t-icon name="info-circle" size="16px" />
+                  <t-icon name="info-circle" size="var(--app-icon-md)" />
                 </button>
                 <template #content>
                   <div class="permissions-compact permissions-compact--popover">
@@ -255,14 +255,14 @@
                       <div v-for="role in orgRoleMatrixOrder" :key="role"
                         :class="['perm-role-block', role, { 'is-me': orgInfo?.my_role === role }]">
                         <div class="perm-role-tag">
-                          <t-icon :name="orgRoleIcon(role)" size="12px" />
+                          <t-icon :name="orgRoleIcon(role)" size="var(--app-icon-xs)" />
                           <span>{{ $t(`organization.role.${role}`) }}</span>
                           <span v-if="orgInfo?.my_role === role" class="me-badge">{{ $t('common.me') }}</span>
                         </div>
                         <div class="perm-items">
                           <span v-for="(perm, idx) in orgRoleMatrix[role]" :key="idx"
                             :class="['perm-item', perm.has ? 'has' : 'no']">
-                            <t-icon :name="perm.has ? 'check' : 'close'" size="12px" />
+                            <t-icon :name="perm.has ? 'check' : 'close'" size="var(--app-icon-xs)" />
                             {{ $t(`organization.editor.${perm.key}`) }}
                           </span>
                         </div>
@@ -493,7 +493,7 @@
               <template #requested_role="{ row }">
                 <span v-if="row.request_type === 'upgrade' && row.prev_role" class="join-request-role-change">
                   {{ roleLabel(row.prev_role) }}
-                  <t-icon name="arrow-right" size="12px" />
+                  <t-icon name="arrow-right" size="var(--app-icon-xs)" />
                   {{ roleLabel(row.requested_role) }}
                 </span>
                 <t-tag v-else size="small" :theme="getRoleTheme(row.requested_role)" variant="light">
@@ -570,7 +570,7 @@
                 <button type="button" class="permissions-trigger-btn"
                   :aria-label="$t('organization.settings.permissionCalcFormula')"
                   :title="$t('organization.settings.permissionCalcFormula')">
-                  <t-icon name="info-circle" size="16px" />
+                  <t-icon name="info-circle" size="var(--app-icon-md)" />
                 </button>
                 <template #content>
                   <div class="permission-hint-popover">
@@ -664,7 +664,7 @@
                 <button type="button" class="permissions-trigger-btn"
                   :aria-label="$t('organization.settings.sharedAgentsKbHintShort')"
                   :title="$t('organization.settings.sharedAgentsKbHintShort')">
-                  <t-icon name="info-circle" size="16px" />
+                  <t-icon name="info-circle" size="var(--app-icon-md)" />
                 </button>
                 <template #content>
                   <div class="permission-hint-popover">

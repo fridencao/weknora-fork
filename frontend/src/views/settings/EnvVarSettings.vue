@@ -5,7 +5,7 @@
         <h2>{{ t('envVarSettings.title') }}</h2>
         <t-popup placement="bottom-start" trigger="hover" :overlay-inner-style="{ maxWidth: '380px' }">
           <button type="button" class="hint-trigger" :aria-label="t('envVarSettings.helpAria')">
-            <t-icon name="help-circle" size="16px" />
+            <t-icon name="help-circle" size="var(--app-icon-md)" />
           </button>
           <template #content>
             <div class="hint-popover">
@@ -55,7 +55,7 @@
             <header class="env-skill-card__head">
               <div class="env-skill-card__identity">
                 <div class="env-skill-card__title">
-                  <t-icon :name="SKILL_ICON" size="16px" class="env-group__icon" />
+                  <t-icon :name="SKILL_ICON" size="var(--app-icon-md)" class="env-group__icon" />
                   <h4>{{ card.skill.skill_name || card.skill.skill_id }}</h4>
                   <span
                     v-if="multipleSandboxes"

@@ -3,9 +3,9 @@
     :max-height="280" @click="onSelect">
     <button type="button" class="integrations-agent-filter" :class="{ 'integrations-agent-filter--active': modelValue }"
       :aria-label="ariaLabel">
-      <t-icon name="filter" size="14px" class="integrations-agent-filter__icon" />
+      <t-icon name="filter" size="var(--app-icon-sm)" class="integrations-agent-filter__icon" />
       <span v-if="selectedAgentName" class="integrations-agent-filter__name">{{ selectedAgentName }}</span>
-      <t-icon name="chevron-down" size="12px" class="integrations-agent-filter__chevron" />
+      <t-icon name="chevron-down" size="var(--app-icon-xs)" class="integrations-agent-filter__chevron" />
     </button>
   </t-dropdown>
 </template>

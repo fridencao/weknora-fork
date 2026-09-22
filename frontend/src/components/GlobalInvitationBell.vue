@@ -10,7 +10,7 @@
       class="global-invitation-bell">
       <button type="button" class="global-invitation-bell__btn"
         :title="$t('tenantInvitation.inboxTooltip')" @click="openDialog">
-        <t-icon name="notification" size="18px" />
+        <t-icon name="notification" size="var(--app-icon-md)" />
       </button>
     </t-badge>
   </template>

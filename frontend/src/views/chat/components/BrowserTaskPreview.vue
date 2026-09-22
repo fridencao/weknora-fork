@@ -2,7 +2,7 @@
   <Teleport :to="pipTarget || 'body'" :disabled="!pipTarget">
   <aside v-if="status.selected" ref="previewElement" class="browser-task-preview" :class="{ 'is-dragging': dragging, 'is-pip': !!pipTarget, 'needs-help': status.needs_help }" :style="pipTarget ? {} : positionStyle" :aria-label="t('localBrowser.preview')">
     <div class="preview-heading" @pointerdown="!pipTarget && startDrag($event)" @pointermove="moveDrag" @pointerup="stopDrag" @pointercancel="stopDrag" @lostpointercapture="stopDrag"><BrowserIcon class="preview-browser-icon" width="20" height="20" /><strong>{{ t('localBrowser.local') }}</strong><span>{{ t(!status.connected ? 'localBrowser.offline' : status.stopping ? 'localBrowser.stopping' : status.paused ? 'localBrowser.paused' : status.needs_help ? 'localBrowser.needHelp' : status.task_id ? 'localBrowser.connected' : 'localBrowser.waiting') }}</span>
-      <button v-if="pipSupported" class="preview-popout" :disabled="pipOpening" :title="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" :aria-label="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" @pointerdown.stop @click="togglePictureInPicture"><t-icon :name="pipTarget ? 'fullscreen-exit' : 'fullscreen'" size="16px" /></button>
+      <button v-if="pipSupported" class="preview-popout" :disabled="pipOpening" :title="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" :aria-label="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" @pointerdown.stop @click="togglePictureInPicture"><t-icon :name="pipTarget ? 'fullscreen-exit' : 'fullscreen'" size="var(--app-icon-md)" /></button>
     </div>
     <section v-if="status.needs_help" class="preview-handoff" role="status" aria-live="polite">
       <strong>{{ t('localBrowser.needHelp') }}</strong>
@@ -13,7 +13,7 @@
     <button v-if="!(status.needs_help && status.action === 'tab_borrow')" class="preview-image" :disabled="!status.connected || !status.task_id || busy || status.stopping" :aria-label="t('localBrowser.locateWindow')" @click="act('focus')">
       <img v-if="preview" :src="preview" :alt="t('localBrowser.preview')" />
       <span v-else>{{ t(status.connected ? 'localBrowser.waiting' : 'localBrowser.reconnectShort') }}</span>
-      <span v-if="status.connected && status.task_id" class="locate"><t-icon name="jump" size="13px" />{{ t('localBrowser.locateWindow') }}</span>
+      <span v-if="status.connected && status.task_id" class="locate"><t-icon name="jump" size="var(--app-icon-xs)" />{{ t('localBrowser.locateWindow') }}</span>
     </button>
     <p v-if="status.action" class="preview-progress">{{ browserActionLabel(t, status.action) }} · {{ t('localBrowser.elapsedSeconds', { seconds: Math.floor((status.action_elapsed_ms || 0) / 1000) }) }}</p>
     <p v-if="browserPageAddress(status.page_url)" class="preview-address">{{ browserPageAddress(status.page_url) }}</p>

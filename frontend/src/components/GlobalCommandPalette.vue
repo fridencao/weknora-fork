@@ -6,11 +6,11 @@
       <div class="cmdk__input-row">
         <t-icon name="search" class="cmdk__input-icon" />
         <span v-if="activeKbScope" class="cmdk__scope-chip" :title="activeKbScope.name">
-          <t-icon name="folder" size="12px" />
+          <t-icon name="folder" size="var(--app-icon-xs)" />
           <span class="cmdk__scope-chip-name">{{ activeKbScope.name }}</span>
           <button type="button" class="cmdk__scope-chip-x" :title="t('commandPalette.scope.remove')"
             :aria-label="t('commandPalette.scope.remove')" @click="clearKbScope">
-            <t-icon name="close" size="12px" />
+            <t-icon name="close" size="var(--app-icon-xs)" />
           </button>
         </span>
         <input ref="inputRef" v-model="query" type="text" class="cmdk__input"
@@ -21,11 +21,11 @@
         </span>
         <t-tooltip :content="t('commandPalette.retrieval')" placement="bottom">
           <button type="button" class="cmdk__icon-btn" :class="{ active: drawerVisible }" @click="drawerVisible = true">
-            <t-icon name="setting" size="16px" />
+            <t-icon name="setting" size="var(--app-icon-md)" />
           </button>
         </t-tooltip>
         <button type="button" class="cmdk__icon-btn" :aria-label="t('commandPalette.hotkey.esc')" @click="handleClose">
-          <t-icon name="close" size="16px" />
+          <t-icon name="close" size="var(--app-icon-md)" />
         </button>
       </div>
 
@@ -127,11 +127,11 @@
             <p>{{ t('commandPalette.empty.noResults') }}</p>
             <div class="cmdk__empty-actions">
               <t-button theme="primary" variant="outline" size="small" @click="askAi">
-                <template #icon><t-icon name="chat" size="14px" /></template>
+                <template #icon><t-icon name="chat" size="var(--app-icon-sm)" /></template>
                 {{ t('commandPalette.empty.askAi') }}
               </t-button>
               <t-button variant="outline" size="small" @click="drawerVisible = true">
-                <template #icon><t-icon name="setting" size="14px" /></template>
+                <template #icon><t-icon name="setting" size="var(--app-icon-sm)" /></template>
                 {{ t('commandPalette.empty.adjustRetrieval') }}
               </t-button>
             </div>

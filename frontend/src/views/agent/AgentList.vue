@@ -84,11 +84,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('builtin')" @click="toggleAgentSection('builtin')"
               @keydown.enter.prevent="toggleAgentSection('builtin')"
               @keydown.space.prevent="toggleAgentSection('builtin')">
-              <t-icon name="app" size="14px" />
+              <t-icon name="app" size="var(--app-icon-sm)" />
               <span>{{ $t('agent.sections.builtin') }}</span>
               <span class="agent-section-count">{{ filteredAgentSectionCounts.builtin }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('builtin') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('builtin') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 我创建的：当前 agent 是本空间 + 非内置 + 我亲手创建，且前一张
                  要么不存在、要么不是本空间、要么是内置（builtin → mine 过渡）、
@@ -103,11 +103,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('mine')" @click="toggleAgentSection('mine')"
               @keydown.enter.prevent="toggleAgentSection('mine')"
               @keydown.space.prevent="toggleAgentSection('mine')">
-              <t-icon name="user" size="14px" />
+              <t-icon name="user" size="var(--app-icon-sm)" />
               <span>{{ $t('agent.sections.mine') }}</span>
               <span class="agent-section-count">{{ filteredAgentSectionCounts.mine }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 本空间 · 仅查看 / 其他成员：本空间里非内置且非我创建的同事 agent。 -->
             <div v-if="agent.isMine
@@ -120,11 +120,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('tenantOthers')" @click="toggleAgentSection('tenantOthers')"
               @keydown.enter.prevent="toggleAgentSection('tenantOthers')"
               @keydown.space.prevent="toggleAgentSection('tenantOthers')">
-              <t-icon :name="tenantSectionIconName" size="14px" />
+              <t-icon :name="tenantSectionIconName" size="var(--app-icon-sm)" />
               <span>{{ $t(tenantSectionLabelKey) }}</span>
               <span class="agent-section-count">{{ filteredAgentSectionCounts.tenantOthers }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 可编辑：仅在「全部」视图过渡处显示分组标题 -->
             <div v-if="!agent.isMine
@@ -133,12 +133,12 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('sharedEditable')" @click="toggleAgentSection('sharedEditable')"
               @keydown.enter.prevent="toggleAgentSection('sharedEditable')"
               @keydown.space.prevent="toggleAgentSection('sharedEditable')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="edit-1" size="12px" class="agent-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="edit-1" size="var(--app-icon-xs)" class="agent-section-subicon" />
               <span>{{ $t('agent.sections.sharedEditable') }}</span>
               <span class="agent-section-count">{{ filteredAgentSectionCounts.sharedEditable }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 仅查看 -->
             <div v-if="!agent.isMine
@@ -149,12 +149,12 @@
               role="button" tabindex="0" :aria-expanded="!isAgentSectionCollapsed('sharedReadonly')" @click="toggleAgentSection('sharedReadonly')"
               @keydown.enter.prevent="toggleAgentSection('sharedReadonly')"
               @keydown.space.prevent="toggleAgentSection('sharedReadonly')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="browse" size="12px" class="agent-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="browse" size="var(--app-icon-xs)" class="agent-section-subicon" />
               <span>{{ $t('agent.sections.sharedReadonly') }}</span>
               <span class="agent-section-count">{{ filteredAgentSectionCounts.sharedReadonly }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isAgentRowHidden(agent)" class="agent-card" :class="{
               'is-builtin': agent.is_builtin,
@@ -166,14 +166,14 @@
               <button type="button" class="agent-favorite-star"
                 :class="{ 'is-favorited': isAgentFavorited(agent.id) }"
                 :aria-label="$t('listSpaceSidebar.favorites')" :aria-pressed="isAgentFavorited(agent.id)" @click.stop="toggleFavoriteAgent(agent.id, $event)">
-                <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="14px" />
+                <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="var(--app-icon-sm)" />
               </button>
               <div class="card-header">
                 <div class="card-header-left">
                   <div v-if="agent.is_builtin" class="builtin-avatar"
                     :class="agent.config?.agent_mode === 'smart-reasoning' ? 'agent' : 'normal'">
                     <t-icon :name="agent.config?.agent_mode === 'smart-reasoning' ? 'control-platform' : 'chat'"
-                      size="18px" />
+                      size="var(--app-icon-md)" />
                   </div>
                   <div v-else-if="agent.avatar" class="builtin-avatar agent-emoji">{{ agent.avatar }}</div>
                   <AgentAvatar v-else :name="agent.name" size="small" />
@@ -243,7 +243,7 @@
                       <div class="feature-badge"
                         :class="{ 'mode-normal': agent.config?.agent_mode === 'quick-answer', 'mode-agent': agent.config?.agent_mode === 'smart-reasoning' }">
                         <t-icon :name="agent.config?.agent_mode === 'smart-reasoning' ? 'control-platform' : 'chat'"
-                          size="14px" />
+                          size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.web_search_enabled" :content="$t('agent.features.webSearch')"
@@ -260,19 +260,19 @@
                     <t-tooltip v-if="agent.config?.knowledge_bases?.length || agent.config?.kb_selection_mode === 'all'"
                       :content="$t('agent.features.knowledgeBase')" placement="top">
                       <div class="feature-badge knowledge">
-                        <t-icon name="folder" size="16px" />
+                        <t-icon name="folder" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.mcp_services?.length || agent.config?.mcp_selection_mode === 'all'"
                       :content="$t('agent.features.mcp')" placement="top">
                       <div class="feature-badge mcp">
-                        <t-icon name="extension" size="16px" />
+                        <t-icon name="extension" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.multi_turn_enabled" :content="$t('agent.features.multiTurn')"
                       placement="top">
                       <div class="feature-badge multi-turn">
-                        <t-icon name="chat-bubble" size="16px" />
+                        <t-icon name="chat-bubble" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                   </div>
@@ -283,7 +283,7 @@
                   <span class="org-source-text">{{ agent.org_name }}</span>
                 </div>
                 <div v-else-if="showAgentBuiltinBadge(agent)" class="builtin-badge">
-                  <t-icon name="lock-on" size="12px" />
+                  <t-icon name="lock-on" size="var(--app-icon-xs)" />
                   <span>{{ $t('agent.builtin') }}</span>
                 </div>
                 <ResourceOriginBadge v-else-if="showAgentOriginBadge(agent)" :variant="agentOriginVariant(agent)"
@@ -302,11 +302,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('builtin')" @click="toggleAgentSection('builtin')"
               @keydown.enter.prevent="toggleAgentSection('builtin')"
               @keydown.space.prevent="toggleAgentSection('builtin')">
-              <t-icon name="app" size="14px" />
+              <t-icon name="app" size="var(--app-icon-sm)" />
               <span>{{ $t('agent.sections.builtin') }}</span>
               <span class="agent-section-count">{{ mineAgentSectionCounts.builtin }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('builtin') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('builtin') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 我创建的：第一张非内置且我亲手创建的卡片前打标题 -->
             <div v-if="!agent.is_builtin
@@ -317,11 +317,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('mine')" @click="toggleAgentSection('mine')"
               @keydown.enter.prevent="toggleAgentSection('mine')"
               @keydown.space.prevent="toggleAgentSection('mine')">
-              <t-icon name="user" size="14px" />
+              <t-icon name="user" size="var(--app-icon-sm)" />
               <span>{{ $t('agent.sections.mine') }}</span>
               <span class="agent-section-count">{{ mineAgentSectionCounts.mine }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('mine') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 本空间 · 仅查看 / 其他成员：非内置且非我创建的同事 agent -->
             <div v-if="!agent.is_builtin
@@ -332,11 +332,11 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('tenantOthers')" @click="toggleAgentSection('tenantOthers')"
               @keydown.enter.prevent="toggleAgentSection('tenantOthers')"
               @keydown.space.prevent="toggleAgentSection('tenantOthers')">
-              <t-icon :name="tenantSectionIconName" size="14px" />
+              <t-icon :name="tenantSectionIconName" size="var(--app-icon-sm)" />
               <span>{{ $t(tenantSectionLabelKey) }}</span>
               <span class="agent-section-count">{{ mineAgentSectionCounts.tenantOthers }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('tenantOthers') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isAgentRowHidden(agent)" class="agent-card" :class="{
               'is-builtin': agent.is_builtin,
@@ -347,7 +347,7 @@
               <button type="button" class="agent-favorite-star"
                 :class="{ 'is-favorited': isAgentFavorited(agent.id) }"
                 :aria-label="$t('listSpaceSidebar.favorites')" :aria-pressed="isAgentFavorited(agent.id)" @click.stop="toggleFavoriteAgent(agent.id, $event)">
-                <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="14px" />
+                <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="var(--app-icon-sm)" />
               </button>
               <!-- 卡片头部 -->
               <div class="card-header">
@@ -356,7 +356,7 @@
                   <div v-if="agent.is_builtin" class="builtin-avatar"
                     :class="agent.config?.agent_mode === 'smart-reasoning' ? 'agent' : 'normal'">
                     <t-icon :name="agent.config?.agent_mode === 'smart-reasoning' ? 'control-platform' : 'chat'"
-                      size="18px" />
+                      size="var(--app-icon-md)" />
                   </div>
                   <div v-else-if="agent.avatar" class="builtin-avatar agent-emoji">{{ agent.avatar }}</div>
                   <AgentAvatar v-else :name="agent.name" size="small" />
@@ -414,7 +414,7 @@
                       <div class="feature-badge"
                         :class="{ 'mode-normal': agent.config?.agent_mode === 'quick-answer', 'mode-agent': agent.config?.agent_mode === 'smart-reasoning' }">
                         <t-icon :name="agent.config?.agent_mode === 'smart-reasoning' ? 'control-platform' : 'chat'"
-                          size="14px" />
+                          size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.web_search_enabled" :content="$t('agent.features.webSearch')"
@@ -431,26 +431,26 @@
                     <t-tooltip v-if="agent.config?.knowledge_bases?.length || agent.config?.kb_selection_mode === 'all'"
                       :content="$t('agent.features.knowledgeBase')" placement="top">
                       <div class="feature-badge knowledge">
-                        <t-icon name="folder" size="16px" />
+                        <t-icon name="folder" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.mcp_services?.length || agent.config?.mcp_selection_mode === 'all'"
                       :content="$t('agent.features.mcp')" placement="top">
                       <div class="feature-badge mcp">
-                        <t-icon name="extension" size="16px" />
+                        <t-icon name="extension" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="agent.config?.multi_turn_enabled" :content="$t('agent.features.multiTurn')"
                       placement="top">
                       <div class="feature-badge multi-turn">
-                        <t-icon name="chat-bubble" size="16px" />
+                        <t-icon name="chat-bubble" size="var(--app-icon-md)" />
                       </div>
                     </t-tooltip>
                   </div>
                 </div>
                 <!-- 右下角：内置 / 来源徽章（我创建 / 同空间其他成员） -->
                 <div v-if="showAgentBuiltinBadge(agent)" class="builtin-badge">
-                  <t-icon name="lock-on" size="12px" />
+                  <t-icon name="lock-on" size="var(--app-icon-xs)" />
                   <span>{{ $t('agent.builtin') }}</span>
                 </div>
                 <ResourceOriginBadge v-else-if="showAgentOriginBadge(agent)" :variant="agentOriginVariant(agent)"
@@ -471,11 +471,11 @@
               role="button" tabindex="0" :aria-expanded="!isAgentSectionCollapsed('sharedByMe')" @click="toggleAgentSection('sharedByMe')"
               @keydown.enter.prevent="toggleAgentSection('sharedByMe')"
               @keydown.space.prevent="toggleAgentSection('sharedByMe')">
-              <t-icon name="share" size="14px" />
+              <t-icon name="share" size="var(--app-icon-sm)" />
               <span>{{ $t('agent.sections.sharedByMe') }}</span>
               <span class="agent-section-count">{{ spaceAgentSectionCounts.sharedByMe }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('sharedByMe') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('sharedByMe') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 可编辑：首次从 is_mine 进入共享 + editable -->
             <div v-if="!shared.is_mine
@@ -484,12 +484,12 @@
               tabindex="0" :aria-expanded="!isAgentSectionCollapsed('sharedEditable')" @click="toggleAgentSection('sharedEditable')"
               @keydown.enter.prevent="toggleAgentSection('sharedEditable')"
               @keydown.space.prevent="toggleAgentSection('sharedEditable')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="edit-1" size="12px" class="agent-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="edit-1" size="var(--app-icon-xs)" class="agent-section-subicon" />
               <span>{{ $t('agent.sections.sharedEditable') }}</span>
               <span class="agent-section-count">{{ spaceAgentSectionCounts.sharedEditable }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('sharedEditable') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 共享给我 · 仅查看：首次从可编辑 / is_mine 进入 viewer -->
             <div v-if="!shared.is_mine
@@ -500,12 +500,12 @@
               role="button" tabindex="0" :aria-expanded="!isAgentSectionCollapsed('sharedReadonly')" @click="toggleAgentSection('sharedReadonly')"
               @keydown.enter.prevent="toggleAgentSection('sharedReadonly')"
               @keydown.space.prevent="toggleAgentSection('sharedReadonly')">
-              <t-icon name="usergroup-add" size="14px" />
-              <t-icon name="browse" size="12px" class="agent-section-subicon" />
+              <t-icon name="usergroup-add" size="var(--app-icon-sm)" />
+              <t-icon name="browse" size="var(--app-icon-xs)" class="agent-section-subicon" />
               <span>{{ $t('agent.sections.sharedReadonly') }}</span>
               <span class="agent-section-count">{{ spaceAgentSectionCounts.sharedReadonly }}</span>
               <t-icon class="agent-section-toggle"
-                :name="isAgentSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isAgentSectionCollapsed('sharedReadonly') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isSpaceAgentCollapsed(shared)" class="agent-card shared-agent-card" :class="{
               'agent-mode-normal': shared.agent?.config?.agent_mode === 'quick-answer',
@@ -551,7 +551,7 @@
                         :class="{ 'mode-normal': shared.agent?.config?.agent_mode === 'quick-answer', 'mode-agent': shared.agent?.config?.agent_mode === 'smart-reasoning' }">
                         <t-icon
                           :name="shared.agent?.config?.agent_mode === 'smart-reasoning' ? 'control-platform' : 'chat'"
-                          size="14px" />
+                          size="var(--app-icon-sm)" />
                       </div>
                     </t-tooltip>
                     <t-tooltip v-if="shared.agent?.config?.web_search_enabled" :content="$t('agent.features.webSearch')"
@@ -567,16 +567,16 @@
                     <t-tooltip
                       v-if="shared.agent?.config?.knowledge_bases?.length || shared.agent?.config?.kb_selection_mode === 'all'"
                       :content="$t('agent.features.knowledgeBase')" placement="top">
-                      <div class="feature-badge knowledge"><t-icon name="folder" size="16px" /></div>
+                      <div class="feature-badge knowledge"><t-icon name="folder" size="var(--app-icon-md)" /></div>
                     </t-tooltip>
                     <t-tooltip
                       v-if="shared.agent?.config?.mcp_services?.length || shared.agent?.config?.mcp_selection_mode === 'all'"
                       :content="$t('agent.features.mcp')" placement="top">
-                      <div class="feature-badge mcp"><t-icon name="extension" size="16px" /></div>
+                      <div class="feature-badge mcp"><t-icon name="extension" size="var(--app-icon-md)" /></div>
                     </t-tooltip>
                     <t-tooltip v-if="shared.agent?.config?.multi_turn_enabled" :content="$t('agent.features.multiTurn')"
                       placement="top">
-                      <div class="feature-badge multi-turn"><t-icon name="chat-bubble" size="16px" /></div>
+                      <div class="feature-badge multi-turn"><t-icon name="chat-bubble" size="var(--app-icon-md)" /></div>
                     </t-tooltip>
                   </div>
                 </div>

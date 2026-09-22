@@ -55,6 +55,12 @@ const RULES = [
     baseline: 65,
   },
   {
+    name: 't-icon-size-literal',
+    why: '图标尺寸请用 --app-icon-xs/sm/md/lg/xl token（size="var(--app-icon-md)"），禁止 size="Npx" 硬编码',
+    pattern: /<t-icon[^>]*\bsize="[0-9]+(\.[0-9]+)?px"/g,
+    baseline: 0,
+  },
+  {
     name: 'transition-all',
     why: 'transition: all 会让无关属性也参与动画（含 layout 属性），请列出具体属性',
     pattern: /transition\s*:\s*all\b/g,

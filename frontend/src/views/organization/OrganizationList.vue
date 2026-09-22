@@ -12,7 +12,7 @@
               <t-tooltip :content="canManageOrg ? $t('organization.joinOrg') : noPermissionTip" placement="bottom">
                 <t-button variant="text" theme="default" size="small" class="header-action-btn"
                   :disabled="!canManageOrg" @click="handleJoinOrganization">
-                  <template #icon><t-icon name="enter" size="16px" /></template>
+                  <template #icon><t-icon name="enter" size="var(--app-icon-md)" /></template>
                 {{ $t('organization.joinOrg') }}
                 </t-button>
               </t-tooltip>
@@ -63,11 +63,11 @@
               role="button" tabindex="0" :aria-expanded="!isOrgSectionCollapsed('created')" @click="toggleOrgSection('created')"
               @keydown.enter.prevent="toggleOrgSection('created')"
               @keydown.space.prevent="toggleOrgSection('created')">
-              <t-icon name="user" size="14px" />
+              <t-icon name="user" size="var(--app-icon-sm)" />
               <span>{{ $t('organization.createdByMe') }}</span>
               <span class="org-section-count">{{ orgSectionCounts.created }}</span>
               <t-icon class="org-section-toggle"
-                :name="isOrgSectionCollapsed('created') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isOrgSectionCollapsed('created') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <!-- 我加入的：第一张非 owner 卡片前打标题（all 视图下） -->
             <div v-if="spaceSelection === 'all' && !org.is_owner
@@ -75,11 +75,11 @@
               tabindex="0" :aria-expanded="!isOrgSectionCollapsed('joined')" @click="toggleOrgSection('joined')"
               @keydown.enter.prevent="toggleOrgSection('joined')"
               @keydown.space.prevent="toggleOrgSection('joined')">
-              <t-icon name="usergroup" size="14px" />
+              <t-icon name="usergroup" size="var(--app-icon-sm)" />
               <span>{{ $t('organization.joinedByMe') }}</span>
               <span class="org-section-count">{{ orgSectionCounts.joined }}</span>
               <t-icon class="org-section-toggle"
-                :name="isOrgSectionCollapsed('joined') ? 'chevron-right' : 'chevron-down'" size="14px" />
+                :name="isOrgSectionCollapsed('joined') ? 'chevron-right' : 'chevron-down'" size="var(--app-icon-sm)" />
             </div>
             <div v-show="!isOrgRowHidden(org)" class="org-card"
             :class="{ 'joined-org': !org.is_owner }" role="link" tabindex="0" @keydown.enter.self.prevent="handleCardClick(org)" @keydown.space.self.prevent="handleCardClick(org)" @click="handleCardClick(org)">
@@ -133,13 +133,13 @@
                 <div class="feature-badges">
                   <t-tooltip :content="$t('organization.memberCount')" placement="top">
                     <div class="feature-badge stat-member">
-                      <t-icon name="user" size="14px" />
+                      <t-icon name="user" size="var(--app-icon-sm)" />
                       <span class="badge-count">{{ org.member_count || 0 }}</span>
                     </div>
                   </t-tooltip>
                   <t-tooltip :content="$t('organization.invite.knowledgeBases')" placement="top">
                     <div class="feature-badge stat-kb">
-                      <t-icon name="folder" size="14px" />
+                      <t-icon name="folder" size="var(--app-icon-sm)" />
                       <span class="badge-count">{{ org.share_count ?? 0 }}</span>
                     </div>
                   </t-tooltip>
@@ -158,7 +158,7 @@
               </div>
               <div v-if="showOrgRelationTag(org)" class="bottom-right">
                 <div class="relation-role-tag" :class="org.is_owner ? 'owner' : (org.my_role || '')">
-                  <t-icon :name="org.is_owner ? 'usergroup-add' : 'usergroup'" size="14px" />
+                  <t-icon :name="org.is_owner ? 'usergroup-add' : 'usergroup'" size="var(--app-icon-sm)" />
                   <span>{{ org.is_owner ? $t('organization.owner') : (org.my_role ?
                     $t(`organization.role.${org.my_role}`) :
                     $t('organization.joinedByMe')) }}</span>
@@ -249,7 +249,7 @@
                       </template>
                       <template v-else>
                         <div class="invite-preview-error-inline">
-                          <t-icon name="error-circle" size="20px" />
+                          <t-icon name="error-circle" size="var(--app-icon-lg)" />
                           <span>{{ invitePreviewError }}</span>
                         </div>
                         <div class="join-form-item">
@@ -300,7 +300,7 @@
                               </div>
                               <div class="searchable-row-meta">
                                 <span class="searchable-meta-item">
-                                  <t-icon name="user" size="12px" />
+                                  <t-icon name="user" size="var(--app-icon-xs)" />
                                   <template v-if="org.member_limit > 0">{{ org.member_count }}/{{ org.member_limit }}</template>
                                   <template v-else>{{ org.member_count }}</template>
                                 </span>
@@ -345,13 +345,13 @@
                     <div class="feature-badges preview-space-badges">
                       <t-tooltip :content="$t('organization.memberCount')" placement="top">
                         <div class="feature-badge stat-member">
-                          <t-icon name="user" size="14px" />
+                          <t-icon name="user" size="var(--app-icon-sm)" />
                           <span class="badge-count">{{ invitePreviewData.member_count }}</span>
                         </div>
                       </t-tooltip>
                       <t-tooltip :content="$t('organization.invite.knowledgeBases')" placement="top">
                         <div class="feature-badge stat-kb">
-                          <t-icon name="folder" size="14px" />
+                          <t-icon name="folder" size="var(--app-icon-sm)" />
                           <span class="badge-count">{{ invitePreviewData.share_count }}</span>
                         </div>
                       </t-tooltip>
@@ -365,12 +365,12 @@
                     <button type="button" class="preview-space-id-chip" @click="copyPreviewSpaceId">
                       <span class="preview-space-id-label">{{ $t('organization.join.spaceId') }}</span>
                       <code>{{ shortPreviewSpaceId }}</code>
-                      <t-icon name="file-copy" size="14px" />
+                      <t-icon name="file-copy" size="var(--app-icon-sm)" />
                     </button>
                   </div>
 
                   <div v-if="invitePreviewData.is_already_member" class="preview-member-status">
-                    <t-icon name="check-circle" size="18px" />
+                    <t-icon name="check-circle" size="var(--app-icon-md)" />
                     <span>{{ $t('organization.invite.alreadyMember') }}</span>
                   </div>
 

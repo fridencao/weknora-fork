@@ -56,7 +56,7 @@ const folderPickerVisible = ref(false);
               <t-button theme="primary" size="small" :loading="downloadLoading"
                 :disabled="count === 0 || count > 200 || deleteLoading || reparseLoading || tagLoading || downloadLoading"
                 @click="emit('download')">
-                <template #icon><t-icon name="download" size="14px" /></template>
+                <template #icon><t-icon name="download" size="var(--app-icon-sm)" /></template>
                 {{ t(downloadLoading ? 'knowledgeBase.batchDownloading' : 'knowledgeBase.batchDownload') }}
               </t-button>
             </span>
@@ -67,7 +67,7 @@ const folderPickerVisible = ref(false);
             :cancel-btn="{ content: t('common.cancel') }" placement="top" @confirm="emit('reparse')">
             <t-button theme="default" variant="outline" size="small"
               :disabled="count === 0 || deleteLoading || reparseLoading || tagLoading || downloadLoading" :loading="reparseLoading" @click.stop>
-              <template #icon><t-icon name="refresh" size="14px" /></template>
+              <template #icon><t-icon name="refresh" size="var(--app-icon-sm)" /></template>
               {{ t('knowledgeBase.rebuildDocument') }}
             </t-button>
           </t-popconfirm>
@@ -75,7 +75,7 @@ const folderPickerVisible = ref(false);
           <t-button v-if="canMutate" theme="default" variant="outline" size="small"
             :disabled="count === 0 || deleteLoading || reparseLoading || tagLoading || downloadLoading" :loading="tagLoading"
             @click="emit('batchTag')">
-            <template #icon><t-icon name="tag" size="14px" /></template>
+            <template #icon><t-icon name="tag" size="var(--app-icon-sm)" /></template>
             {{ t('knowledgeBase.batchTag') }}
           </t-button>
 
@@ -83,7 +83,7 @@ const folderPickerVisible = ref(false);
             placement="top" overlay-class-name="card-more" destroy-on-close>
             <t-button theme="default" variant="outline" size="small"
               :disabled="count === 0 || deleteLoading || reparseLoading || tagLoading || downloadLoading">
-              <template #icon><t-icon name="folder" size="14px" /></template>
+              <template #icon><t-icon name="folder" size="var(--app-icon-sm)" /></template>
               {{ t('knowledgeBase.moveToFolder.action') }}
             </t-button>
             <template #content>
@@ -99,7 +99,7 @@ const folderPickerVisible = ref(false);
             :cancel-btn="{ content: t('common.cancel') }" placement="top" @confirm="emit('delete')">
             <t-button theme="danger" variant="outline" size="small"
               :disabled="count === 0 || deleteLoading || reparseLoading || tagLoading || downloadLoading" :loading="deleteLoading" @click.stop>
-              <template #icon><t-icon name="delete" size="14px" /></template>
+              <template #icon><t-icon name="delete" size="var(--app-icon-sm)" /></template>
               {{ t('knowledgeBase.batchDelete') }}
             </t-button>
           </t-popconfirm>

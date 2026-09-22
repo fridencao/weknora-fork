@@ -43,7 +43,7 @@
           :aria-label="$t('common.close')"
           @click="onClose"
         >
-          <t-icon name="close" size="16px" />
+          <t-icon name="close" size="var(--app-icon-md)" />
         </button>
       </header>
       <SkillFilesPanel

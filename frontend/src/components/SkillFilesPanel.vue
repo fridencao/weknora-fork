@@ -26,7 +26,7 @@
               <t-icon
                 class="skill-files-panel__icon"
                 :name="row.isDir ? (expandedDirs.has(row.path) ? 'folder-open' : 'folder') : fileIcon(row.name)"
-                size="16px"
+                size="var(--app-icon-md)"
               />
               <span class="skill-files-panel__name">{{ row.name }}</span>
             </button>

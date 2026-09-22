@@ -44,11 +44,11 @@
                     {{ $t('promptTemplate.default') }}
                   </span>
                   <span v-if="template.has_knowledge_base" class="template-tag kb-tag">
-                    <t-icon name="folder" size="12px" />
+                    <t-icon name="folder" size="var(--app-icon-xs)" />
                     {{ $t('promptTemplate.withKnowledgeBase') }}
                   </span>
                   <span v-if="template.has_web_search" class="template-tag web-tag">
-                    <t-icon name="internet" size="12px" />
+                    <t-icon name="internet" size="var(--app-icon-xs)" />
                     {{ $t('promptTemplate.withWebSearch') }}
                   </span>
                 </div>

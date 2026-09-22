@@ -14,7 +14,7 @@
             :aria-label="t('memorySettings.usage.iconHint')"
             :title="t('memorySettings.usage.iconHint')"
           >
-            <t-icon name="info-circle" size="16px" />
+            <t-icon name="info-circle" size="var(--app-icon-md)" />
           </button>
           <template #content>
             <div class="usage-popup">
@@ -155,7 +155,7 @@
         <t-tab-panel v-for="value in tabs" :key="value" :value="value">
           <template #label>
             <span class="status-tab-label">
-              <t-icon :name="tabIcon(value)" size="14px" />
+              <t-icon :name="tabIcon(value)" size="var(--app-icon-sm)" />
               <span>{{ tabLabel(value) }}</span>
             </span>
           </template>

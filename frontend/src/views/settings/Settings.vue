@@ -60,7 +60,7 @@
            的瞬间触发；这一段做兜底兼容旧 URL。 -->
       <div v-if="!canSeeSection(currentSection)" class="section role-denied">
         <div class="role-denied-icon">
-          <t-icon name="lock-on" size="48px" />
+          <t-icon name="lock-on" size="var(--app-icon-xl)" />
         </div>
         <div class="role-denied-title">{{ $t('settings.roleDenied.title') }}</div>
         <div class="role-denied-desc">{{ $t('settings.roleDenied.desc') }}</div>

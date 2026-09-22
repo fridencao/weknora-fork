@@ -22,19 +22,19 @@
             <div class="service-card__body">
               <div class="service-card__header">
                 <div class="service-card__badge" aria-hidden="true">
-                  <t-icon name="tools" size="14px" />
+                  <t-icon name="tools" size="var(--app-icon-sm)" />
                 </div>
                 <h3 class="service-card__title" :title="service.name">{{ service.name }}</h3>
                 <span v-if="service.is_builtin" class="service-card__builtin">{{ $t('mcpSettings.builtin') }}</span>
                 <div v-if="authStore.hasRole('admin')" class="service-card__actions">
                   <button type="button" class="service-card__icon-btn" :title="$t('common.edit')"
                     :aria-label="`${service.name} · ${$t('common.edit')}`" @click="handleEdit(service)">
-                    <t-icon name="edit" size="14px" />
+                    <t-icon name="edit" size="var(--app-icon-sm)" />
                   </button>
                   <button v-if="!service.is_builtin" type="button" class="service-card__icon-btn service-card__icon-btn--danger"
                     :disabled="togglingIds.has(service.id)" :title="$t('common.delete')"
                     :aria-label="`${service.name} · ${$t('common.delete')}`" @click="handleDelete(service)">
-                    <t-icon name="delete" size="14px" />
+                    <t-icon name="delete" size="var(--app-icon-sm)" />
                   </button>
                 </div>
               </div>
@@ -44,7 +44,7 @@
               <div v-else class="service-card__empty-usage">
                 <button v-if="authStore.hasRole('admin') && !service.is_builtin" type="button"
                   class="service-card__add-usage" @click="handleEdit(service, 1)">
-                  <t-icon name="add" size="14px" />
+                  <t-icon name="add" size="var(--app-icon-sm)" />
                   {{ $t('mcpSettings.addUsageInstructions') }}
                 </button>
                 <span v-else>{{ $t('mcpSettings.noUsageInstructions') }}</span>
@@ -56,12 +56,12 @@
                     :class="{ 'is-stale': service.catalog?.stale, 'is-missing': !service.catalog }"
                     :title="$t('mcpMetadata.toolsAndUsage')"
                     @click="authStore.hasRole('admin') && handleEdit(service, 1)">
-                    <t-icon v-if="service.catalog?.stale" name="error-circle" size="14px" />
+                    <t-icon v-if="service.catalog?.stale" name="error-circle" size="var(--app-icon-sm)" />
                     <span class="service-card__tools-label">
                       {{ service.catalog ? $t('mcpSettings.toolCount', { count: service.catalog.tool_count }) : $t('mcpSettings.toolsNotSynced') }}
                       <template v-if="service.catalog?.stale"> · {{ $t('mcpSettings.toolsStale') }}</template>
                     </span>
-                    <t-icon v-if="authStore.hasRole('admin')" name="chevron-right" size="14px" />
+                    <t-icon v-if="authStore.hasRole('admin')" name="chevron-right" size="var(--app-icon-sm)" />
                   </component>
                   <span class="service-card__type">{{ getTransportTypeLabel(service.transport_type) }}</span>
                 </div>

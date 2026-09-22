@@ -1,7 +1,7 @@
 <template>
   <div class="folder-picker">
     <div v-if="showBack" class="folder-picker__header" @click.stop="emit('back')">
-      <t-icon name="chevron-left" size="16px" />
+      <t-icon name="chevron-left" size="var(--app-icon-md)" />
       <span>{{ t('knowledgeBase.moveToFolder.action') }}</span>
     </div>
 

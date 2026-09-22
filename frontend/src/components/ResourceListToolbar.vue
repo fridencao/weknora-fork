@@ -19,7 +19,7 @@
     </div>
     <t-input :model-value="query" class="search-input" :placeholder="$t('menu.search')"
       :aria-label="$t('menu.search')" clearable @update:model-value="(value: unknown) => $emit('update:query', String(value ?? ''))">
-      <template #prefix-icon><t-icon name="search" size="16px" /></template>
+      <template #prefix-icon><t-icon name="search" size="var(--app-icon-md)" /></template>
     </t-input>
   </div>
 </template>

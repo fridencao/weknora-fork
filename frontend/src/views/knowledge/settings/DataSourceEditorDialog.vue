@@ -1403,13 +1403,13 @@ const drawerConfirmText = computed(() => {
           :aria-expanded="prereqExpanded"
           @click="prereqExpanded = !prereqExpanded"
         >
-          <t-icon name="info-circle-filled" size="15px" class="ds-setup-guide__icon" />
+          <t-icon name="info-circle-filled" size="var(--app-icon-sm)" class="ds-setup-guide__icon" />
           <span class="ds-setup-guide__summary">
             {{ t(`datasource.prereqBarText_${form.type}`, t('datasource.prereqBarText')) }}
           </span>
           <t-icon
             :name="prereqExpanded ? 'chevron-up' : 'chevron-down'"
-            size="14px"
+            size="var(--app-icon-sm)"
             class="ds-setup-guide__chevron"
           />
         </button>
@@ -1746,7 +1746,7 @@ const drawerConfirmText = computed(() => {
               <t-icon
                 v-else
                 :name="expandedResourceIds.has(r.external_id) ? 'chevron-down' : 'chevron-right'"
-                size="12px"
+                size="var(--app-icon-xs)"
               />
             </button>
             <span v-else class="resource-picker__expand-spacer" aria-hidden="true" />
@@ -1775,7 +1775,7 @@ const drawerConfirmText = computed(() => {
               </svg>
             </span>
             <span class="resource-picker__icon" aria-hidden="true">
-              <t-icon :name="resourceIconName(r)" size="16px" />
+              <t-icon :name="resourceIconName(r)" size="var(--app-icon-md)" />
             </span>
             <span class="resource-picker__label">
               <span class="resource-picker__name" :title="r.name || t('datasource.untitled')">
@@ -1790,7 +1790,7 @@ const drawerConfirmText = computed(() => {
         </div>
       </div>
       <div v-else class="ds-resource-empty">
-        <t-icon name="info-circle" size="32px" style="color: var(--td-warning-color); margin-bottom: 8px;" />
+        <t-icon name="info-circle" size="var(--app-icon-xl)" style="color: var(--td-warning-color); margin-bottom: 8px;" />
         <p class="ds-empty-title">{{ t('datasource.noResources') }}</p>
         <p class="ds-empty-desc">{{ t(`datasource.noResourcesDesc_${form.type}`, t('datasource.noResourcesDesc')) }}</p>
         <div class="ds-guide-steps">

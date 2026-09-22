@@ -52,7 +52,7 @@
     </div>
 
     <div v-else-if="error" class="rq-state rq-state--error" role="alert">
-      <div class="rq-state-icon"><t-icon name="error-circle" size="24px" /></div>
+      <div class="rq-state-icon"><t-icon name="error-circle" size="var(--app-icon-xl)" /></div>
       <div class="rq-state-copy">
         <strong>{{ t('system.globalSettings.runtime.errors.generic') }}</strong>
         <span>{{ error }}</span>
@@ -63,7 +63,7 @@
     </div>
 
     <div v-else-if="!available && !modelLimiterAvailable" class="rq-state">
-      <div class="rq-state-icon"><t-icon name="info-circle" size="24px" /></div>
+      <div class="rq-state-icon"><t-icon name="info-circle" size="var(--app-icon-xl)" /></div>
       <div class="rq-state-copy">
         <strong>{{ t('system.globalSettings.runtime.unavailableTitle') }}</strong>
         <span>{{ t('system.globalSettings.runtime.unavailable') }}</span>
@@ -155,7 +155,7 @@
         </div>
 
         <div v-if="queues.length === 0" class="rq-empty">
-          <t-icon name="queue" size="28px" />
+          <t-icon name="queue" size="var(--app-icon-xl)" />
           <span>{{ t('system.globalSettings.runtime.empty') }}</span>
         </div>
 
@@ -261,11 +261,11 @@
           <span class="rq-pools-note">{{ t('system.globalSettings.runtime.models.scope') }}</span>
         </div>
         <div v-if="!modelLimiterAvailable" class="rq-empty">
-          <t-icon name="info-circle" size="28px" />
+          <t-icon name="info-circle" size="var(--app-icon-xl)" />
           <span>{{ t('system.globalSettings.runtime.models.disabled') }}</span>
         </div>
         <div v-else-if="models.length === 0" class="rq-empty">
-          <t-icon name="server" size="28px" />
+          <t-icon name="server" size="var(--app-icon-xl)" />
           <span>{{ t('system.globalSettings.runtime.models.empty') }}</span>
         </div>
         <div v-else class="data-table-shell rq-table-shell">

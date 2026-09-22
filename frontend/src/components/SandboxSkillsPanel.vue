@@ -58,7 +58,7 @@
         >
           <div class="file-upload-content">
             <div class="file-upload-icon-wrap" aria-hidden="true">
-              <t-icon name="cloud-upload" size="32px" class="upload-icon" />
+              <t-icon name="cloud-upload" size="var(--app-icon-xl)" class="upload-icon" />
             </div>
             <div class="upload-text">
               <span v-if="uploading" class="upload-file-name">
@@ -112,7 +112,7 @@
           </t-popconfirm>
         </Teleport>
         <div v-if="uninstallDone" class="skill-manage__done">
-          <t-icon name="check-circle-filled" size="22px" />
+          <t-icon name="check-circle-filled" size="var(--app-icon-lg)" />
           <p>{{ $t('settings.sandbox.skillRemoveDone', { name: uninstallingName }) }}</p>
         </div>
         <template v-else-if="managedSkill && isRemoving(managedSkill)">
@@ -176,7 +176,7 @@
                   :aria-label="$t('settings.sandbox.skillRetry')"
                   @click="retrySkill(managedSkill)"
                 >
-                  <t-icon name="refresh" size="16px" />
+                  <t-icon name="refresh" size="var(--app-icon-md)" />
                 </button>
               </t-tooltip>
             </div>
@@ -300,7 +300,7 @@
                 :stroke-width="2"
                 :label="false"
               />
-              <t-icon v-else :name="SKILL_ICON" size="18px" />
+              <t-icon v-else :name="SKILL_ICON" size="var(--app-icon-md)" />
             </div>
             <div class="skill-card__body">
               <div
@@ -355,7 +355,7 @@
                       :aria-label="$t('settings.sandbox.skillEnv.toggle')"
                       @pointerdown="ensureEnvDrafts(skill.id)"
                     >
-                      <t-icon name="key" size="14px" />
+                      <t-icon name="key" size="var(--app-icon-sm)" />
                     </button>
                     <template #content>
                         <div class="skill-env-popup__panel">
@@ -374,7 +374,7 @@
                               :title="$t('common.close')"
                               @click.stop="onEnvVisible(skill, false)"
                             >
-                              <template #icon><t-icon name="close" size="16px" /></template>
+                              <template #icon><t-icon name="close" size="var(--app-icon-md)" /></template>
                             </t-button>
                           </header>
                           <div class="skill-env-popup__body">
@@ -479,7 +479,7 @@
                       :aria-label="$t('settings.sandbox.skillTranscript')"
                     >
                       <span v-if="isBusy(skill)" class="skill-card__live-dot" aria-hidden="true" />
-                      <t-icon name="chat-bubble-history" size="14px" />
+                      <t-icon name="chat-bubble-history" size="var(--app-icon-sm)" />
                     </button>
                     <template #content>
                         <div class="skill-transcript-popup__panel">
@@ -502,7 +502,7 @@
                               :title="$t('common.close')"
                               @click.stop="onTranscriptVisible(skill, false)"
                             >
-                              <template #icon><t-icon name="close" size="16px" /></template>
+                              <template #icon><t-icon name="close" size="var(--app-icon-md)" /></template>
                             </t-button>
                           </header>
                           <div class="skill-transcript-popup__body">
@@ -532,7 +532,7 @@
                       :aria-label="$t('settings.sandbox.skillTranscript')"
                     >
                       <span class="skill-card__live-dot" aria-hidden="true" />
-                      <t-icon name="chat-bubble-history" size="14px" />
+                      <t-icon name="chat-bubble-history" size="var(--app-icon-sm)" />
                     </button>
                   </t-tooltip>
                   <t-tooltip
@@ -547,7 +547,7 @@
                       :aria-label="$t('settings.sandbox.skillStop')"
                       @click="stopSkill(skill)"
                     >
-                      <t-icon name="stop-circle" size="14px" />
+                      <t-icon name="stop-circle" size="var(--app-icon-sm)" />
                     </button>
                   </t-tooltip>
                   <t-tooltip
@@ -562,7 +562,7 @@
                       :aria-label="$t('settings.sandbox.skillRetry')"
                       @click="retrySkill(skill)"
                     >
-                      <t-icon name="refresh" size="14px" />
+                      <t-icon name="refresh" size="var(--app-icon-sm)" />
                     </button>
                   </t-tooltip>
                   <t-popconfirm
@@ -581,7 +581,7 @@
                       :disabled="deletingId === skill.id"
                       :aria-label="$t('settings.skills.manageUninstall')"
                     >
-                      <t-icon name="delete" size="14px" />
+                      <t-icon name="delete" size="var(--app-icon-sm)" />
                     </button>
                   </t-popconfirm>
                 </div>

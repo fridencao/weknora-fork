@@ -23,7 +23,7 @@
             <div v-for="(group, gIdx) in groupedKnowledgeRefs" :key="'grp-' + gIdx" class="doc-group">
                 <div class="doc-group-header" @click="toggleGroup(group.key)">
                     <div class="doc-group-left">
-                        <t-icon name="file" size="14px" class="doc-group-icon" />
+                        <t-icon name="file" size="var(--app-icon-sm)" class="doc-group-icon" />
                         <span class="doc-group-title" :title="group.title">{{ group.title }}</span>
                         <span class="doc-group-count">{{ $t('chat.referenceChunkCount', { count: group.chunks.length })
                             }}</span>
@@ -36,7 +36,7 @@
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                <t-icon name="jump" size="14px" />
+                                <t-icon name="jump" size="var(--app-icon-sm)" />
                             </a>
                         </t-tooltip>
                     </div>

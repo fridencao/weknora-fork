@@ -20,7 +20,7 @@
             @click="openEdit(ep)"
           >
             <div class="channel-card__badge">
-              <t-icon name="tools" size="22px" />
+              <t-icon name="tools" size="var(--app-icon-lg)" />
             </div>
             <div class="channel-card__body">
               <div class="channel-card__header">
@@ -216,7 +216,7 @@
             <div class="code-toolbar">
               <pre class="code-toolbar__code">{{ freshToken }}</pre>
               <t-button class="code-toolbar__copy" size="small" variant="text" shape="square" :title="$t('common.copy')" @click="copyText(freshToken)">
-                <t-icon name="file-copy" size="16px" />
+                <t-icon name="file-copy" size="var(--app-icon-md)" />
               </t-button>
             </div>
           </div>
@@ -226,7 +226,7 @@
             <div class="code-toolbar">
               <pre class="code-toolbar__code">{{ endpointUrl(editing) }}</pre>
               <t-button class="code-toolbar__copy" size="small" variant="text" shape="square" :title="$t('common.copy')" @click="copyText(endpointUrl(editing))">
-                <t-icon name="file-copy" size="16px" />
+                <t-icon name="file-copy" size="var(--app-icon-md)" />
               </t-button>
             </div>
           </div>
@@ -240,7 +240,7 @@
                 <div class="code-toolbar">
                   <pre class="code-toolbar__code">{{ snippet.text }}</pre>
                   <t-button class="code-toolbar__copy" size="small" variant="text" shape="square" :title="$t('common.copy')" @click="copyText(snippet.text)">
-                    <t-icon name="file-copy" size="16px" />
+                    <t-icon name="file-copy" size="var(--app-icon-md)" />
                   </t-button>
                 </div>
               </t-tab-panel>

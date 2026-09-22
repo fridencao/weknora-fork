@@ -37,7 +37,7 @@
         <h2>{{ t('system.globalSettings.title') }}</h2>
         <t-popup placement="bottom-start" trigger="hover" :overlay-inner-style="{ maxWidth: '420px' }">
           <button type="button" class="hint-trigger" :aria-label="t('system.globalSettings.priorityHint.disclosure')">
-            <t-icon name="info-circle" size="16px" />
+            <t-icon name="info-circle" size="var(--app-icon-md)" />
           </button>
           <template #content>
             <div class="hint-popover">
@@ -61,7 +61,7 @@
     </div>
 
     <div v-else-if="settings.length === 0" class="empty-state">
-      <t-icon name="info-circle" size="24px" />
+      <t-icon name="info-circle" size="var(--app-icon-xl)" />
       <span>{{ t('system.globalSettings.empty') }}</span>
     </div>
 

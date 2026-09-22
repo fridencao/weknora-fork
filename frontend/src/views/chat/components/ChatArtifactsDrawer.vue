@@ -58,7 +58,7 @@
                     @click="closePreview"
                 >
                     <template #icon>
-                        <t-icon name="chevron-left" size="18px" />
+                        <t-icon name="chevron-left" size="var(--app-icon-md)" />
                     </template>
                 </t-button>
                 <div class="artifact-drawer-header-icon">
@@ -75,7 +75,7 @@
                     @click="handleDownload(previewItem)"
                 >
                     <template #icon>
-                        <t-icon name="download" size="16px" />
+                        <t-icon name="download" size="var(--app-icon-md)" />
                     </template>
                 </t-button>
                 <div ref="previewActions" class="artifact-preview-actions" />
@@ -104,7 +104,7 @@
             <span>{{ $t('common.loading') }}</span>
         </div>
         <div v-else-if="!items.length" class="artifact-drawer-empty">
-            <t-icon name="folder-open" size="32px" />
+            <t-icon name="folder-open" size="var(--app-icon-xl)" />
             <span>{{ $t('agent.artifactDrawer.empty') }}</span>
         </div>
         <ul v-else class="artifact-list">
@@ -134,7 +134,7 @@
                     @click.stop="openPreview(item)"
                 >
                     <template #icon>
-                        <t-icon name="browse" size="16px" />
+                        <t-icon name="browse" size="var(--app-icon-md)" />
                     </template>
                 </t-button>
                 <t-button
@@ -147,7 +147,7 @@
                     @click.stop="handleDownload(item)"
                 >
                     <template #icon>
-                        <t-icon name="download" size="16px" />
+                        <t-icon name="download" size="var(--app-icon-md)" />
                     </template>
                 </t-button>
             </li>

@@ -45,7 +45,7 @@
               />
               <t-tooltip v-if="canManage" :content="$t('knowledgeBase.settings')" placement="top">
                 <button type="button" class="kb-settings-button" @click="handleOpenKBSettings">
-                  <t-icon name="setting" size="16px" />
+                  <t-icon name="setting" size="var(--app-icon-md)" />
                 </button>
               </t-tooltip>
               <!-- 导入结果：默认仅图标，hover / 点击展开详情 -->
@@ -54,7 +54,7 @@
                 <button type="button" class="faq-import-trigger"
                   :aria-label="$t('faqManager.import.recentResult')"
                   @click.stop="importResultExpanded = !importResultExpanded">
-                  <t-icon name="check-circle-filled" size="16px" />
+                  <t-icon name="check-circle-filled" size="var(--app-icon-md)" />
                 </button>
                 <div class="faq-import-panel">
                   <div class="faq-import-strip faq-import-strip--result faq-import-strip--panel">
@@ -72,7 +72,7 @@
                     <span class="faq-import-strip__time">{{ formatImportTime(importResult!.imported_at) }}</span>
                     <button type="button" class="faq-import-strip__close" :aria-label="$t('common.close')"
                       @click="closeImportResult">
-                      <t-icon name="close" size="14px" />
+                      <t-icon name="close" size="var(--app-icon-sm)" />
                     </button>
                   </div>
                 </div>
@@ -81,7 +81,7 @@
               <div v-else-if="isImportInProgress && importState.taskStatus"
                 class="faq-import-strip faq-import-strip--in-title"
                 :class="`faq-import-strip--${importState.taskStatus.status}`">
-                <t-icon :name="importProgressIcon" size="16px" class="faq-import-strip__icon"
+                <t-icon :name="importProgressIcon" size="var(--app-icon-md)" class="faq-import-strip__icon"
                   :class="{ 'is-spinning': importState.taskStatus.status === 'running' }" />
                 <span class="faq-import-strip__text">{{ importProgressText }}</span>
                 <div class="faq-import-strip__bar">
@@ -103,7 +103,7 @@
             <t-input v-model.trim="entrySearchKeyword" :placeholder="$t('knowledgeEditor.faq.searchPlaceholder')"
               clearable class="faq-search-input" @clear="loadEntries()" @enter="loadEntries()">
               <template #prefix-icon>
-                <t-icon name="search" size="16px" />
+                <t-icon name="search" size="var(--app-icon-md)" />
               </template>
             </t-input>
             <div class="faq-filter-bar__filters">
@@ -120,7 +120,7 @@
                   <t-dropdown :options="faqCreateOptions" trigger="click" placement="bottom-right"
                     @click="handleFaqAction">
                     <t-button variant="text" theme="default" class="content-bar-icon-btn" size="small">
-                      <template #icon><t-icon name="add" size="16px" /></template>
+                      <template #icon><t-icon name="add" size="var(--app-icon-md)" /></template>
                     </t-button>
                   </t-dropdown>
                 </t-tooltip>
@@ -131,7 +131,7 @@
                 <t-tooltip :content="$t('knowledgeEditor.faqExport.exportButton')" placement="top">
                   <t-button variant="text" theme="default" class="content-bar-icon-btn" size="small"
                     :loading="exportLoading">
-                    <template #icon><t-icon name="download" size="16px" /></template>
+                    <template #icon><t-icon name="download" size="var(--app-icon-md)" /></template>
                   </t-button>
                 </t-tooltip>
               </t-dropdown>
@@ -139,7 +139,7 @@
               <t-tooltip :content="$t('knowledgeEditor.faq.searchTest')" placement="top">
                 <t-button variant="text" theme="default" class="content-bar-icon-btn" size="small"
                   @click="handleFaqAction({ value: 'search' })">
-                  <template #icon><t-icon name="search" size="16px" /></template>
+                  <template #icon><t-icon name="search" size="var(--app-icon-md)" /></template>
                 </t-button>
               </t-tooltip>
             </div>
@@ -307,7 +307,7 @@
             <template v-else-if="!loading">
               <div class="faq-empty-state">
                 <div class="empty-content">
-                  <t-icon name="file-add" size="48px" class="empty-icon" />
+                  <t-icon name="file-add" size="var(--app-icon-xl)" class="empty-icon" />
                   <div class="empty-text">{{ $t('knowledgeEditor.faq.emptyTitle') }}</div>
                   <div class="empty-desc">{{ $t('knowledgeEditor.faq.emptyDesc') }}</div>
                 </div>
@@ -366,7 +366,7 @@
                   <t-button theme="primary" variant="outline"
                     :disabled="!similarInput.trim() || editorForm.similar_questions.length >= 10" @click="addSimilar"
                     class="add-item-btn" size="small">
-                    <t-icon name="add" size="16px" />
+                    <t-icon name="add" size="var(--app-icon-md)" />
                   </t-button>
                 </div>
                 <div v-if="editorForm.similar_questions.length > 0" class="item-list">
@@ -374,7 +374,7 @@
                     <div class="item-content">{{ question }}</div>
                     <t-button theme="default" variant="text" size="small" @click="removeSimilar(index)"
                       class="remove-item-btn">
-                      <t-icon name="close" size="16px" />
+                      <t-icon name="close" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>
@@ -394,7 +394,7 @@
                   <t-button theme="primary" variant="outline"
                     :disabled="!negativeInput.trim() || editorForm.negative_questions.length >= 10" @click="addNegative"
                     class="add-item-btn" size="small">
-                    <t-icon name="add" size="16px" />
+                    <t-icon name="add" size="var(--app-icon-md)" />
                   </t-button>
                 </div>
                 <div v-if="editorForm.negative_questions.length > 0" class="item-list">
@@ -403,7 +403,7 @@
                     <div class="item-content">{{ question }}</div>
                     <t-button theme="default" variant="text" size="small" @click="removeNegative(index)"
                       class="remove-item-btn">
-                      <t-icon name="close" size="16px" />
+                      <t-icon name="close" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>
@@ -428,7 +428,7 @@
                     <t-button theme="primary" variant="outline"
                       :disabled="!answerInput.trim() || editorForm.answers.length >= 5" @click="addAnswer"
                       class="add-item-btn" size="small">
-                      <t-icon name="add" size="16px" />
+                      <t-icon name="add" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                   <div class="item-count">{{ editorForm.answers.length }}/5</div>
@@ -438,7 +438,7 @@
                     <div class="item-content">{{ answer }}</div>
                     <t-button theme="default" variant="text" size="small" @click="removeAnswer(index)"
                       class="remove-item-btn">
-                      <t-icon name="close" size="16px" />
+                      <t-icon name="close" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>
@@ -505,7 +505,7 @@
                     <t-dropdown :options="downloadExampleOptions" placement="bottom-right" trigger="click"
                       @click="handleDownloadExample" class="download-example-dropdown">
                       <t-button theme="default" variant="outline" size="small" class="download-example-btn">
-                        <t-icon name="download" size="16px" />
+                        <t-icon name="download" size="var(--app-icon-md)" />
                         <span>{{ $t('knowledgeEditor.faqImport.downloadExample') }}</span>
                       </t-button>
                     </t-dropdown>
@@ -517,7 +517,7 @@
                       @click="fileInputRef?.click()" @dragover.prevent @dragenter.prevent
                       @drop.prevent="handleFileDrop">
                       <div class="file-upload-content">
-                        <t-icon name="upload" size="32px" class="upload-icon" />
+                        <t-icon name="upload" size="var(--app-icon-xl)" class="upload-icon" />
                         <div class="upload-text">
                           <span v-if="!importState.file" class="upload-primary-text">
                             {{ $t('knowledgeEditor.faqImport.clickToUpload') }}
@@ -538,7 +538,7 @@
                 <!-- 预览区域 -->
                 <div v-if="importState.preview.length" class="import-preview">
                   <div class="preview-header">
-                    <t-icon name="file-view" size="16px" class="preview-icon" />
+                    <t-icon name="file-view" size="var(--app-icon-md)" class="preview-icon" />
                     <span class="preview-title">
                       {{ $t('knowledgeEditor.faqImport.previewCount', { count: importState.preview.length }) }}
                     </span>
@@ -594,7 +594,7 @@
 
               <div class="batch-tag-content">
                 <div class="batch-tag-tip">
-                  <t-icon name="info-circle" size="16px" class="tip-icon" />
+                  <t-icon name="info-circle" size="var(--app-icon-md)" class="tip-icon" />
                   <span>{{ $t('knowledgeEditor.faq.batchUpdateTagTip', { count: selectedRowKeys.length }) }}</span>
                 </div>
                 <t-form layout="vertical" class="batch-tag-form">

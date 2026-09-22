@@ -20,7 +20,7 @@
             :aria-label="t('common.close')"
             @click="close"
           >
-            <t-icon name="close" size="16px" />
+            <t-icon name="close" size="var(--app-icon-md)" />
           </button>
         </header>
 
@@ -90,7 +90,7 @@
                           :aria-label="t('chat.navigateToDocument')"
                           @click.stop
                         >
-                          <t-icon name="jump" size="14px" />
+                          <t-icon name="jump" size="var(--app-icon-sm)" />
                         </a>
                       </div>
                       <p v-if="item.snippet && !expandedKeys.has(item.key)" class="reference-item__snippet">

@@ -18,7 +18,7 @@
             <div class="channel-card__badge" :class="`channel-card__badge--${channel.platform}`">
               <img v-if="platformLogo(channel.platform)" :src="platformLogo(channel.platform)"
                 :alt="platformLabel(channel.platform)" class="channel-card__logo" />
-              <t-icon v-else name="chat-message" size="22px" />
+              <t-icon v-else name="chat-message" size="var(--app-icon-lg)" />
             </div>
             <div class="channel-card__body">
               <div class="channel-card__header">

@@ -46,19 +46,19 @@ const actionLoading = computed(() => (
         <div class="faq-batch-bar__actions">
           <t-button v-if="canEdit" theme="default" variant="outline" size="small"
             :disabled="actionLoading" :loading="tagLoading" @click="emit('batchTag')">
-            <template #icon><t-icon name="discount" size="14px" /></template>
+            <template #icon><t-icon name="discount" size="var(--app-icon-sm)" /></template>
             {{ t('knowledgeEditor.faq.batchUpdateTag') }}
           </t-button>
 
           <t-button v-if="canEdit && disabledCount > 0" theme="default" variant="outline" size="small"
             :disabled="actionLoading" :loading="statusAction === 'enable'" @click="emit('enable')">
-            <template #icon><t-icon name="check-circle" size="14px" /></template>
+            <template #icon><t-icon name="check-circle" size="var(--app-icon-sm)" /></template>
             {{ t('knowledgeEditor.faq.batchEnable') }}
           </t-button>
 
           <t-button v-if="canEdit && enabledCount > 0" theme="default" variant="outline" size="small"
             :disabled="actionLoading" :loading="statusAction === 'disable'" @click="emit('disable')">
-            <template #icon><t-icon name="minus-circle" size="14px" /></template>
+            <template #icon><t-icon name="minus-circle" size="var(--app-icon-sm)" /></template>
             {{ t('knowledgeEditor.faq.batchDisable') }}
           </t-button>
 
@@ -68,7 +68,7 @@ const actionLoading = computed(() => (
             :cancel-btn="{ content: t('common.cancel') }" placement="top" @confirm="emit('delete')">
             <t-button theme="danger" variant="outline" size="small" :disabled="actionLoading"
               :loading="deleteLoading" @click.stop>
-              <template #icon><t-icon name="delete" size="14px" /></template>
+              <template #icon><t-icon name="delete" size="var(--app-icon-sm)" /></template>
               {{ t('knowledgeEditor.faq.batchDelete') }}
             </t-button>
           </t-popconfirm>

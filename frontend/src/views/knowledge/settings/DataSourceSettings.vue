@@ -304,7 +304,7 @@ onBeforeUnmount(stopPolling)
               </template>
             </p>
             <div v-if="ds.error_message" class="ds-card__error">
-              <t-icon name="error-circle-filled" size="14px" />
+              <t-icon name="error-circle-filled" size="var(--app-icon-sm)" />
               <span>{{ ds.error_message }}</span>
             </div>
           </div>

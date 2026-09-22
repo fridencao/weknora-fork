@@ -153,7 +153,7 @@
                         <div class="input-container" :class="{ 'is-embedded': embeddedMode }">
                             <transition name="scroll-btn-fade">
                                 <div v-show="userHasScrolledUp" class="scroll-to-bottom-btn" @click="onClickScrollToBottom">
-                                    <t-icon name="chevron-down" size="18px" />
+                                    <t-icon name="chevron-down" size="var(--app-icon-md)" />
                                 </div>
                             </transition>
                             <InputField ref="inputFieldRef" :auto-focus="focusComposerOnMount" :compact="!embeddedMode"

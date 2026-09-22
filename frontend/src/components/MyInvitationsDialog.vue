@@ -39,18 +39,18 @@
           </div>
           <div class="invitation-card-meta">
             <span class="meta-row">
-              <t-icon name="user" size="14px" class="meta-icon" />
+              <t-icon name="user" size="var(--app-icon-sm)" class="meta-icon" />
               <span class="meta-label">{{ $t('tenantInvitation.myInbox.from') }}：</span>
               <span class="meta-value">{{ inviterDisplay(row) }}</span>
             </span>
             <span class="meta-row">
-              <t-icon name="time" size="14px" class="meta-icon" />
+              <t-icon name="time" size="var(--app-icon-sm)" class="meta-icon" />
               <span class="meta-value">
                 {{ $t('tenantInvitation.myInbox.expiresIn', { date: formatDate(row.expires_at) }) }}
               </span>
             </span>
             <span v-if="row.message" class="meta-row meta-row--message">
-              <t-icon name="chat" size="14px" class="meta-icon" />
+              <t-icon name="chat" size="var(--app-icon-sm)" class="meta-icon" />
               <span class="meta-label">{{ $t('tenantInvitation.myInbox.messageLabel') }}：</span>
               <span class="meta-value">{{ row.message }}</span>
             </span>

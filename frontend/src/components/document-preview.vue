@@ -523,7 +523,7 @@ onUnmounted(() => {
 
     <!-- Error -->
     <div v-else-if="error" class="preview-error">
-      <t-icon name="error-circle" size="48px" />
+      <t-icon name="error-circle" size="var(--app-icon-xl)" />
       <p>{{ error }}</p>
       <t-button theme="primary" size="small" @click="loadedForId = ''; loadPreview()">
         {{ $t('preview.retry') }}
@@ -532,7 +532,7 @@ onUnmounted(() => {
 
     <!-- Unsupported -->
     <div v-else-if="previewType === 'unsupported'" class="preview-unsupported">
-      <t-icon name="file-unknown" size="48px" />
+      <t-icon name="file-unknown" size="var(--app-icon-xl)" />
       <p>{{ $t('preview.unsupported') }}</p>
       <p class="unsupported-hint">{{ $t('preview.unsupportedHint') }}</p>
     </div>
@@ -601,7 +601,7 @@ onUnmounted(() => {
     <!-- Audio -->
     <div v-else-if="previewType === 'audio' && blobUrl" class="preview-audio">
       <div class="audio-wrapper">
-        <t-icon name="sound" size="48px" />
+        <t-icon name="sound" size="var(--app-icon-xl)" />
         <p class="audio-filename">{{ fileName }}</p>
         <audio ref="previewContent" controls :src="blobUrl" class="audio-element">
           {{ $t('preview.audioNotSupported') }}

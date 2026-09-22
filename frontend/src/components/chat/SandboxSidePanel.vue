@@ -24,7 +24,7 @@
             :aria-selected="panel?.activeTab.value === tab.id"
             @click="panel?.open(tab.id)"
           >
-            <t-icon :name="tab.icon" size="16px" />
+            <t-icon :name="tab.icon" size="var(--app-icon-md)" />
             <span>{{ tab.label }}</span>
             <span
               v-if="tab.id === 'artifacts' && artifacts.length"
@@ -39,7 +39,7 @@
           :aria-label="t('common.close')"
           @click="panel?.close()"
         >
-          <t-icon name="close" size="16px" />
+          <t-icon name="close" size="var(--app-icon-md)" />
         </button>
       </div>
 

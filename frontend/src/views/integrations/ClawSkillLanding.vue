@@ -67,7 +67,7 @@
                       :title="$t('integrations.claw.copy')"
                       @click="copyEnvExample"
                     >
-                      <t-icon name="file-copy" size="16px" />
+                      <t-icon name="file-copy" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>
@@ -82,7 +82,7 @@
                       :title="$t('integrations.claw.copy')"
                       @click="copyInstallCommand"
                     >
-                      <t-icon name="file-copy" size="16px" />
+                      <t-icon name="file-copy" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>

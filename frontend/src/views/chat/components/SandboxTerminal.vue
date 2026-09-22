@@ -3,14 +3,14 @@
         @mousedown="focusTerminal">
         <div v-if="status !== 'ready'" class="sandbox-terminal__overlay">
             <div class="sandbox-terminal__overlay-card">
-                <t-icon v-if="status === 'connecting'" name="loading" size="24px"
+                <t-icon v-if="status === 'connecting'" name="loading" size="var(--app-icon-xl)"
                     class="sandbox-terminal__spinner" />
                 <t-icon
                     v-else-if="status === 'paused' || status === 'needs_provision' || status === 'no_sandbox'"
-                    name="terminal" size="28px" />
-                <t-icon v-else-if="status === 'unsupported'" name="error-circle" size="28px" />
-                <t-icon v-else-if="status === 'idle'" name="time" size="28px" />
-                <t-icon v-else name="cloud" size="28px" />
+                    name="terminal" size="var(--app-icon-xl)" />
+                <t-icon v-else-if="status === 'unsupported'" name="error-circle" size="var(--app-icon-xl)" />
+                <t-icon v-else-if="status === 'idle'" name="time" size="var(--app-icon-xl)" />
+                <t-icon v-else name="cloud" size="var(--app-icon-xl)" />
                 <p class="sandbox-terminal__overlay-text">{{ statusText }}</p>
                 <t-button v-if="actionLabel" size="small"
                     :theme="status === 'needs_provision' ? 'primary' : 'default'" variant="outline"

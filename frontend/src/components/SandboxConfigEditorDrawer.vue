@@ -533,7 +533,7 @@
                   : $t('settings.sandbox.expandRule')"
                 @click="rule.expanded = !rule.expanded"
               >
-                <t-icon :name="rule.expanded ? 'chevron-down' : 'chevron-right'" size="14px" />
+                <t-icon :name="rule.expanded ? 'chevron-down' : 'chevron-right'" size="var(--app-icon-sm)" />
                 <span class="net-rule__name" :class="{ 'is-empty': !rule.name.trim() }">
                   {{ rule.name.trim() || $t('settings.sandbox.ruleUntitled') }}
                 </span>
@@ -543,17 +543,17 @@
                   :disabled="index === 0"
                   :aria-label="$t('settings.sandbox.moveRuleUp')"
                   @click="moveCubeRule(index, -1)">
-                  <t-icon name="chevron-up" size="14px" />
+                  <t-icon name="chevron-up" size="var(--app-icon-sm)" />
                 </button>
                 <button type="button" class="net-rule__move"
                   :disabled="index === cubeRules.length - 1"
                   :aria-label="$t('settings.sandbox.moveRuleDown')"
                   @click="moveCubeRule(index, 1)">
-                  <t-icon name="chevron-down" size="14px" />
+                  <t-icon name="chevron-down" size="var(--app-icon-sm)" />
                 </button>
                 <button type="button" class="net-rule__remove"
                   :aria-label="$t('common.delete')" @click="cubeRules.splice(index, 1)">
-                  <t-icon name="close" size="14px" />
+                  <t-icon name="close" size="var(--app-icon-sm)" />
                 </button>
               </div>
             </div>
@@ -646,14 +646,14 @@
                   : $t('settings.sandbox.expandRule')"
                 @click="rule.expanded = !rule.expanded"
               >
-                <t-icon :name="rule.expanded ? 'chevron-down' : 'chevron-right'" size="14px" />
+                <t-icon :name="rule.expanded ? 'chevron-down' : 'chevron-right'" size="var(--app-icon-sm)" />
                 <span class="net-rule__name" :class="{ 'is-empty': !rule.host.trim() }">
                   {{ rule.host.trim() || $t('settings.sandbox.ruleUntitled') }}
                 </span>
               </button>
               <button type="button" class="net-rule__remove"
                 :aria-label="$t('common.delete')" @click="e2bHostRules.splice(index, 1)">
-                <t-icon name="close" size="14px" />
+                <t-icon name="close" size="var(--app-icon-sm)" />
               </button>
             </div>
             <div v-if="rule.expanded" class="net-rule__body">

@@ -2185,7 +2185,7 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                 :supported-file-types="[...supportedFileTypes]" />
               <t-tooltip v-if="canManage" :content="$t('knowledgeBase.settings')" placement="top">
                 <button type="button" class="kb-settings-button" :aria-label="$t('knowledgeBase.settings')" :disabled="!kbId" @click="handleOpenKBSettings">
-                  <t-icon name="setting" size="16px" />
+                  <t-icon name="setting" size="var(--app-icon-md)" />
                 </button>
               </t-tooltip>
             </div>
@@ -2228,7 +2228,7 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     :aria-expanded="false" :title="$t('knowledgeBase.folderTree.expand')"
                     :aria-label="$t('knowledgeBase.folderTree.expand')"
                     @click="handleFolderTreeCollapsedChange(false)">
-                    <t-icon name="view-list" size="16px" />
+                    <t-icon name="view-list" size="var(--app-icon-md)" />
                   </button>
                   <button v-if="folderBreadcrumbs.length" type="button" class="doc-folder-path__crumb" :title="kbInfo?.name" @click="handleFolderSelect('')">
                     {{ kbInfo?.name }}
@@ -2249,14 +2249,14 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     :aria-label="$t('knowledgeBase.docSearchPlaceholder')" clearable class="doc-search-input" @clear="loadKnowledgeFiles(kbId)"
                     @enter="loadKnowledgeFiles(kbId)">
                     <template #prefix-icon>
-                      <t-icon name="search" size="16px" />
+                      <t-icon name="search" size="var(--app-icon-md)" />
                     </template>
                   </t-input>
                   <t-popup v-model:visible="filtersExpanded" trigger="click" placement="bottom-right"
                     overlay-class-name="document-filter-popup" :overlay-inner-style="{ padding: 0 }">
                     <button type="button" class="doc-filter-toggle" :class="{ active: filtersExpanded || activeFilterCount > 0 }"
                       :aria-expanded="filtersExpanded" aria-controls="document-filters">
-                      <t-icon name="filter" size="16px" />
+                      <t-icon name="filter" size="var(--app-icon-md)" />
                       {{ $t('knowledgeBase.filters') }}
                       <span v-if="activeFilterCount" class="doc-filter-count">{{ activeFilterCount }}</span>
                     </button>
@@ -2291,7 +2291,7 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                             <span>{{ $t('knowledgeBase.columnTag') }}<span v-if="selectedTagIds.length" class="doc-filter-tags__count">{{ selectedTagIds.length }}</span></span>
                           </div>
                           <t-input v-model.trim="tagSearchQuery" :placeholder="$t('knowledgeBase.tagSearchPlaceholder')" clearable>
-                            <template #prefix-icon><t-icon name="search" size="14px" /></template>
+                            <template #prefix-icon><t-icon name="search" size="var(--app-icon-sm)" /></template>
                           </t-input>
                           <div class="doc-filter-tags__list">
                             <t-loading v-if="tagLoading && !tagList.length" size="small" />
@@ -2311,20 +2311,20 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     type="button" class="doc-filter-toggle doc-batch-toggle" :class="{ active: batchMode }" :aria-pressed="batchMode"
                     :disabled="batchDeleting || batchReparsing || batchTagging || batchDownloading"
                     @click="toggleBatchMode">
-                    <t-icon :name="batchMode ? 'close' : 'check-rectangle'" size="16px" />
+                    <t-icon :name="batchMode ? 'close' : 'check-rectangle'" size="var(--app-icon-md)" />
                     {{ $t(batchMode ? 'common.cancel' : 'menu.batchManage') }}
                   </button>
                   <div class="doc-view-toggle" role="group" :aria-label="$t('knowledgeBase.viewModeToggle')">
                     <t-tooltip :content="$t('knowledgeBase.viewModeGrid')" placement="top">
                       <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'grid' }"
                         :aria-label="$t('knowledgeBase.viewModeGrid')" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'">
-                        <t-icon name="view-module" size="16px" />
+                        <t-icon name="view-module" size="var(--app-icon-md)" />
                       </button>
                     </t-tooltip>
                     <t-tooltip :content="$t('knowledgeBase.viewModeList')" placement="top">
                       <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'list' }"
                         :aria-label="$t('knowledgeBase.viewModeList')" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'">
-                        <t-icon name="view-list" size="16px" />
+                        <t-icon name="view-list" size="var(--app-icon-md)" />
                       </button>
                     </t-tooltip>
                   </div>

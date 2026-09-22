@@ -15,7 +15,7 @@
               <span v-if="userName && userName !== activeTenantName" class="user-tenant-meta-name">{{ userName }}</span>
               <span v-if="(userName && userName !== activeTenantName) && currentRoleLabel"
                 class="user-tenant-meta-sep">·</span>
-              <t-icon v-if="currentRoleIcon" :name="currentRoleIcon" size="12px" class="user-tenant-meta-icon" />
+              <t-icon v-if="currentRoleIcon" :name="currentRoleIcon" size="var(--app-icon-xs)" class="user-tenant-meta-icon" />
               <span v-if="currentRoleLabel" class="user-tenant-meta-role">{{ currentRoleLabel }}</span>
             </div>
           </template>
@@ -45,7 +45,7 @@
               <t-tooltip :content="$t('newUserGuide.reopen')" placement="top">
                 <button type="button" class="dropdown-guide-btn" :aria-label="$t('newUserGuide.reopen')"
                   @click.stop="reopenGuide">
-                  <t-icon name="help-circle" size="14px" />
+                  <t-icon name="help-circle" size="var(--app-icon-sm)" />
                 </button>
               </t-tooltip>
             </div>
@@ -64,7 +64,7 @@
               {{ activeTenantName || userName }}
             </span>
             <div v-if="currentRoleLabel" class="dropdown-tenant-panel-role">
-              <t-icon v-if="currentRoleIcon" :name="currentRoleIcon" size="12px"
+              <t-icon v-if="currentRoleIcon" :name="currentRoleIcon" size="var(--app-icon-xs)"
                 class="dropdown-tenant-panel-role-icon" />
               <span>{{ currentRoleLabel }}</span>
             </div>
@@ -140,7 +140,7 @@
                    也保持各行徽标列对齐。 -->
               <span v-if="isHomeTenant(m.tenant_id)" class="tenant-submenu-item-home-dot"
                 :title="$t('tenant.switcher.homeTooltip')">
-                <t-icon name="home" size="9px" />
+                <t-icon name="home" size="var(--app-icon-xs)" />
               </span>
             </div>
             <!-- 两行布局：第一行是 tenant 名（拿满剩余宽度，避免被徽标截断
@@ -152,7 +152,7 @@
               <span class="tenant-submenu-item-name">{{ tenantDisplayName(m) }}</span>
               <div class="tenant-submenu-item-meta">
                 <span class="tenant-submenu-item-role">
-                  <t-icon v-if="roleIcon(m.role)" :name="roleIcon(m.role)" size="12px"
+                  <t-icon v-if="roleIcon(m.role)" :name="roleIcon(m.role)" size="var(--app-icon-xs)"
                     class="tenant-submenu-item-role-icon" />
                   {{ formatRole(m.role) }}
                 </span>

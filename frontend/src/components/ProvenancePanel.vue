@@ -14,7 +14,7 @@
     @close="close"
   >
     <div v-if="!model" class="provenance-panel__empty">
-      <t-icon name="info-circle" size="28px" />
+      <t-icon name="info-circle" size="var(--app-icon-xl)" />
       <p>{{ t('chat.provenance.empty') }}</p>
     </div>
 
@@ -38,7 +38,7 @@
             <dd>
               <span v-if="model.reliability !== null" class="provenance-panel__stars" role="img"
                 :aria-label="t('chat.provenance.reliabilityAria', { level: model.reliability })">
-                <t-icon v-for="i in 5" :key="i" name="star-filled" size="14px"
+                <t-icon v-for="i in 5" :key="i" name="star-filled" size="var(--app-icon-sm)"
                   :class="{ 'is-dim': i > (model?.reliability ?? 0) }" />
               </span>
               <span v-else class="provenance-panel__missing">{{ t('chat.provenance.unregistered') }}</span>
@@ -76,7 +76,7 @@
           @click.stop
         >
           {{ t('chat.provenance.openDocument') }}
-          <t-icon name="jump" size="14px" />
+          <t-icon name="jump" size="var(--app-icon-sm)" />
         </a>
       </section>
 

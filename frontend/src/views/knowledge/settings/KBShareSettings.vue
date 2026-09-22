@@ -8,7 +8,7 @@
             :overlay-inner-style="shareHintPopupInnerStyle">
             <button type="button" class="share-hint-trigger-btn" :aria-label="$t('knowledgeEditor.share.hintTitle')"
               :title="$t('knowledgeEditor.share.hintTitle')">
-              <t-icon name="info-circle" size="16px" />
+              <t-icon name="info-circle" size="var(--app-icon-md)" />
             </button>
             <template #content>
               <div class="share-hint-popover">

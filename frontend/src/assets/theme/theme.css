@@ -285,6 +285,10 @@ html[theme-mode="dark"] .starkb-logo-light { display: none; }
 html[theme-mode="dark"] .starkb-logo-dark { display: inline; }
 
 /* ============================================================
+ * 图标尺寸 token（2026-09-23）：xs/sm/md/lg/xl = 12/14/16/20/24px，
+ * 功能图标禁止 size="Npx" 硬编码（styleGuard 棘轮看管）。
+ * ============================================================ */
+/* ============================================================
  * 字号阶梯（2026-09-22 UI 优化：整体缩放 zoom → token 重映射）
  * 三档 = 对 data-font-size 重映射全部字号 token，不再用 <html> zoom。
  * 正常档 = 对数压缩阶梯 target = 12 + log2(source − 12)（12→12、14→13、
@@ -295,6 +299,11 @@ html[theme-mode="dark"] .starkb-logo-dark { display: inline; }
  * 基线锁：styleGuard.test.mjs「font-size ladder anchors」。
  * ============================================================ */
 :root:root:root {
+  --app-icon-xs: 12px;
+  --app-icon-sm: 14px;
+  --app-icon-md: 16px;
+  --app-icon-lg: 20px;
+  --app-icon-xl: 24px;
   --app-text-2xs: 10px;
   --app-text-xs: 11px;
   --app-text-sm: 12px;

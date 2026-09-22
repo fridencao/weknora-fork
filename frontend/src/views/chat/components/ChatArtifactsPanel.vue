@@ -11,7 +11,7 @@
         @click="closePreview"
       >
         <template #icon>
-          <t-icon name="chevron-left" size="18px" />
+          <t-icon name="chevron-left" size="var(--app-icon-md)" />
         </template>
       </t-button>
       <ArtifactFileIcon class="artifact-panel-header-icon" :file-name="previewItem.file_name" />
@@ -27,7 +27,7 @@
         @click="handleDownload(previewItem)"
       >
         <template #icon>
-          <t-icon name="download" size="16px" />
+          <t-icon name="download" size="var(--app-icon-md)" />
         </template>
       </t-button>
       <t-button
@@ -41,7 +41,7 @@
         @click="handleDelete(previewItem)"
       >
         <template #icon>
-          <t-icon name="delete" size="16px" />
+          <t-icon name="delete" size="var(--app-icon-md)" />
         </template>
       </t-button>
       <div ref="previewActions" class="artifact-preview-actions" />
@@ -65,7 +65,7 @@
       <span>{{ $t('agent.artifactDrawer.collecting') }}</span>
     </div>
     <div v-else-if="!items.length" class="artifact-panel-empty">
-      <t-icon name="folder-open" size="32px" />
+      <t-icon name="folder-open" size="var(--app-icon-xl)" />
       <span>{{ $t('chat.sandbox.artifactsEmpty') }}</span>
     </div>
     <template v-else>
@@ -92,7 +92,7 @@
           :aria-label="$t('chat.sandbox.artifactsSearch')"
           clearable
         >
-          <template #prefix-icon><t-icon name="search" size="16px" /></template>
+          <template #prefix-icon><t-icon name="search" size="var(--app-icon-md)" /></template>
         </t-input>
       </div>
       <div v-if="collecting" class="artifact-panel-banner">
@@ -100,7 +100,7 @@
         <span>{{ $t('agent.artifactDrawer.collecting') }}</span>
       </div>
       <div v-if="!visibleItems.length" class="artifact-panel-empty">
-        <t-icon name="search" size="24px" />
+        <t-icon name="search" size="var(--app-icon-xl)" />
         <span>{{ $t('chat.sandbox.artifactsNoMatches') }}</span>
       </div>
       <ul v-show="visibleItems.length" ref="listRef" class="artifact-list">
@@ -134,7 +134,7 @@
             @click.stop="handleDownload(item)"
           >
             <template #icon>
-              <t-icon name="download" size="16px" />
+              <t-icon name="download" size="var(--app-icon-md)" />
             </template>
           </t-button>
           <t-button
@@ -148,7 +148,7 @@
             @click.stop="handleDelete(item)"
           >
             <template #icon>
-              <t-icon name="delete" size="16px" />
+              <t-icon name="delete" size="var(--app-icon-md)" />
             </template>
           </t-button>
         </li>

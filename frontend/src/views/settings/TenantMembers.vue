@@ -13,7 +13,7 @@
             :overlay-inner-style="permissionsPopupInnerStyle">
             <button type="button" class="permissions-trigger-btn" :aria-label="$t('tenantMember.permissions.title')"
               :title="$t('tenantMember.permissions.iconHint')">
-              <t-icon name="info-circle" size="16px" />
+              <t-icon name="info-circle" size="var(--app-icon-md)" />
             </button>
             <template #content>
               <div class="permissions-compact permissions-compact--popover">
@@ -25,13 +25,13 @@
                   <div v-for="r in roleMatrixOrder" :key="r"
                     :class="['perm-role-block', r, { 'is-me': currentRole === r }]">
                     <div class="perm-role-tag">
-                      <t-icon :name="roleMatrixIcon(r)" size="12px" />
+                      <t-icon :name="roleMatrixIcon(r)" size="var(--app-icon-xs)" />
                       <span>{{ $t('tenantMember.role.' + r) }}</span>
                       <span v-if="currentRole === r" class="me-badge">{{ $t('common.me') }}</span>
                     </div>
                     <div class="perm-items">
                       <span v-for="(perm, i) in roleMatrix[r]" :key="i" :class="['perm-item', perm.has ? 'has' : 'no']">
-                        <t-icon :name="perm.has ? 'check' : 'close'" size="12px" />
+                        <t-icon :name="perm.has ? 'check' : 'close'" size="var(--app-icon-xs)" />
                         {{ $t('tenantMember.permissions.' + perm.key) }}
                       </span>
                     </div>
@@ -101,7 +101,7 @@
                 <div class="member-cell">
                   <template v-if="row.is_share_link">
                     <span class="member-name share-link-title">
-                      <t-icon name="link" size="14px" />
+                      <t-icon name="link" size="var(--app-icon-sm)" />
                       {{ $t('tenantInvitation.shareLink.cellTitle') }}
                     </span>
                     <span class="member-email">

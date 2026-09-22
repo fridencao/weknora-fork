@@ -16,7 +16,7 @@
           <button v-for="ch in channels" :key="ch.id" type="button" class="channel-card channel-card--clickable"
             @click="openDrawer(ch)">
             <div class="channel-card__badge">
-              <t-icon name="code" size="22px" />
+              <t-icon name="code" size="var(--app-icon-lg)" />
             </div>
             <div class="channel-card__body">
               <div class="channel-card__header">

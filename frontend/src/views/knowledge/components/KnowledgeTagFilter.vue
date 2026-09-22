@@ -67,7 +67,7 @@ const manage = () => {
           <t-input v-model.trim="search" size="small"
             :placeholder="$t('knowledgeBase.tagSearchPlaceholder')" clearable>
             <template #prefix-icon>
-              <t-icon name="search" size="14px" />
+              <t-icon name="search" size="var(--app-icon-sm)" />
             </template>
           </t-input>
         </div>
@@ -121,7 +121,7 @@ const manage = () => {
         @mouseenter="hovered = true"
         @mouseleave="hovered = false">
         <span class="doc-tag-filter-trigger__prefix" aria-hidden="true">
-          <t-icon name="discount" size="16px" />
+          <t-icon name="discount" size="var(--app-icon-md)" />
         </span>
         <span class="doc-tag-filter-trigger__label">{{ label }}</span>
         <span class="doc-tag-filter-trigger__suffix">
@@ -137,7 +137,7 @@ const manage = () => {
           <t-icon
             v-else
             name="chevron-down"
-            size="16px"
+            size="var(--app-icon-md)"
             class="doc-tag-filter-trigger__caret"
             :class="{ open: visible }"
           />

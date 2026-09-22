@@ -2,7 +2,7 @@
   <main class="workspace-onboarding">
     <section class="workspace-card">
       <div class="workspace-mark" aria-hidden="true">
-        <t-icon name="system-sum" size="30px" />
+        <t-icon name="system-sum" size="var(--app-icon-xl)" />
       </div>
       <h1 v-if="authStore.canCreateTenant">{{ $t('auth.workspaceOnboarding.title') }}</h1>
       <h1 v-else>{{ $t('auth.workspaceOnboarding.inviteOnlyTitle') }}</h1>
@@ -18,7 +18,7 @@
         <span>{{ $t('auth.workspaceOnboarding.loadingPolicy') }}</span>
       </div>
       <div v-else-if="policyLoadFailed" class="policy-error" role="alert">
-        <t-icon name="error-circle" size="20px" aria-hidden="true" />
+        <t-icon name="error-circle" size="var(--app-icon-lg)" aria-hidden="true" />
         <span>{{ $t('auth.workspaceOnboarding.policyLoadFailed') }}</span>
         <t-button size="small" variant="text" @click="loadPolicy">
           {{ $t('auth.workspaceOnboarding.retry') }}
@@ -27,7 +27,7 @@
 
       <template v-else>
         <div v-if="!authStore.canCreateTenant" class="invite-only-notice">
-          <t-icon name="lock-on" size="20px" aria-hidden="true" />
+          <t-icon name="lock-on" size="var(--app-icon-lg)" aria-hidden="true" />
           <span>{{ $t('auth.workspaceOnboarding.inviteOnlyNotice') }}</span>
         </div>
 

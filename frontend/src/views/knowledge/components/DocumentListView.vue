@@ -302,7 +302,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
                   :disabled="!canEdit" :title="item.tags.slice(5).map(tag => tag.name).join(', ')">+{{ item.tags.length - 5 }}</button>
               </div>
               <button v-else-if="canEdit" type="button" class="row-tag-add">
-                <t-icon name="add" size="12px" />
+                <t-icon name="add" size="var(--app-icon-xs)" />
                 {{ t('knowledgeBase.tagAddAction') }}
               </button>
             </div>
@@ -328,7 +328,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
             :on-visible-change="(v: boolean) => onMoreVisible(item.id, v)">
             <button class="row-more-btn" :class="{ active: moreOpen === item.id }" type="button"
               :aria-label="`${item.file_name} · ${t('knowledgeBase.columnActions')}`" :aria-expanded="moreOpen === item.id">
-              <t-icon name="more" size="16px" />
+              <t-icon name="more" size="var(--app-icon-md)" />
             </button>
             <template #content>
               <!-- Move: folder picker (must win over the normal menu while open) -->
@@ -368,7 +368,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
               <!-- Move: target KB list -->
               <div v-else-if="moveMenuMode === 'targets'" class="card-menu move-menu">
                 <div class="move-menu-header" @click.stop="emit('move-back')">
-                  <t-icon name="chevron-left" size="16px" />
+                  <t-icon name="chevron-left" size="var(--app-icon-md)" />
                   <span>{{ $t('knowledgeBase.moveToKnowledgeBase') }}</span>
                 </div>
                 <div v-if="moveTargetsLoading" class="move-menu-loading">
@@ -390,12 +390,12 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
               <!-- Move: confirm with mode selection -->
               <div v-else-if="moveMenuMode === 'confirm'" class="card-menu move-menu">
                 <div class="move-menu-header" @click.stop="emit('move-back')">
-                  <t-icon name="chevron-left" size="16px" />
+                  <t-icon name="chevron-left" size="var(--app-icon-md)" />
                   <span>{{ $t('knowledgeBase.moveConfirmTitle') }}</span>
                 </div>
                 <div class="move-confirm-body">
                   <div class="move-target-info">
-                    <t-icon name="arrow-right" size="14px" />
+                    <t-icon name="arrow-right" size="var(--app-icon-sm)" />
                     <span>{{ moveSelectedTargetName }}</span>
                   </div>
                   <div class="move-mode-item" :class="{ active: moveMode === 'reuse_vectors' }"

@@ -40,7 +40,7 @@
                   <span class="tenant-item-id">ID: {{ tenant.id }}</span>
                 </div>
               </div>
-              <t-icon v-if="isSelected(tenant.id)" name="check" size="16px" class="check-icon" />
+              <t-icon v-if="isSelected(tenant.id)" name="check" size="var(--app-icon-md)" class="check-icon" />
             </div>
           </template>
 

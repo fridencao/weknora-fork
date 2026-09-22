@@ -29,7 +29,7 @@
           :overlay-inner-style="{ maxWidth: '360px', whiteSpace: 'normal' }"
         >
           <button type="button" class="snapshot-meta__help" :aria-label="t('mcpMetadata.noServerDocumentation')">
-            <t-icon name="help-circle" size="16px" />
+            <t-icon name="help-circle" size="var(--app-icon-md)" />
           </button>
         </t-tooltip>
         <t-popup
@@ -49,7 +49,7 @@
             :aria-label="t('mcpMetadata.serverDocumentation')"
           >
             <span>{{ t('mcpMetadata.serverDocumentation') }}</span>
-            <t-icon name="chevron-down" size="14px" />
+            <t-icon name="chevron-down" size="var(--app-icon-sm)" />
           </button>
           <template #content>
             <div class="server-docs-popup" @click.stop>

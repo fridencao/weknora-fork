@@ -208,7 +208,7 @@
             <p v-if="vendorDocLink" class="form-desc provider-doc-link">
               <a :href="vendorDocLink" target="_blank" rel="noopener noreferrer">
                 {{ $t('model.editor.providerDocs', { provider: selectedProviderDisplayLabel }) }}
-                <t-icon name="jump" size="12px" />
+                <t-icon name="jump" size="var(--app-icon-xs)" />
               </a>
             </p>
           </div>

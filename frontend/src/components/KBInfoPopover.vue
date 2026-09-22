@@ -158,7 +158,7 @@
       class="kb-info-button"
       :class="{ 'has-warning': kbInfo?.vector_store_status === 'unavailable' }"
     >
-      <t-icon name="info-circle" size="16px" />
+      <t-icon name="info-circle" size="var(--app-icon-md)" />
     </button>
   </t-popup>
   </t-tooltip>

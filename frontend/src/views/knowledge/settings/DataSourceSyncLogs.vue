@@ -200,7 +200,7 @@ const groupedLogs = computed(() => {
     <div v-if="loading" style="text-align:center;padding:60px"><t-loading /></div>
 
     <div v-else-if="logs.length === 0" class="logs-empty">
-      <t-icon name="root-list" size="40px" />
+      <t-icon name="root-list" size="var(--app-icon-xl)" />
       <p>{{ t('datasource.noLogs') }}</p>
     </div>
 
@@ -239,7 +239,7 @@ const groupedLogs = computed(() => {
             <!-- Dot -->
             <div class="tl-dot-col">
               <span class="tl-dot" :style="{ background: statusColor(log.status) }">
-                <t-icon v-if="log.status === 'running'" name="loading" size="10px" class="tl-spin" />
+                <t-icon v-if="log.status === 'running'" name="loading" size="var(--app-icon-xs)" class="tl-spin" />
               </span>
               <span class="tl-line"></span>
             </div>

@@ -15,7 +15,7 @@
 
         <div ref="cardRef" class="guide__card" :class="{ 'guide__card--center': !hole }" :style="cardStyle">
           <button type="button" class="guide__close" :aria-label="t(`${labelsPrefix}.skip`)" @click="dismiss">
-            <t-icon name="close" size="18px" />
+            <t-icon name="close" size="var(--app-icon-md)" />
           </button>
 
           <div class="guide__progress">

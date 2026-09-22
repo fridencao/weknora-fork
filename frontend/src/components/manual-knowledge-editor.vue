@@ -1023,7 +1023,7 @@ onBeforeUnmount(() => {
                       @mousedown.prevent
                       @click="handleToolbarAction(btn.action)"
                     >
-                      <t-icon :name="btn.icon" size="18px" />
+                      <t-icon :name="btn.icon" size="var(--app-icon-md)" />
                     </button>
                   </t-tooltip>
                 </template>

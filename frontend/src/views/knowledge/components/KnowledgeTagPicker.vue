@@ -1,7 +1,7 @@
 <template>
   <div class="knowledge-tag-picker">
     <t-input v-model="query" :disabled="busy" :placeholder="$t('knowledgeBase.tagPickerSearch')" :maxlength="40" clearable>
-      <template #prefix-icon><t-icon name="search" size="16px" /></template>
+      <template #prefix-icon><t-icon name="search" size="var(--app-icon-md)" /></template>
     </t-input>
     <div class="tag-picker-list" :aria-label="$t('knowledgeBase.columnTag')">
       <t-loading v-if="loading && !tags.length" size="small" />
@@ -15,15 +15,15 @@
             <t-input v-model="editingName" autofocus :maxlength="40" size="small" :disabled="busy"
               :aria-label="$t('knowledgeBase.tagEditAction')" @enter="saveName(tag)"
               @keydown="(_v: string, ctx: { e: KeyboardEvent }) => { if (ctx.e.key === 'Escape') cancelEdit() }" />
-            <t-button variant="text" shape="square" size="small" :loading="busy" :aria-label="$t('common.save')" @click="saveName(tag)"><t-icon name="check" size="14px" /></t-button>
-            <t-button theme="default" variant="text" shape="square" size="small" :disabled="busy" :aria-label="$t('common.cancel')" @click="cancelEdit"><t-icon name="close" size="14px" /></t-button>
+            <t-button variant="text" shape="square" size="small" :loading="busy" :aria-label="$t('common.save')" @click="saveName(tag)"><t-icon name="check" size="var(--app-icon-sm)" /></t-button>
+            <t-button theme="default" variant="text" shape="square" size="small" :disabled="busy" :aria-label="$t('common.cancel')" @click="cancelEdit"><t-icon name="close" size="var(--app-icon-sm)" /></t-button>
           </template>
           <template v-else>
             <t-checkbox :checked="selectedIds.includes(tag.id)" :disabled="busy" @change="toggle(tag.id)"><span :title="tag.name">{{ tag.name }}</span></t-checkbox>
             <t-popup attach="body" trigger="click" placement="bottom-right" :visible="menuTagId === tag.id"
               @visible-change="(visible: boolean) => { if (visible) menuTagId = tag.id; else if (menuTagId === tag.id) menuTagId = '' }">
               <button type="button" class="tag-picker-more" :class="{ 'is-open': menuTagId === tag.id }" :disabled="busy"
-                :aria-label="`${tag.name} · ${$t('knowledgeBase.columnActions')}`" :aria-expanded="menuTagId === tag.id"><t-icon name="ellipsis" size="16px" /></button>
+                :aria-label="`${tag.name} · ${$t('knowledgeBase.columnActions')}`" :aria-expanded="menuTagId === tag.id"><t-icon name="ellipsis" size="var(--app-icon-md)" /></button>
               <template #content>
                 <div class="tag-picker-menu">
                   <button type="button" @click="startEdit(tag)">{{ $t('knowledgeBase.tagEditAction') }}</button>
@@ -42,7 +42,7 @@
         </div>
       </template>
       <button v-if="canCreate && !loading" type="button" class="tag-picker-create" :disabled="busy" @click="createTag">
-        <t-icon :name="busy ? 'loading' : 'add'" size="16px" />
+        <t-icon :name="busy ? 'loading' : 'add'" size="var(--app-icon-md)" />
         <span :title="query.trim()">{{ $t('knowledgeBase.tagCreateAction') }} “{{ query.trim() }}”</span>
       </button>
       <p v-if="!loading && !tags.length && !canCreate" class="tag-picker-empty">{{ $t(query.trim() ? 'knowledgeBase.tagEmptyResult' : 'knowledgeBase.noTags') }}</p>

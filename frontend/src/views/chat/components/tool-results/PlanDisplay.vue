@@ -13,7 +13,7 @@
         </div>
         <span class="step-description" :class="{ 'completed': step.status === 'completed' }">
           {{ step.description }}
-          <span v-if="step.status === 'in_progress'" class="sparkle">✨</span>
+          <span v-if="step.status === 'in_progress'" class="sparkle"><t-icon name="loading" /></span>
         </span>
       </div>
     </div>
@@ -107,7 +107,24 @@ const props = defineProps<Props>();
   
   .sparkle {
     margin-left: 3px;
-    font-size: var(--app-text-xs);
+    font-size: var(--app-icon-sm);
+    display: inline-flex;
+
+    .t-icon {
+      animation: plan-sparkle-spin 1s linear infinite;
+    }
+  }
+
+  @keyframes plan-sparkle-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sparkle .t-icon {
+      animation: none;
+    }
   }
 }
 

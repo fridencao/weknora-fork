@@ -30,7 +30,7 @@
         :aria-label="$t('artifactLibrary.searchPlaceholder')"
         clearable
       >
-        <template #prefix-icon><t-icon name="search" size="16px" /></template>
+        <template #prefix-icon><t-icon name="search" size="var(--app-icon-md)" /></template>
       </t-input>
     </div>
 
@@ -100,7 +100,7 @@
                 :title="$t('artifactLibrary.openSession')"
                 @click.stop="openSession(item)"
               >
-                <t-icon name="chat" size="14px" />
+                <t-icon name="chat" size="var(--app-icon-sm)" />
                 <span>{{ item.session_title || $t('artifactLibrary.untitledSession') }}</span>
               </button>
               <t-button
@@ -113,7 +113,7 @@
                 :loading="isDownloading(item)"
                 @click.stop="handleDownload(item)"
               >
-                <template #icon><t-icon name="download" size="16px" /></template>
+                <template #icon><t-icon name="download" size="var(--app-icon-md)" /></template>
               </t-button>
               <t-button
                 class="row-action row-action--danger"
@@ -125,7 +125,7 @@
                 :loading="isDeleting(item)"
                 @click.stop="handleDelete(item)"
               >
-                <template #icon><t-icon name="delete" size="16px" /></template>
+                <template #icon><t-icon name="delete" size="var(--app-icon-md)" /></template>
               </t-button>
             </li>
           </ul>
@@ -157,7 +157,7 @@
           <div class="preview-header-text">
             <div class="preview-header-title" :title="previewItem.file_name">{{ previewItem.file_name }}</div>
             <button type="button" class="session-link session-link--inline" @click="openSession(previewItem)">
-              <t-icon name="chat" size="12px" />
+              <t-icon name="chat" size="var(--app-icon-xs)" />
               <span>{{ previewItem.session_title || $t('artifactLibrary.untitledSession') }}</span>
             </button>
           </div>
@@ -172,7 +172,7 @@
             :loading="isDownloading(previewItem)"
             @click="handleDownload(previewItem)"
           >
-            <template #icon><t-icon name="download" size="16px" /></template>
+            <template #icon><t-icon name="download" size="var(--app-icon-md)" /></template>
           </t-button>
           <t-button
             class="row-action row-action--danger"
@@ -184,7 +184,7 @@
             :loading="isDeleting(previewItem)"
             @click="handleDelete(previewItem)"
           >
-            <template #icon><t-icon name="delete" size="16px" /></template>
+            <template #icon><t-icon name="delete" size="var(--app-icon-md)" /></template>
           </t-button>
           <t-button
             class="row-action"
@@ -195,7 +195,7 @@
             :aria-label="$t('common.close')"
             @click="previewVisible = false"
           >
-            <template #icon><t-icon name="close" size="16px" /></template>
+            <template #icon><t-icon name="close" size="var(--app-icon-md)" /></template>
           </t-button>
         </div>
       </template>

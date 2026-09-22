@@ -4,7 +4,7 @@
     <template #header>
       <div class="batch-tag-heading">
         <div class="batch-tag-heading-row">
-          <t-icon name="discount" size="16px" class="batch-tag-heading-icon" aria-hidden="true" />
+          <t-icon name="discount" size="var(--app-icon-md)" class="batch-tag-heading-icon" aria-hidden="true" />
           <span class="batch-tag-title">{{ $t('knowledgeBase.batchTagDialogHeading') }}</span>
         </div>
         <p class="batch-tag-subtitle">{{ $t('knowledgeBase.batchTagSubtitle', { count }) }}</p>

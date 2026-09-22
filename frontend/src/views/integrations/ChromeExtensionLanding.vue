@@ -18,7 +18,7 @@
         @click="openChromeStore"
       >
         <template #icon>
-          <t-icon name="extension" size="18px" />
+          <t-icon name="extension" size="var(--app-icon-md)" />
         </template>
       </IntegrationExternalCta>
     </template>
@@ -71,7 +71,7 @@
                       :title="$t('integrations.chrome.copy')"
                       @click="copyApiUrl"
                     >
-                      <t-icon name="file-copy" size="16px" />
+                      <t-icon name="file-copy" size="var(--app-icon-md)" />
                     </t-button>
                   </div>
                 </div>

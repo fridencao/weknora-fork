@@ -8,7 +8,7 @@
             <t-popup placement="bottom-start" trigger="hover" :overlay-inner-style="{ maxWidth: '380px' }">
               <button type="button" class="hint-trigger"
                 :aria-label="$t('settings.sandbox.pageHintTitle')">
-                <t-icon name="info-circle" size="16px" />
+                <t-icon name="info-circle" size="var(--app-icon-md)" />
               </button>
               <template #content>
                 <div class="hint-popover">
@@ -111,7 +111,7 @@
             </div>
             <ul v-if="cardWarnings[record.id]?.length" class="sandbox-card__warnings">
               <li v-for="item in cardWarnings[record.id]" :key="item.key">
-                <t-icon name="error-circle" size="12px" />
+                <t-icon name="error-circle" size="var(--app-icon-xs)" />
                 <span>{{ item.text }}</span>
               </li>
             </ul>
@@ -167,7 +167,7 @@
                   <span class="inventory-row__title" :title="id">{{ sessionTitle(id) }}</span>
                   <span class="inventory-row__meta">{{ $t('settings.sandbox.inventorySessionKind') }}</span>
                 </span>
-                <t-icon name="chevron-right" size="16px" />
+                <t-icon name="chevron-right" size="var(--app-icon-md)" />
               </button>
             </li>
           </ul>

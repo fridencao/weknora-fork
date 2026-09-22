@@ -8,7 +8,7 @@
   >
     <div class="cmdk-item__icon">
       <slot name="icon">
-        <t-icon :name="iconName" size="14px" />
+        <t-icon :name="iconName" size="var(--app-icon-sm)" />
       </slot>
     </div>
     <div class="cmdk-item__body">

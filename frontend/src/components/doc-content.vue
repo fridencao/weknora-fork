@@ -1591,13 +1591,13 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
               variant="text" shape="square" theme="default" :title="$t('common.download') || 'Download'"
               @click="downloadFile()">
               <template #icon>
-                <t-icon name="download" size="16px" />
+                <t-icon name="download" size="var(--app-icon-md)" />
               </template>
             </t-button>
             <t-button v-if="details.id && hasTimelineSpans" class="header-action-btn trace-entry-btn" size="small"
               variant="text" shape="square" :theme="traceEntryTheme" :title="traceEntryTitle" @click="openTimeline">
               <template #icon>
-                <t-icon name="chart-line" size="16px" />
+                <t-icon name="chart-line" size="var(--app-icon-md)" />
               </template>
             </t-button>
           </div>
@@ -1674,7 +1674,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
             <h4 class="setting-drawer__section-title">
               <span>{{ $t('knowledgeBase.customMetadata') }}</span>
               <t-tooltip :content="$t('knowledgeBase.metadataCapabilityHint')" placement="top">
-                <t-icon name="info-circle" size="14px" class="metadata-capability-icon" />
+                <t-icon name="info-circle" size="var(--app-icon-sm)" class="metadata-capability-icon" />
               </t-tooltip>
               <span v-if="Object.keys(details.custom_metadata || {}).length" class="metadata-count">
                 {{ Object.keys(details.custom_metadata || {}).length }}/20
@@ -1682,7 +1682,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
             </h4>
             <t-tooltip v-if="canEditContent && !metadataEditing" :content="$t('common.edit')" placement="top">
               <t-button class="icon-action-btn" size="small" variant="text" shape="square" @click="startMetadataEdit">
-                <template #icon><t-icon name="edit" size="15px" /></template>
+                <template #icon><t-icon name="edit" size="var(--app-icon-sm)" /></template>
               </t-button>
             </t-tooltip>
           </div>
@@ -1695,7 +1695,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
               </div>
             </div>
             <button v-else-if="canEditContent" type="button" class="metadata-empty-action" @click="startMetadataEdit">
-              <t-icon name="add" size="15px" />
+              <t-icon name="add" size="var(--app-icon-sm)" />
               <span>{{ $t('knowledgeBase.addMetadataField') }}</span>
             </button>
             <span v-else class="metadata-empty">{{ $t('knowledgeBase.noCustomMetadata') }}</span>
@@ -1713,12 +1713,12 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
               <t-tooltip :content="$t('common.delete')" placement="top">
                 <t-button class="icon-action-btn metadata-remove-btn" size="small" variant="text" shape="square"
                   @click="removeMetadataRow(row.id)">
-                  <template #icon><t-icon name="delete" size="15px" /></template>
+                  <template #icon><t-icon name="delete" size="var(--app-icon-sm)" /></template>
                 </t-button>
               </t-tooltip>
             </div>
             <button v-if="metadataDraft.length < 20" type="button" class="metadata-add-row" @click="addMetadataRow">
-              <t-icon name="add" size="15px" />
+              <t-icon name="add" size="var(--app-icon-sm)" />
               <span>{{ $t('knowledgeBase.addMetadataField') }}</span>
             </button>
             <div class="metadata-actions">
@@ -1737,9 +1737,9 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
           <div class="url_link_box">
             <a :href="isValidURL(details.source) ? details.source : 'javascript:void(0)'"
               :target="isValidURL(details.source) ? '_blank' : undefined" class="url_link">
-              <t-icon name="link" size="14px" />
+              <t-icon name="link" size="var(--app-icon-sm)" />
               <span class="url_text">{{ details.source }}</span>
-              <t-icon name="jump" size="14px" class="jump-icon" />
+              <t-icon name="jump" size="var(--app-icon-sm)" class="jump-icon" />
             </a>
           </div>
         </section>
@@ -1757,13 +1757,13 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
               <t-tooltip v-if="canEditSummary" :content="$t('common.edit')" placement="top">
                 <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                   @click="startSummaryEdit">
-                  <template #icon><t-icon name="edit" size="15px" /></template>
+                  <template #icon><t-icon name="edit" size="var(--app-icon-sm)" /></template>
                 </t-button>
               </t-tooltip>
               <t-tooltip :content="$t('knowledgeBase.regenerateSummary')" placement="top">
                 <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                   :loading="summaryRefreshing" @click="refreshSummary">
-                  <template #icon><t-icon name="refresh" size="15px" /></template>
+                  <template #icon><t-icon name="refresh" size="var(--app-icon-sm)" /></template>
                 </t-button>
               </t-tooltip>
             </div>
@@ -1788,7 +1788,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
             }}</div>
             <div v-if="(summaryOverflow && !summaryExpanded) || summaryExpanded" class="summary_fade"
               :class="{ 'summary_fade_expanded': summaryExpanded }">
-              <t-icon :name="summaryExpanded ? 'chevron-up' : 'chevron-down'" size="14px" class="summary_fade_icon" />
+              <t-icon :name="summaryExpanded ? 'chevron-up' : 'chevron-down'" size="var(--app-icon-sm)" class="summary_fade_icon" />
             </div>
           </div>
           <div v-else class="summary_loading">
@@ -1797,10 +1797,10 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
               <span>{{ $t('knowledgeBase.generatingSummary') }}</span>
             </template>
             <template v-else>
-              <t-icon name="file-unknown" size="18px" />
+              <t-icon name="file-unknown" size="var(--app-icon-md)" />
               <span>{{ $t('knowledgeBase.noDocumentSummary') }}</span>
               <t-button v-if="canEditContent" size="small" variant="text" :loading="summaryRefreshing" @click="refreshSummary">
-                <template #icon><t-icon name="refresh" size="14px" /></template>
+                <template #icon><t-icon name="refresh" size="var(--app-icon-sm)" /></template>
                 {{ $t('knowledgeBase.generateSummary') }}
               </t-button>
             </template>
@@ -1878,7 +1878,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                       :content="$t('knowledgeBase.retryIndex')" placement="top">
                       <t-button class="icon-action-btn" size="small" theme="danger" variant="text" shape="square"
                         @click="retryChunkIndex(chunk.original)">
-                        <template #icon><t-icon name="refresh" size="15px" /></template>
+                        <template #icon><t-icon name="refresh" size="var(--app-icon-sm)" /></template>
                       </t-button>
                     </t-tooltip>
                     <t-popup v-if="chunk.hasParent" :visible="parentContextPopup === chunk.original.id"
@@ -1887,13 +1887,13 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                       @visible-change="(visible: boolean) => setParentContextPopupVisible(chunk.original, index, visible)">
                       <t-button class="icon-action-btn" :class="{ 'is-active': parentContextPopup === chunk.original.id }"
                         size="small" variant="text" shape="square" :title="$t('knowledgeBase.viewParentContext')">
-                        <template #icon><t-icon name="git-branch" size="15px" /></template>
+                        <template #icon><t-icon name="git-branch" size="var(--app-icon-sm)" /></template>
                       </t-button>
                       <template #content>
                         <div class="chunk-context-popup" @click.stop>
                           <div class="chunk-popup-head">
                             <div class="chunk-popup-title">
-                              <t-icon name="git-branch" size="15px" />
+                              <t-icon name="git-branch" size="var(--app-icon-sm)" />
                               <span>{{ $t('knowledgeBase.viewParentContext') }}</span>
                             </div>
                           </div>
@@ -1914,13 +1914,13 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                       <t-button class="icon-action-btn chunk-question-entry"
                         :class="{ 'is-active': questionPopupChunk === chunk.original.id }" size="small" variant="text"
                         shape="square" :title="$t('knowledgeBase.generatedQuestions')">
-                        <template #icon><t-icon name="help-circle" size="15px" /></template>
+                        <template #icon><t-icon name="help-circle" size="var(--app-icon-sm)" /></template>
                       </t-button>
                       <template #content>
                         <div class="chunk-questions-popup" @click.stop>
                           <div class="chunk-popup-head">
                             <div class="chunk-popup-title">
-                              <t-icon name="help-circle" size="15px" />
+                              <t-icon name="help-circle" size="var(--app-icon-sm)" />
                               <span>{{ $t('knowledgeBase.generatedQuestions') }}</span>
                               <span class="chunk-popup-count">{{ chunk.questions.length }}</span>
                               <span v-if="hasStaleGeneratedQuestions(chunk.original)" class="chunk-question-stale-hint">
@@ -1931,14 +1931,14 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                               <t-tooltip :content="$t('knowledgeBase.addGeneratedQuestion')" placement="top">
                                 <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                                   @click.stop="openQuestionComposer(chunk.original)">
-                                  <template #icon><t-icon name="add" size="15px" /></template>
+                                  <template #icon><t-icon name="add" size="var(--app-icon-sm)" /></template>
                                 </t-button>
                               </t-tooltip>
                               <t-tooltip :content="$t('knowledgeBase.regenerateQuestions')" placement="top">
                                 <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                                   :loading="regeneratingQuestionChunk === chunk.original.id"
                                   @click.stop="regenerateQuestions(chunk.original)">
-                                  <template #icon><t-icon name="refresh" size="15px" /></template>
+                                  <template #icon><t-icon name="refresh" size="var(--app-icon-sm)" /></template>
                                 </t-button>
                               </t-tooltip>
                             </div>
@@ -1951,7 +1951,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                                 <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                                   :disabled="savingQuestionChunk === chunk.original.id"
                                   @click="closeQuestionComposer(chunk.original)">
-                                  <template #icon><t-icon name="close" size="14px" /></template>
+                                  <template #icon><t-icon name="close" size="var(--app-icon-sm)" /></template>
                                 </t-button>
                               </t-tooltip>
                               <t-button size="small" theme="primary" :loading="savingQuestionChunk === chunk.original.id"
@@ -1961,7 +1961,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                             </div>
                             <div v-if="chunk.questions.length" class="questions-list">
                               <div v-for="question in chunk.questions" :key="question.id" class="question-item">
-                                <span class="question-leading-icon"><t-icon name="help-circle" size="14px" /></span>
+                                <span class="question-leading-icon"><t-icon name="help-circle" size="var(--app-icon-sm)" /></span>
                                 <div v-if="editingQuestionKey === `${chunk.original.id}:${question.id}`" class="question-inline-editor">
                                   <t-input v-model="questionEditDraft" autofocus
                                     @enter="saveQuestionEdit(chunk.original, question)" />
@@ -1977,7 +1977,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                                       :content="$t('common.edit')" placement="top">
                                       <t-button class="icon-action-btn" theme="default" variant="text" shape="square"
                                         size="small" @click.stop="startQuestionEdit(chunk.original, question)">
-                                        <template #icon><t-icon name="edit" size="14px" /></template>
+                                        <template #icon><t-icon name="edit" size="var(--app-icon-sm)" /></template>
                                       </t-button>
                                     </t-tooltip>
                                     <t-popconfirm v-if="canDeleteGeneratedQuestion && !question.id.startsWith('legacy-')"
@@ -1986,7 +1986,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                                       @confirm="handleDeleteQuestion(chunk.original, index, question)">
                                       <t-button class="icon-action-btn delete-question-btn" theme="default" variant="text"
                                         shape="square" size="small" :loading="isDeleting(index, question.id)">
-                                        <template #icon><t-icon name="delete" size="14px" /></template>
+                                        <template #icon><t-icon name="delete" size="var(--app-icon-sm)" /></template>
                                       </t-button>
                                     </t-popconfirm>
                                   </div>
@@ -1994,7 +1994,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                               </div>
                             </div>
                             <div v-else-if="questionComposerChunk !== chunk.original.id" class="questions-empty">
-                              <t-icon name="chat-bubble-help" size="20px" />
+                              <t-icon name="chat-bubble-help" size="var(--app-icon-lg)" />
                               <span>{{ $t('knowledgeBase.noGeneratedQuestions') }}</span>
                             </div>
                           </div>
@@ -2005,7 +2005,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                       <t-tooltip :content="$t('common.edit')" placement="top">
                         <t-button class="icon-action-btn" :class="{ 'is-active': editingChunkId === chunk.original.id }"
                           size="small" variant="text" shape="square" @click="startChunkEdit(chunk.original)">
-                          <template #icon><t-icon name="edit" size="15px" /></template>
+                          <template #icon><t-icon name="edit" size="var(--app-icon-sm)" /></template>
                         </t-button>
                       </t-tooltip>
                       <t-popup :visible="chunkHistoryPopup === chunk.original.id" trigger="click" placement="bottom-right"
@@ -2014,14 +2014,14 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                         @visible-change="(visible: boolean) => setChunkHistoryPopupVisible(chunk.original, visible)">
                         <t-button class="icon-action-btn" :class="{ 'is-active': chunkHistoryPopup === chunk.original.id }"
                           size="small" variant="text" shape="square" :title="$t('knowledgeBase.chunkHistory')">
-                          <template #icon><t-icon name="history" size="15px" /></template>
+                          <template #icon><t-icon name="history" size="var(--app-icon-sm)" /></template>
                         </t-button>
                         <template #content>
                           <div class="chunk-history-popup" @click.stop>
                             <div class="chunk-history-popup-head">
                               <div>
                                 <div class="chunk-history-popup-title">
-                                  <t-icon name="history" size="15px" />
+                                  <t-icon name="history" size="var(--app-icon-sm)" />
                                   <span>{{ $t('knowledgeBase.chunkHistory') }}</span>
                                 </div>
                                 <div class="chunk-history-current">
@@ -2054,11 +2054,11 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                                   <span class="chunk-history-version">v{{ revision.revision }}</span>
                                   <span class="chunk-history-time">{{ new Date(revision.edited_at).toLocaleString() }}</span>
                                   <span v-if="revisionStatusChanged(chunk.original, revisionIndex)" class="chunk-history-status-change">
-                                    <t-icon :name="revision.is_enabled ? 'play-circle' : 'stop-circle'" size="13px" />
+                                    <t-icon :name="revision.is_enabled ? 'play-circle' : 'stop-circle'" size="var(--app-icon-xs)" />
                                     {{ revision.is_enabled ? $t('knowledgeBase.enabledStatus') : $t('knowledgeBase.disabledStatus') }}
                                   </span>
                                   <t-icon :name="selectedChunkRevision[chunk.original.id] === revision.revision ? 'chevron-up' : 'chevron-down'"
-                                    size="14px" class="chunk-history-row-chevron" />
+                                    size="var(--app-icon-sm)" class="chunk-history-row-chevron" />
                                 </button>
                                 <div v-if="selectedChunkRevision[chunk.original.id] === revision.revision" class="chunk-history-diff">
                                   <div class="chunk-history-diff-head">
@@ -2072,7 +2072,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                                       <t-button class="icon-action-btn" size="small" variant="text" shape="square"
                                         :title="$t('knowledgeBase.revertRevision')"
                                         :loading="revertingRevision === `${chunk.original.id}:${revision.revision}`">
-                                        <template #icon><t-icon name="rollback" size="14px" /></template>
+                                        <template #icon><t-icon name="rollback" size="var(--app-icon-sm)" /></template>
                                       </t-button>
                                     </t-popconfirm>
                                   </div>
@@ -2103,7 +2103,7 @@ const handleChunkPageChange = (pageInfo: { current: number }) => {
                 </div>
                 <div v-if="editingChunkId === chunk.original.id" class="chunk-editor">
                   <div class="chunk-editor-label">
-                    <t-icon name="edit" size="14px" />
+                    <t-icon name="edit" size="var(--app-icon-sm)" />
                     <span>{{ $t('knowledgeBase.editChunkContent') }}</span>
                   </div>
                   <t-textarea v-model="chunkDraft" :autosize="{ minRows: 6, maxRows: 20 }" autofocus />

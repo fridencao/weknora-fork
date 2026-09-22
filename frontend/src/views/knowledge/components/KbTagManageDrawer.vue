@@ -24,7 +24,7 @@
             class="tag-manage-search"
           >
             <template #prefix-icon>
-              <t-icon name="search" size="14px" />
+              <t-icon name="search" size="var(--app-icon-sm)" />
             </template>
           </t-input>
         </div>
@@ -37,7 +37,7 @@
             :aria-label="$t('knowledgeBase.tagCreateAction')"
             @click="startCreateTag"
           >
-            <template #icon><t-icon name="add" size="16px" /></template>
+            <template #icon><t-icon name="add" size="var(--app-icon-md)" /></template>
           </t-button>
         </t-tooltip>
       </div>
@@ -58,7 +58,7 @@
             <li v-if="creatingTag" class="tag-tile tag-tile--editing" @click.stop>
               <div class="tag-tile__main tag-tile__main--editing">
                 <span class="tag-tile__badge" aria-hidden="true">
-                  <t-icon name="discount" size="15px" />
+                  <t-icon name="discount" size="var(--app-icon-sm)" />
                 </span>
                 <t-input
                   ref="newTagInputRef"
@@ -81,7 +81,7 @@
                   :title="$t('common.create')"
                   @click.stop="submitCreateTag"
                 >
-                  <template #icon><t-icon name="check" size="14px" /></template>
+                  <template #icon><t-icon name="check" size="var(--app-icon-sm)" /></template>
                 </t-button>
                 <t-button
                   variant="text"
@@ -91,7 +91,7 @@
                   :title="$t('common.cancel')"
                   @click.stop="cancelCreateTag"
                 >
-                  <template #icon><t-icon name="close" size="14px" /></template>
+                  <template #icon><t-icon name="close" size="var(--app-icon-sm)" /></template>
                 </t-button>
               </div>
             </li>
@@ -106,7 +106,7 @@
               <template v-if="editingTagId === tag.id">
                 <div class="tag-tile__main tag-tile__main--editing">
                   <span class="tag-tile__badge" aria-hidden="true">
-                    <t-icon name="discount" size="15px" />
+                    <t-icon name="discount" size="var(--app-icon-sm)" />
                   </span>
                   <t-input
                     :ref="(el: any) => setEditingTagInputRef(el, tag.id)"
@@ -129,7 +129,7 @@
                     :title="$t('common.save')"
                     @click.stop="submitEditTag"
                   >
-                    <template #icon><t-icon name="check" size="14px" /></template>
+                    <template #icon><t-icon name="check" size="var(--app-icon-sm)" /></template>
                   </t-button>
                   <t-button
                     variant="text"
@@ -139,14 +139,14 @@
                     :title="$t('common.cancel')"
                     @click.stop="cancelEditTag"
                   >
-                    <template #icon><t-icon name="close" size="14px" /></template>
+                    <template #icon><t-icon name="close" size="var(--app-icon-sm)" /></template>
                   </t-button>
                 </div>
               </template>
               <template v-else>
                 <div class="tag-tile__main">
                   <span class="tag-tile__badge" aria-hidden="true">
-                    <t-icon name="discount" size="15px" />
+                    <t-icon name="discount" size="var(--app-icon-sm)" />
                   </span>
                   <span class="tag-tile__text">
                     <span class="tag-tile__name" :title="tag.name">{{ tag.name }}</span>
@@ -168,7 +168,7 @@
                     :title="$t('knowledgeBase.tagEditAction')"
                     @click="startEditTag(tag)"
                   >
-                    <template #icon><t-icon name="edit" size="14px" /></template>
+                    <template #icon><t-icon name="edit" size="var(--app-icon-sm)" /></template>
                   </t-button>
                   <t-popconfirm
                     :content="getDeleteConfirmContent(tag)"
@@ -186,7 +186,7 @@
                       :title="$t('knowledgeBase.tagDeleteAction')"
                       @click.stop
                     >
-                      <template #icon><t-icon name="delete" size="14px" /></template>
+                      <template #icon><t-icon name="delete" size="var(--app-icon-sm)" /></template>
                     </t-button>
                   </t-popconfirm>
                 </div>

@@ -8,13 +8,13 @@
       <span class="session-source-filter__leading">
         <img v-if="currentOption?.logo" :src="currentOption.logo" :alt="currentOption.label"
           class="session-source-filter__logo" />
-        <t-icon v-else :name="iconFor(currentOption)" class="session-source-filter__icon" size="14px" />
+        <t-icon v-else :name="iconFor(currentOption)" class="session-source-filter__icon" size="var(--app-icon-sm)" />
         <span class="session-source-filter__label" :title="currentOption?.label">{{ currentOption?.label }}</span>
       </span>
       <t-icon v-if="inline" name="chevron-down" class="session-source-filter__chevron"
-        :class="{ 'session-source-filter__chevron--open': open }" size="10px" />
+        :class="{ 'session-source-filter__chevron--open': open }" size="var(--app-icon-xs)" />
       <t-icon v-else name="chevron-down" class="session-source-filter__chevron"
-        :class="{ 'session-source-filter__chevron--open': open }" size="12px" />
+        :class="{ 'session-source-filter__chevron--open': open }" size="var(--app-icon-xs)" />
     </button>
     <Teleport to="body">
       <div v-if="open" class="session-source-filter__panel" role="listbox" :style="panelStyle" @click.stop>
@@ -23,14 +23,14 @@
           :aria-selected="item.value === current" @click="handleSelect(item.value)">
           <span class="session-source-filter__option-leading">
             <img v-if="item.logo" :src="item.logo" :alt="item.label" class="session-source-filter__logo" />
-            <t-icon v-else :name="iconFor(item)" class="session-source-filter__icon" size="14px" />
+            <t-icon v-else :name="iconFor(item)" class="session-source-filter__icon" size="var(--app-icon-sm)" />
             <span class="session-source-filter__option-label" :title="item.label">{{ item.label }}</span>
           </span>
           <t-icon
             name="check"
             class="session-source-filter__check"
             :class="{ 'session-source-filter__check--visible': item.value === current }"
-            size="13px"
+            size="var(--app-icon-xs)"
           />
         </button>
       </div>

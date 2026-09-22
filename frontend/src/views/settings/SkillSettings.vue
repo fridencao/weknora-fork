@@ -42,7 +42,7 @@
             <div class="skill-card__body">
               <div class="skill-card__header">
                 <div class="skill-card__badge" aria-hidden="true">
-                  <t-icon :name="SKILL_ICON" size="14px" />
+                  <t-icon :name="SKILL_ICON" size="var(--app-icon-sm)" />
                 </div>
                 <div class="skill-card__heading">
                   <h3 class="skill-card__title" :title="item.name">{{ item.name }}</h3>
@@ -74,7 +74,7 @@
                   @click="onInstallChipClick(item, view)">
                   <span v-if="view.installs.some(isInstallBusy)" class="skill-card__entry-dot" aria-hidden="true" />
                   <span class="skill-card__chip-text">{{ installSummary(item, view) }}</span>
-                  <t-icon name="chevron-right" size="14px" class="skill-card__chip-go" />
+                  <t-icon name="chevron-right" size="var(--app-icon-sm)" class="skill-card__chip-go" />
                 </button>
                 <t-popup v-else :visible="openPanelId === item.id" trigger="click" placement="bottom-left" attach="body"
                   destroy-on-close overlay-class-name="skill-install-panel-overlay"
@@ -85,7 +85,7 @@
                     :aria-expanded="openPanelId === item.id">
                     <span v-if="view.installs.some(isInstallBusy)" class="skill-card__entry-dot" aria-hidden="true" />
                     <span class="skill-card__chip-text">{{ installSummary(item, view) }}</span>
-                    <t-icon name="chevron-down" size="14px" class="skill-card__chip-go" />
+                    <t-icon name="chevron-down" size="var(--app-icon-sm)" class="skill-card__chip-go" />
                   </button>
                   <template #content>
                     <div class="skill-install-panel">
@@ -99,7 +99,7 @@
                           <span class="skill-install-panel__name">{{ installName(inst) }}</span>
                           <span v-if="isInstallBusy(inst)" class="skill-card__entry-dot" aria-hidden="true" />
                           <t-icon v-else-if="installChipStatusIcon(item, inst)"
-                            :name="installChipStatusIcon(item, inst)" size="14px" class="skill-card__entry-status" />
+                            :name="installChipStatusIcon(item, inst)" size="var(--app-icon-sm)" class="skill-card__entry-status" />
                         </button>
                       </template>
                       <template v-if="view.available.length > 0">
@@ -110,7 +110,7 @@
                           :title="sandboxMetaLine(cfg)" @click="openInstallTo(item, cfg)">
                           <SandboxBackendBadge :type="cfg.sandbox_type" size="xs" />
                           <span class="skill-install-panel__name">{{ cfg.name }}</span>
-                          <t-icon name="add" size="14px" class="skill-install-panel__add" />
+                          <t-icon name="add" size="var(--app-icon-sm)" class="skill-install-panel__add" />
                         </button>
                       </template>
                     </div>
@@ -119,7 +119,7 @@
                 <button v-if="view.upgradable.length > 0" type="button"
                   class="skill-card__chip skill-card__chip--upgrade" :title="upgradeTooltip(item, view)"
                   :aria-label="upgradeLabel(view)" @click="openUpgrade(item)">
-                  <t-icon name="arrow-up" size="14px" class="skill-card__chip-go" />
+                  <t-icon name="arrow-up" size="var(--app-icon-sm)" class="skill-card__chip-go" />
                   <span class="skill-card__chip-text">{{ upgradeLabel(view) }}</span>
                 </button>
               </div>
@@ -167,7 +167,7 @@
           <div class="skill-card__body">
             <div class="skill-card__header">
               <div class="skill-card__badge" aria-hidden="true">
-                <t-icon :name="SKILL_ICON" size="14px" />
+                <t-icon :name="SKILL_ICON" size="var(--app-icon-sm)" />
               </div>
               <h3 class="skill-card__title" :title="registeredCatalog.name">{{ registeredCatalog.name }}</h3>
               <span v-if="registeredCatalog.version" class="skill-card__type">{{ registeredCatalog.version }}</span>
@@ -200,7 +200,7 @@
             @drop.prevent="onFileDrop">
             <div class="file-upload-content">
               <div class="file-upload-icon-wrap" aria-hidden="true">
-                <t-icon name="cloud-upload" size="32px" class="upload-icon" />
+                <t-icon name="cloud-upload" size="var(--app-icon-xl)" class="upload-icon" />
               </div>
               <div class="upload-text">
                 <span v-if="pendingFile" class="upload-file-name">

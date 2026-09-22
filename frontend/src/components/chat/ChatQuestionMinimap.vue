@@ -51,9 +51,9 @@
     >
       <button type="button" class="question-minimap__preview" @click="handleQuestionClick(peakTurn.id)">
         <span class="question-minimap__meta">
-          <t-icon name="chat" size="13px" aria-hidden="true" />
+          <t-icon name="chat" size="var(--app-icon-xs)" aria-hidden="true" />
           <span class="question-minimap__position">{{ t('chat.questionMinimapPosition', { current: peakIndex + 1, total: anchoredQuestions.length }) }}</span>
-          <t-icon name="arrow-up" size="14px" class="question-minimap__jump-icon" aria-hidden="true" />
+          <t-icon name="arrow-up" size="var(--app-icon-sm)" class="question-minimap__jump-icon" aria-hidden="true" />
         </span>
         <span class="question-minimap__question">{{ questionText(peakTurn) }}</span>
         <span v-if="answerText(peakTurn)" class="question-minimap__answer">{{ answerText(peakTurn) }}</span>

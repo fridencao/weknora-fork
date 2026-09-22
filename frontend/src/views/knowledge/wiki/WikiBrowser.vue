@@ -120,7 +120,7 @@
         <div v-if="!graphReady" class="wiki-reader-empty wiki-graph-empty">
           <t-loading v-if="graphLoading" />
           <div v-else class="wiki-empty-icon">
-            <t-icon name="chart-bubble" size="48px" />
+            <t-icon name="chart-bubble" size="var(--app-icon-xl)" />
           </div>
           <p class="wiki-empty-desc">{{ graphLoading ? $t('knowledgeEditor.wikiBrowser.graphEmpty') :
             $t('knowledgeEditor.wikiBrowser.graphNoData') }}</p>
@@ -283,11 +283,11 @@
                     <div class="wiki-tree-trailing wiki-folder-inline-actions">
                       <t-button variant="text" theme="default" size="small" class="wiki-folder-action-btn confirm"
                         @click.stop="submitCreateRootFolder">
-                        <t-icon name="check" size="16px" />
+                        <t-icon name="check" size="var(--app-icon-md)" />
                       </t-button>
                       <t-button variant="text" theme="default" size="small" class="wiki-folder-action-btn cancel"
                         @click.stop="cancelCreateRootFolder">
-                        <t-icon name="close" size="16px" />
+                        <t-icon name="close" size="var(--app-icon-md)" />
                       </t-button>
                     </div>
                   </div>
@@ -375,7 +375,7 @@
             <!-- Empty state -->
             <div v-if="!hasContentPages && !loading" class="wiki-empty-state">
               <div class="wiki-empty-icon">
-                <t-icon name="file-unknown" size="36px" />
+                <t-icon name="file-unknown" size="var(--app-icon-xl)" />
               </div>
               <p class="wiki-empty-title">{{ $t('knowledgeEditor.wikiBrowser.emptyTitle') }}</p>
               <p class="wiki-empty-desc">{{ $t('knowledgeEditor.wikiBrowser.emptyDesc') }}</p>
@@ -392,7 +392,7 @@
               <!-- Navigation -->
               <div v-if="navHistory.length || navFromSystemView" class="wiki-nav-bar">
                 <a href="#" class="wiki-nav-back" @click.prevent="goBack">
-                  <t-icon name="arrow-left" size="14px" />
+                  <t-icon name="arrow-left" size="var(--app-icon-sm)" />
                   <span>{{ backLabel }}</span>
                 </a>
               </div>
@@ -553,7 +553,7 @@
                     </div>
                     <div v-if="!editingPage" class="wiki-reader-aside-meta">
                       <span class="wiki-reader-aside-meta-item">
-                        <t-icon name="time" size="14px" />
+                        <t-icon name="time" size="var(--app-icon-sm)" />
                         {{ formatDate(selectedPage.updated_at) }}
                       </span>
                     </div>
@@ -648,7 +648,7 @@
             <!-- No page selected -->
             <div v-else class="wiki-reader-empty">
               <div class="wiki-empty-icon">
-                <t-icon name="browse" size="48px" />
+                <t-icon name="browse" size="var(--app-icon-xl)" />
               </div>
               <p class="wiki-empty-title" v-if="hasContentPages">{{ $t('knowledgeEditor.wikiBrowser.selectPageHint') }}
               </p>
@@ -689,7 +689,7 @@
             <div class="wiki-issue-popup-desc">
               <div style="font-weight: 500; margin-bottom: 4px; color: var(--td-brand-color); cursor: pointer;"
                 @click="navigateToSlugAndFix(issue.slug)">
-                <t-icon name="link" size="12px" /> {{ $t('knowledgeEditor.wikiBrowser.issuePagePrefix') }}{{
+                <t-icon name="link" size="var(--app-icon-xs)" /> {{ $t('knowledgeEditor.wikiBrowser.issuePagePrefix') }}{{
                   slugDisplayName(issue.slug) }}
               </div>
               {{ issue.description }}

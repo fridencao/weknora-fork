@@ -49,12 +49,12 @@
               <div class="integration-inline">
                 <button type="button" class="integration-inline__stat integration-inline__link" @click="gotoIntegrations('im')">
                   <span>{{ $t('integrations.tabs.im') }} · {{ agentIMChannelCount }}</span>
-                  <t-icon name="chevron-right" size="14px" />
+                  <t-icon name="chevron-right" size="var(--app-icon-sm)" />
                 </button>
                 <span class="integration-inline__sep" aria-hidden="true">|</span>
                 <button type="button" class="integration-inline__stat integration-inline__link" @click="gotoIntegrations('embed')">
                   <span>{{ $t('integrations.tabs.embed') }} · {{ agentEmbedChannelCount }}</span>
-                  <t-icon name="chevron-right" size="14px" />
+                  <t-icon name="chevron-right" size="var(--app-icon-sm)" />
                 </button>
               </div>
             </div>
@@ -113,7 +113,7 @@
               <div class="name-input-wrapper">
                 <!-- 内置智能体使用简洁图标 -->
                 <div v-if="isBuiltinAgent" class="builtin-avatar" :class="isAgentMode ? 'agent' : 'normal'">
-                  <t-icon :name="isAgentMode ? 'control-platform' : 'chat'" size="24px" />
+                  <t-icon :name="isAgentMode ? 'control-platform' : 'chat'" size="var(--app-icon-xl)" />
                 </div>
                 <!-- 自定义智能体使用 AgentAvatar -->
                 <AgentAvatar v-else :name="formData.name || '?'" size="medium" />
@@ -1383,7 +1383,7 @@
                       class="skill-pick__check"
                     />
                     <div class="skill-pick__badge" aria-hidden="true">
-                      <t-icon :name="SKILL_ICON" size="16px" />
+                      <t-icon :name="SKILL_ICON" size="var(--app-icon-md)" />
                     </div>
                     <div class="skill-pick__body">
                       <div class="skill-pick__title-row">
@@ -1393,7 +1393,7 @@
                           class="skill-pick__hint"
                           :class="{ 'skill-pick__hint--busy': isSkillBusy(skill) }"
                         >
-                          <t-icon :name="skillStatusIcon(skill)" size="14px" />
+                          <t-icon :name="skillStatusIcon(skill)" size="var(--app-icon-sm)" />
                           {{ skillStatusHint(skill) }}
                         </span>
                         <span
@@ -1401,14 +1401,14 @@
                           class="skill-pick__hint"
                           :class="{ 'skill-pick__hint--busy': isSkillBusy(skill) }"
                         >
-                          <t-icon :name="isSkillBusy(skill) ? 'refresh' : 'error-circle'" size="14px" />
+                          <t-icon :name="isSkillBusy(skill) ? 'refresh' : 'error-circle'" size="var(--app-icon-sm)" />
                           {{ skill.servedNote }}
                         </span>
                         <span
                           v-if="canUpgradeSkillRow(skill)"
                           class="skill-pick__hint skill-pick__hint--upgrade"
                         >
-                          <t-icon name="arrow-up" size="14px" />
+                          <t-icon name="arrow-up" size="var(--app-icon-sm)" />
                           {{ skillUpgradeHint(skill) }}
                         </span>
                       </div>
