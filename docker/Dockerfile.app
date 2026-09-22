@@ -15,6 +15,9 @@ ENV PATH="/usr/local/cargo/bin:$PATH"
 ARG RUSTUP_DIST_SERVER_ARG=https://mirrors.tuna.tsinghua.edu.cn/rustup
 ENV RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER_ARG}
 ENV RUSTUP_UPDATE_ROOT=${RUSTUP_DIST_SERVER_ARG}/rustup
+# cargo 稀疏索引：默认的 git 索引协议要整仓克隆 crates.io index（GB 级，实测在
+# 部署 VM 上长时间卡在 "Updating crates.io index"），稀疏协议走 HTTP 增量拉取。
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN if [ "$WITH_BROWSERSKILL" = "1" ]; then \
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable; \
     fi
