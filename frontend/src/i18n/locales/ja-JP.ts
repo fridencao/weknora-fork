@@ -6761,25 +6761,6 @@ export default {
     }
   },
   integrations: {
-    cli: {
-      title: 'StarKB CLI',
-      subtitle: 'ターミナルからナレッジベースとドキュメントの管理、コンテンツの検索、質問ができます。CLIやMCPを通じてスクリプトやAIツールと連携できます。',
-      docs: 'CLIドキュメント',
-      docsHint: 'インストール手順と完全なコマンドリファレンス',
-      quickstart: 'クイックスタート',
-      installTitle: 'CLIをインストール',
-      installDesc: 'GitとGo 1.26以上を使ってソースからビルドします。このmacOS / Linuxの例ではPATHの設定は現在のターミナルでのみ有効です。継続的に使う場合は、バイナリをPATH上のディレクトリに配置してください。',
-      connectTitle: 'このサーバに接続',
-      connectDesc: 'weknoraという名前のプロファイルを作成して有効化し、メールアドレスとパスワードでサインインします。同名のプロファイルが既にある場合は別の名前を選び、MCPの例もそれに合わせて変更してください。',
-      verifyTitle: '接続を確認',
-      verifyDesc: 'サーバと認証の状態を確認し、アカウントがアクセスできるナレッジベースを一覧表示します。',
-      commandsTitle: 'よく使うコマンド',
-      commandsDesc: 'KB_IDをナレッジベースIDに置き換え、ファイルパス・検索語・質問を必要に応じて変更してください。アップロードしたドキュメントは解析が完了するまで検索できません。',
-      mcpTitle: 'MCPクライアントに接続',
-      mcpDesc: 'サインイン後、この設定をstdio対応のMCPクライアントに追加してください。クライアントがweknoraを見つけられない場合は、commandをバイナリの絶対パスに変更してください。',
-      copy: 'コピー',
-      copied: 'コピーしました',
-    },
     title: '公開と連携',
     mcpserver: {
       title: 'MCP サーバー',
@@ -6890,7 +6871,6 @@ export default {
       embed: 'Web埋め込み',
       api: 'API連携',
       chrome: 'Chrome拡張機能',
-      cli: 'CLI',
       claw: 'Clawスキル',
       mcpserver: 'MCP サーバー'
     },

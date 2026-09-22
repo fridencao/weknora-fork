@@ -38,7 +38,6 @@
 
       <ChromeExtensionLanding v-if="tab === 'chrome'" />
       <ClawSkillLanding v-if="tab === 'claw'" />
-      <CliIntegrationLanding v-if="tab === 'cli'" />
     </div>
   </div>
 </template>
@@ -52,7 +51,6 @@ import ApiIntegrationSettings from '@/views/integrations/ApiIntegrationSettings.
 import McpServerIntegrationSettings from '@/views/integrations/McpServerIntegrationSettings.vue'
 import ChromeExtensionLanding from '@/views/integrations/ChromeExtensionLanding.vue'
 import ClawSkillLanding from '@/views/integrations/ClawSkillLanding.vue'
-import CliIntegrationLanding from '@/views/integrations/CliIntegrationLanding.vue'
 import type { IntegrationTab } from '@/config/integrations'
 
 const filterAgentId = ref('')
@@ -64,7 +62,7 @@ const props = defineProps<{
 const route = useRoute()
 
 const isLandingSection = computed(
-  () => props.tab === 'chrome' || props.tab === 'claw' || props.tab === 'cli',
+  () => props.tab === 'chrome' || props.tab === 'claw',
 )
 
 function applyAgentFilterFromRoute() {
