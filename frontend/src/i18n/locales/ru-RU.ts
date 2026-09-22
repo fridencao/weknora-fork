@@ -1843,7 +1843,7 @@ export default {
     nameRequired: 'Введите название общего пространства',
     avatar: 'Аватар общего пространства',
     avatarClear: 'Clear',
-    avatarPickerHint: 'Выберите эмодзи в качестве аватара общего пространства',
+    avatarPickerHint: 'Выберите значок в качестве аватара общего пространства',
     description: 'Описание общего пространства',
     descriptionPlaceholder: 'Введите описание общего пространства (необязательно)',
     noDescription: 'No description',

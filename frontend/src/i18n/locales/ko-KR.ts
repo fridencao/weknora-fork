@@ -1843,7 +1843,7 @@ export default {
     nameRequired: '공유 공간 이름을 입력해주세요',
     avatar: '공유 공간 아바타',
     avatarClear: '지우기',
-    avatarPickerHint: '공유 공간 아바타로 이모티콘을 선택하세요',
+    avatarPickerHint: '공유 공간 아바타로 사용할 아이콘을 선택하세요',
     description: '공유 공간 설명',
     descriptionPlaceholder: '공유 공간 설명을 입력하세요(선택사항).',
     noDescription: '아직 설명이 없습니다',

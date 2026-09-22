@@ -1845,7 +1845,7 @@ export default {
     nameRequired: '请输入共享空间名称',
     avatar: '共享空间头像',
     avatarClear: '清除',
-    avatarPickerHint: '选择 Emoji 作为共享空间头像',
+    avatarPickerHint: '选择图标作为共享空间头像',
     description: '共享空间描述',
     descriptionPlaceholder: '请输入共享空间描述（选填）',
     noDescription: '暂无描述',

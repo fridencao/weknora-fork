@@ -39,11 +39,11 @@
                     <div class="avatar-popover-content" @click.stop>
                       <p class="avatar-popover-title">{{ $t('organization.avatarPickerHint') }}</p>
                       <div class="avatar-emoji-grid">
-                        <button v-for="emoji in avatarEmojiOptions" :key="emoji" type="button"
+                        <button v-for="iconName in avatarIconOptions" :key="iconName" type="button"
                           class="avatar-emoji-btn"
-                          :class="{ 'is-selected': formData.avatar === 'emoji:' + emoji }"
-                          @click="selectAvatarEmoji(emoji)">
-                          {{ emoji }}
+                          :class="{ 'is-selected': formData.avatar === 'icon:' + iconName }"
+                          @click="selectAvatarIcon(iconName)">
+                          <t-icon :name="iconName" />
                         </button>
                       </div>
                       <t-button v-if="formData.avatar" variant="text" size="small" class="avatar-clear-btn"
@@ -842,15 +842,18 @@ const formData = ref({
 })
 
 // 空间头像可选 Emoji（方案三：Emoji 作为头像）
-const avatarEmojiOptions = [
-  '🚀', '📁', '👥', '🏢', '💡', '📚', '🌟', '🔧', '📌', '🎯',
-  '📂', '🔒', '🌐', '⚡', '🎨', '📊', '🤝', '💼', '📧', '🏠',
-  '🔑', '📈', '✨', '📋', '🌍', '💬', '🔔', '📦', '🎉', '🌈'
+// 专业线性图标（TDesign）：团队/企业/项目/数据等共享空间语义
+const avatarIconOptions = [
+  'usergroup', 'city', 'shop', 'home', 'rocket', 'flag',
+  'folder-open', 'book-open', 'book', 'education', 'mail', 'service',
+  'cloud', 'server', 'data-base', 'chart-bar', 'chart-line', 'chart-pie',
+  'wallet', 'calendar', 'task', 'dashboard', 'layers', 'tools',
+  'setting', 'palette', 'brush', 'star', 'internet', 'store',
 ]
 const avatarPopoverVisible = ref(false)
 
-function selectAvatarEmoji(emoji: string) {
-  formData.value.avatar = 'emoji:' + emoji
+function selectAvatarIcon(icon: string) {
+  formData.value.avatar = 'icon:' + icon
   avatarPopoverVisible.value = false
 }
 function clearAvatarEmoji() {
@@ -2150,6 +2153,11 @@ watch(addMemberPopupVisible, (visible) => {
   padding: 0;
   border: 1px solid var(--td-component-stroke);
   border-radius: var(--app-radius-md);
+  color: var(--td-text-color-primary);
+
+  .t-icon {
+    font-size: 20px;
+  }
   background: var(--td-bg-color-container);
   font-size: var(--app-text-2xl);
   cursor: pointer;

@@ -7,6 +7,9 @@
     <template v-if="isEmoji">
       <span class="space-avatar-emoji-char">{{ emojiChar }}</span>
     </template>
+    <template v-else-if="isIcon">
+      <t-icon :name="iconName" class="space-avatar-icon-glyph" />
+    </template>
     <template v-else>
       <svg class="space-avatar-decoration" viewBox="0 0 56 40" preserveAspectRatio="xMaxYMax meet" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <circle cx="10" cy="12" r="4" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/>
@@ -37,6 +40,17 @@ const props = withDefaults(defineProps<{
 const isEmoji = computed(() => {
   const v = (props.avatar || '').trim();
   return v.startsWith('emoji:') && v.length > 6;
+});
+
+// icon:<t-icon-name>：专业线性图标（替代 emoji 的正式头像形态）
+const isIcon = computed(() => {
+  const v = (props.avatar || '').trim();
+  return v.startsWith('icon:') && v.length > 5;
+});
+
+const iconName = computed(() => {
+  const v = (props.avatar || '').trim();
+  return isIcon.value ? v.slice(5) : '';
 });
 
 const emojiChar = computed(() => {
@@ -137,6 +151,11 @@ const letterStyle = computed(() => {
 
     .space-avatar-letter {
       font-size: var(--app-text-3xl);
+    }
+
+    .space-avatar-icon-glyph {
+      font-size: 20px;
+      color: var(--td-text-color-anti);
     }
 
     .space-avatar-emoji-char {

@@ -5403,7 +5403,7 @@ export default {
     nameRequired: '共有スペース名を入力してください',
     avatar: '共有スペースのアバター',
     avatarClear: 'クリア',
-    avatarPickerHint: '共有スペースのアバターとして絵文字を選択します',
+    avatarPickerHint: '共有スペースのアバターとしてアイコンを選択します',
     description: '共有スペースの説明',
     descriptionPlaceholder: '共有スペースの説明を入力してください（任意）',
     noDescription: '説明なし',

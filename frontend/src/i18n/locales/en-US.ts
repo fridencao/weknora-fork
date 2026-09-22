@@ -5403,7 +5403,7 @@ export default {
     nameRequired: 'Please enter shared space name',
     avatar: 'Shared Space Avatar',
     avatarClear: 'Clear',
-    avatarPickerHint: 'Choose an emoji as shared space avatar',
+    avatarPickerHint: 'Choose an icon as shared space avatar',
     description: 'Shared Space Description',
     descriptionPlaceholder: 'Enter shared space description (optional)',
     noDescription: 'No description',
