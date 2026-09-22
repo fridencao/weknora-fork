@@ -126,7 +126,7 @@
         </dl>
         <div v-if="model.chunk.content" class="provenance-panel__excerpt">
           <span class="provenance-panel__excerpt-label">{{ t('chat.provenance.excerpt') }}</span>
-          <p>{{ excerpt }}</p>
+          <div ref="excerptBody" class="provenance-panel__excerpt-body" v-html="excerptHtml"></div>
         </div>
       </section>
 
@@ -137,11 +137,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { marked } from 'marked'
 import { useProvenancePanel } from '@/composables/useProvenancePanel'
 import { extractProvenance, type ProvenanceModel } from '@/utils/provenance'
+import { configureMarkedForChatMarkdown } from '@/utils/chatMarkdownRenderer'
+import { sanitizeMarkdownHTML } from '@/utils/security'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -158,14 +161,68 @@ const model = computed<ProvenanceModel | null>(() =>
   panel ? extractProvenance(panel.inputs.value) : null,
 )
 
+const claimContext = computed(() => panel?.context.value || '')
+
 const panelTitle = computed(() =>
   panel?.title.value || t('chat.provenance.title'),
 )
 
-const excerpt = computed(() => {
-  const content = model.value?.chunk.content || ''
-  return content.length > 320 ? `${content.slice(0, 320)}…` : content
+// 摘录按 markdown 预览渲染（与引用悬浮卡同一管线），展示父 chunk 全文——
+// 旧版开头截 320 字常常只剩相邻章节，与问句「对不上」。
+// 渲染完成后用角标所在句子（claimContext）做二元组相似度定位，滚动 + 高亮相关段。
+const excerptBody = ref<HTMLElement | null>(null)
+
+const bigrams = (s: string): Set<string> => {
+  const t = (s || '').replace(/\s+/g, '')
+  const out = new Set<string>()
+  for (let i = 0; i < t.length - 1; i++) out.add(t.slice(i, i + 2))
+  return out
+}
+
+const excerptHtml = computed(() => {
+  const raw = model.value?.chunk.content || ''
+  const cleaned = raw.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+  if (!cleaned.trim()) return ''
+  try {
+    configureMarkedForChatMarkdown()
+    return sanitizeMarkdownHTML(marked.parse(cleaned, { breaks: true, async: false }) as string)
+  } catch {
+    return ''
+  }
 })
+
+const locateRelevantBlock = async () => {
+  await nextTick()
+  const body = excerptBody.value
+  if (!body) return
+  body.querySelectorAll('.provenance-panel__hit').forEach((el) => {
+    el.classList.remove('provenance-panel__hit')
+  })
+  const context = claimContext.value
+  const ctxGrams = bigrams(context)
+  if (!ctxGrams.size) return
+  let best: Element | null = null
+  let bestScore = 0
+  body.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6').forEach((block) => {
+    const grams = bigrams(block.textContent || '')
+    if (!grams.size) return
+    let hit = 0
+    grams.forEach((g) => {
+      if (ctxGrams.has(g)) hit++
+    })
+    const score = hit / Math.sqrt(grams.size)
+    if (score > bestScore) {
+      bestScore = score
+      best = block
+    }
+  })
+  if (!best || bestScore < 0.5) return
+  const el = best as HTMLElement
+  el.classList.add('provenance-panel__hit')
+  body.scrollTop = Math.max(0, (el as HTMLElement).offsetTop - body.clientHeight / 3)
+}
+
+watch([excerptHtml, claimContext], locateRelevantBlock)
 
 const methodLabel = computed(() => {
   const method = model.value?.chunk.method || ''
@@ -313,10 +370,10 @@ function close() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  color: var(--td-warning-color, var(--td-brand-color));
+  color: var(--td-warning-color);
 
   .is-dim {
-    color: var(--td-bg-color-component-disabled, var(--td-component-stroke));
+    color: var(--td-bg-color-component-disabled);
   }
 }
 
@@ -350,7 +407,7 @@ function close() {
     margin-bottom: 4px;
   }
 
-  p {
+  .provenance-panel__excerpt-body {
     margin: 0;
     padding: 8px 10px;
     border-radius: var(--app-radius-xs);
@@ -358,10 +415,49 @@ function close() {
     font-size: var(--app-text-sm);
     line-height: 1.6;
     color: var(--td-text-color-secondary);
-    white-space: pre-wrap;
     word-break: break-word;
     max-height: 180px;
     overflow-y: auto;
+
+    // markdown 预览模式：块级元素自然流式排布 + 标题压扁为加粗正文
+    :deep(p),
+    :deep(h1),
+    :deep(h2),
+    :deep(h3),
+    :deep(h4),
+    :deep(h5),
+    :deep(h6),
+    :deep(ul),
+    :deep(ol) {
+      margin: 0 0 0.375em;
+      font-size: inherit;
+      white-space: normal;
+    }
+
+    :deep(h1),
+    :deep(h2),
+    :deep(h3),
+    :deep(h4),
+    :deep(h5),
+    :deep(h6) {
+      font-weight: 600;
+      color: var(--td-text-color-primary);
+    }
+
+    :deep(*:first-child) {
+      margin-top: 0;
+    }
+
+    :deep(*:last-child) {
+      margin-bottom: 0;
+    }
+
+    :deep(.provenance-panel__hit) {
+      background: var(--td-brand-color-1);
+      border-radius: var(--app-radius-xs);
+      box-shadow: 0 0 0 3px var(--td-brand-color-1);
+      color: var(--td-text-color-primary);
+    }
   }
 }
 

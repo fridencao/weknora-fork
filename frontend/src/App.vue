@@ -296,7 +296,7 @@ html,
   height: 100%;
   margin: 0;
   padding: 0;
-  font-size: 14px;
+  font-size: var(--app-text-base);
   font-family: var(--app-font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

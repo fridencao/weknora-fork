@@ -321,6 +321,8 @@ export type ReferenceHighlightTarget = {
   documentTitle?: string
   knowledgeBaseId?: string
   key?: string
+  /** 角标所在句子的上下文（穿透到溯源面板做相关段定位） */
+  context?: string
 }
 
 export function resolveReferenceHighlightKey(

@@ -283,3 +283,93 @@ select:-webkit-autofill {
 .starkb-logo-dark { display: none; }
 html[theme-mode="dark"] .starkb-logo-light { display: none; }
 html[theme-mode="dark"] .starkb-logo-dark { display: inline; }
+
+/* ============================================================
+ * 字号阶梯（2026-09-22 UI 优化：整体缩放 zoom → token 重映射）
+ * 三档 = 对 data-font-size 重映射全部字号 token，不再用 <html> zoom。
+ * 正常档 = 对数压缩阶梯 target = 12 + log2(source − 12)（12→12、14→13、
+ * 16→14、20→15），正文 14→13px；小/大档 = 正常档全体 ±1px。
+ * 小/大档里 headline/display 跟随 ±1；正常档保持原值（装饰性大字）。
+ * 消费方：--app-text-*（应用代码 1900+ 处）与 --td-font-size-*
+ * （TDesign 组件 83 处 + line-height calc 自动联动）。
+ * 基线锁：styleGuard.test.mjs「font-size ladder anchors」。
+ * ============================================================ */
+:root:root:root {
+  --app-text-2xs: 10px;
+  --app-text-xs: 11px;
+  --app-text-sm: 12px;
+  --app-text-md: 13px;
+  --app-text-base: 13px;
+  --app-text-lg: 14px;
+  --app-text-xl: 14px;
+  --app-text-2xl: 15px;
+  --app-text-3xl: 15px;
+  --app-text-4xl: 16px;
+  --td-font-size-link-small: 12px;
+  --td-font-size-link-medium: 13px;
+  --td-font-size-link-large: 14px;
+  --td-font-size-mark-small: 12px;
+  --td-font-size-mark-medium: 13px;
+  --td-font-size-body-small: 12px;
+  --td-font-size-body-medium: 13px;
+  --td-font-size-body-large: 14px;
+  --td-font-size-title-small: 14px;
+  --td-font-size-title-medium: 14px;
+  --td-font-size-title-large: 15px;
+}
+:root:root[data-font-size='small'] {
+  --app-text-2xs: 9px;
+  --app-text-xs: 10px;
+  --app-text-sm: 11px;
+  --app-text-md: 12px;
+  --app-text-base: 12px;
+  --app-text-lg: 13px;
+  --app-text-xl: 13px;
+  --app-text-2xl: 14px;
+  --app-text-3xl: 14px;
+  --app-text-4xl: 15px;
+  --td-font-size-link-small: 11px;
+  --td-font-size-link-medium: 12px;
+  --td-font-size-link-large: 13px;
+  --td-font-size-mark-small: 11px;
+  --td-font-size-mark-medium: 12px;
+  --td-font-size-body-small: 11px;
+  --td-font-size-body-medium: 12px;
+  --td-font-size-body-large: 13px;
+  --td-font-size-title-small: 13px;
+  --td-font-size-title-medium: 13px;
+  --td-font-size-title-large: 14px;
+  --td-font-size-headline-small: 23px;
+  --td-font-size-headline-medium: 27px;
+  --td-font-size-headline-large: 35px;
+  --td-font-size-display-medium: 47px;
+  --td-font-size-display-large: 63px;
+}
+:root:root[data-font-size='large'] {
+  --app-text-2xs: 11px;
+  --app-text-xs: 12px;
+  --app-text-sm: 13px;
+  --app-text-md: 14px;
+  --app-text-base: 14px;
+  --app-text-lg: 15px;
+  --app-text-xl: 15px;
+  --app-text-2xl: 16px;
+  --app-text-3xl: 16px;
+  --app-text-4xl: 17px;
+  --td-font-size-link-small: 13px;
+  --td-font-size-link-medium: 14px;
+  --td-font-size-link-large: 15px;
+  --td-font-size-mark-small: 13px;
+  --td-font-size-mark-medium: 14px;
+  --td-font-size-body-small: 13px;
+  --td-font-size-body-medium: 14px;
+  --td-font-size-body-large: 15px;
+  --td-font-size-title-small: 15px;
+  --td-font-size-title-medium: 15px;
+  --td-font-size-title-large: 16px;
+  --td-font-size-headline-small: 25px;
+  --td-font-size-headline-medium: 29px;
+  --td-font-size-headline-large: 37px;
+  --td-font-size-display-medium: 49px;
+  --td-font-size-display-large: 65px;
+}

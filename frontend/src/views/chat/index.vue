@@ -1043,6 +1043,25 @@ const getmsgList = (data, isScrollType = false, scrollHeight) => {
             hasMoreHistory.value = false;
         }
         created_at.value = nextCursor;
+        // 从历史消息引用恢复本会话实际使用的知识库范围：
+        // 此前 KB 选择只存在于请求参数里（且刷新即丢），composer 因此显示不出
+        // 「正在按哪个知识库问答」。恢复后 @ 按钮可见、后续问答沿用同一范围。
+        if (!isScrollType) {
+            const historyKbIds = new Set();
+            for (const m of batch) {
+                for (const ref of (m.knowledge_references || [])) {
+                    if (ref?.knowledge_base_id) historyKbIds.add(ref.knowledge_base_id);
+                }
+            }
+            if (historyKbIds.size) {
+                const current = new Set(useSettingsStoreInstance.settings.selectedKnowledgeBases || []);
+                let changed = false;
+                for (const id of historyKbIds) {
+                    if (!current.has(id)) { current.add(id); changed = true; }
+                }
+                if (changed) useSettingsStoreInstance.selectKnowledgeBases([...current]);
+            }
+        }
         await handleMsgList(batch, isScrollType, scrollHeight);
     }).catch((err) => {
         console.error('Failed to load messages:', err);
@@ -2009,8 +2028,9 @@ onBeforeRouteUpdate((to, from, next) => {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    max-width: 960px;
-    padding: 16px 0;
+    max-width: 100%;
+    padding: 16px var(--chat-content-inset, 20px);
+    box-sizing: border-box;
     animation: contentFadeIn 0.3s ease-out;
 }
 
@@ -2031,13 +2051,12 @@ onBeforeRouteUpdate((to, from, next) => {
     flex-shrink: 0;
     margin: 0 auto;
     width: 100%;
-    max-width: 960px;
+    max-width: 100%;
     box-sizing: border-box;
     position: relative;
 
     &:not(.is-embedded) {
         padding: 0 var(--chat-content-inset, 20px);
-        max-width: calc(960px + 2 * var(--chat-content-inset, 20px));
     }
 
     &.is-embedded {
@@ -2055,7 +2074,7 @@ onBeforeRouteUpdate((to, from, next) => {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: 960px;
+    max-width: 100%;
     flex: 1;
     margin: 0 auto;
     width: 100%;
@@ -2063,7 +2082,6 @@ onBeforeRouteUpdate((to, from, next) => {
 
     &:not(.is-embedded) {
         padding: 0 var(--chat-content-inset, 20px);
-        max-width: calc(960px + 2 * var(--chat-content-inset, 20px));
     }
 
     /*

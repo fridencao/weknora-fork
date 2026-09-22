@@ -8,10 +8,10 @@
 // live outside this file.
 //
 // Shared typography for chat answer markdown (botmsg, AgentStreamDisplay, embed).
-// Tuned against ChatGPT markdown test doc: 16px body, 24px line-height on paragraphs,
-// stepped headings, dotted links, light tables, pill inline code, kbd chips.
+// Body = --app-text-base（字号阶梯的「正文」锚点：12/13/14 三档），
+// 问句气泡（usermsg）同为 base，两侧一致。
 .chat-markdown-typography() {
-  font-size: var(--app-text-xl);
+  font-size: var(--app-text-base);
   color: var(--td-text-color-primary);
   line-height: 1.625;
   letter-spacing: normal;
@@ -443,14 +443,14 @@
   }
 
   :deep(h1) {
-    font-size: 1.5em;
+    font-size: var(--app-text-3xl);
     font-weight: 600;
     margin: 0 0 0.375em;
     line-height: 1.333;
   }
 
   :deep(h2) {
-    font-size: 1.25em;
+    font-size: var(--app-text-lg);
     font-weight: 600;
     margin: 1em 0 0.25em;
     line-height: 1.4;
@@ -461,7 +461,7 @@
   }
 
   :deep(h3) {
-    font-size: 1.125em;
+    font-size: var(--app-text-base);
     font-weight: 600;
     margin: 0.875em 0 0.25em;
     line-height: 1.556;

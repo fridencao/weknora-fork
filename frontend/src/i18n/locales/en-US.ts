@@ -1169,7 +1169,6 @@ export default {
       webFetchEnabled: 'Auto-Fetch Page Content',
       webFetchTopN: 'Pages to Fetch',
       knowledgeBases: 'Knowledge Bases',
-      allKnowledgeBases: 'All Knowledge Bases',
       selectedKnowledgeBases: 'Selected Knowledge Bases',
       noKnowledgeBase: 'No Knowledge Base',
       selectKnowledgeBases: 'Select Knowledge Bases',
@@ -2682,6 +2681,7 @@ export default {
     },
     knowledgeBase: 'Knowledge Base',
     knowledgeBaseWithCount: 'Knowledge Base ({count})',
+    allKnowledgeBases: 'All knowledge bases',
     notConfigured: 'Not configured',
     sharedAgentModelLabel: 'Model from shared agent',
     noModel: 'No available models',
@@ -4857,7 +4857,7 @@ export default {
       monospace: 'Generic Monospace'
     },
     fontSize: 'Font Size',
-    fontSizeDescription: 'Scales the entire interface (text, icons, spacing) and applies immediately',
+    fontSizeDescription: 'Adjusts the interface text size and applies immediately',
     size: {
       small: 'Small',
       normal: 'Normal',
@@ -6964,7 +6964,6 @@ export default {
       capabilityManageTenantSettingsHint: 'Read and update workspace-level integration settings such as API end-user identity mode, request header configuration, and workspace KV settings. Does not include API key management, member management, workspace deletion, or ownership transfer.',
       apiKeyKnowledgeScope: 'Knowledge bases',
       apiKeyKnowledgeScopePlaceholder: 'Leave empty to allow all knowledge bases',
-      allKnowledgeBases: 'All knowledge bases',
       editApiKeyScope: 'Edit API key',
       editApiKeyScopeDesc: 'Change the name and authorization scope of API key "{name}".',
       editApiKeyScopeHint: 'Leave empty to allow all knowledge bases in this workspace. All changes take effect immediately.',

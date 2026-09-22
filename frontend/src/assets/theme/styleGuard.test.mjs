@@ -124,3 +124,34 @@ for (const rule of RULES) {
     )
   })
 }
+
+// ── 字号阶梯锚点（2026-09-22 zoom→token 重映射）────────────────────────
+// theme.css 末尾的三档 token 覆盖块是「字体大小」设置的实现载体，
+// 这里锁住四个角色锚点（辅助 sm / 正文 base / 标题小 xl / 标题中 3xl）
+// 在三档下的渲染值，防止后续改版把阶梯悄悄改掉。
+const THEME_CSS = readFileSync(join(SRC_ROOT, 'assets', 'theme', 'theme.css'), 'utf8')
+
+const LADDER_ANCHORS = {
+  normal: { sm: 12, base: 13, xl: 14, '3xl': 15 },
+  small: { sm: 11, base: 12, xl: 13, '3xl': 14 },
+  large: { sm: 13, base: 14, xl: 15, '3xl': 16 },
+}
+
+function ladderBlock(mode) {
+  const selector =
+    mode === 'normal' ? ':root:root:root' : `:root:root[data-font-size='${mode}']`
+  const start = THEME_CSS.indexOf(selector + ' {')
+  assert.ok(start >= 0, `theme.css 缺少 ${selector} 覆盖块`)
+  const end = THEME_CSS.indexOf('}', start)
+  return THEME_CSS.slice(start, end)
+}
+
+for (const [mode, anchors] of Object.entries(LADDER_ANCHORS)) {
+  test(`font-size ladder anchors (${mode})`, () => {
+    const block = ladderBlock(mode)
+    for (const [token, px] of Object.entries(anchors)) {
+      const re = new RegExp(`--app-text-${token}:\\s*${px}px`)
+      assert.ok(re.test(block), `theme.css ${mode} 档 --app-text-${token} 应为 ${px}px`)
+    }
+  })
+}

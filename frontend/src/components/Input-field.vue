@@ -631,6 +631,31 @@ const selectedMCPItems = computed<MentionItem[]>(() => {
     .map(toMCPMentionItem);
 });
 
+// 生效的知识库范围（设置/侧栏勾选的 KB）：@ 按钮上显示名称，
+// 避免「其实已选了知识库、按钮却毫无体现」的困惑。有 @ 提及时以 chips 为准。
+const scopeKnowledgeBaseLabel = computed(() => {
+  const ids = settingsStore.settings.selectedKnowledgeBases || []
+  if (!ids.length) return ''
+  const pool = [
+    ...knowledgeBases.value,
+    ...((orgStore.sharedKnowledgeBases || [])
+      .map((s: any) => s?.knowledge_base)
+      .filter(Boolean)),
+  ]
+  const names = ids
+    .map((id) => pool.find((kb: any) => String(kb?.id) === String(id))?.name)
+    .filter(Boolean)
+  if (!names.length) return t('input.knowledgeBaseWithCount', { count: ids.length })
+  return names.length === 1 ? String(names[0]) : t('input.knowledgeBaseWithCount', { count: names.length })
+})
+
+// 未显式选择任何知识库时，检索默认覆盖全部知识库——如实展示，避免「已生效但不可见」
+const defaultScopeLabel = computed(() =>
+  !scopeKnowledgeBaseLabel.value && allSelectedItems.value.length === 0
+    ? t('input.allKnowledgeBases')
+    : '',
+)
+
 // 合并所有选中项（用于输入框内显示）
 // 现在智能体配置的知识库也在 store 中，统一从 selectedKbs 获取
 const allSelectedItems = computed(() => {
@@ -2819,7 +2844,8 @@ defineExpose({
               }) : $t('input.knowledgeBase') }}</span>
             </template>
             <div ref="atButtonRef" class="control-btn kb-btn" data-guide="chat-kb-mention" :class="{
-              'active': allSelectedItems.length > 0,
+              'active': allSelectedItems.length > 0 || !!scopeKnowledgeBaseLabel,
+              'has-scope-label': !!scopeKnowledgeBaseLabel,
               'disabled': isMentionDisabled
             }" @click.stop @mousedown.prevent="triggerMention">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"
@@ -2829,7 +2855,16 @@ defineExpose({
                   d="M13.5 10V11.5C13.5 12.163 13.7634 12.7989 14.2322 13.2678C14.7011 13.7366 15.337 14 16 14C16.663 14 17.2989 13.7366 17.7678 13.2678C18.2366 12.7989 18.5 12.163 18.5 11.5V10C18.5 7.74566 17.6045 5.58365 16.0104 3.98959C14.4163 2.39553 12.2543 1.5 10 1.5C7.74566 1.5 5.58365 2.39553 3.98959 3.98959C2.39553 5.58365 1.5 7.74566 1.5 10C1.5 12.2543 2.39553 14.4163 3.98959 16.0104C5.58365 17.6045 7.74566 18.5 10 18.5H12"
                   stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <span v-if="allSelectedItems.length > 0" class="kb-count">{{ allSelectedItems.length }}</span>
+              <span
+                v-if="scopeKnowledgeBaseLabel || defaultScopeLabel"
+                class="kb-scope-label"
+                :class="{ 'is-default': !scopeKnowledgeBaseLabel }"
+                :title="scopeKnowledgeBaseLabel || defaultScopeLabel"
+              >{{ scopeKnowledgeBaseLabel || defaultScopeLabel }}</span>
+              <span
+                v-if="allSelectedItems.length > 0 && !scopeKnowledgeBaseLabel"
+                class="kb-count"
+              >{{ allSelectedItems.length }}</span>
             </div>
           </t-tooltip>
 
@@ -3354,6 +3389,16 @@ const getImgSrc = (url: string) => {
   min-width: auto;
   position: relative;
 
+  &.has-scope-label {
+    width: auto;
+    min-width: 28px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
   &:hover:not(.disabled):not(.active) {
     color: var(--td-text-color-primary);
   }
@@ -3412,6 +3457,26 @@ const getImgSrc = (url: string) => {
 }
 
 .kb-btn.active .kb-btn-text {
+  color: var(--td-brand-color);
+}
+
+.kb-scope-label {
+  font-size: var(--app-text-sm);
+  color: var(--td-text-color-secondary);
+  font-weight: 500;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.is-default {
+    color: var(--td-text-color-placeholder);
+    font-weight: 400;
+  }
+}
+
+.kb-btn.active .kb-scope-label {
   color: var(--td-brand-color);
 }
 
@@ -3696,6 +3761,8 @@ const getImgSrc = (url: string) => {
 
   &.disabled {
     background-color: var(--td-success-color-light);
+    // 浅绿底上白图标对比度不足（浅色模式下几乎不可见），按用户要求改黑色（token 自适应深色模式反白）
+    color: var(--td-text-color-primary);
   }
 
   img {

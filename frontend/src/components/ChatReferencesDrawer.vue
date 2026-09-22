@@ -319,6 +319,7 @@ function openProvenance(item: ReferenceListItem) {
   provenancePanel?.open({
     inputs: collectProvenanceInputs(item),
     title: item.title,
+    context: highlight.value?.context || '',
   })
 }
 

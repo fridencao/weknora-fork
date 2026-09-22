@@ -113,7 +113,7 @@ const formatFileSize = (bytes: number): string => {
   background: var(--td-bg-color-secondarycontainer);
   margin-left: auto;
   color: var(--td-text-color-primary);
-  font-size: var(--app-text-xl);
+  font-size: var(--app-text-base);
   line-height: 1.6;
   text-align: left;
   word-break: break-word;
