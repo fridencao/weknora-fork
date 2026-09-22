@@ -696,6 +696,34 @@ const resolveAssistantMessageId = (message) => message?.assistant_message_id || 
 
 const handleAnswerRenderComplete = (message, ready) => {
     message.answerFullyRendered = Boolean(ready);
+    if (ready) void hydrateMessageReferences(message);
+};
+
+// 流式回答完成后再拉一次本会话最新消息，把服务端读取时组装的
+// knowledge_references 补到本地消息对象上——否则刚生成的回答点引用时
+// 溯源面板拿到空数据，必须手动刷新页面才能显示。
+const hydrateMessageReferences = async (message, attempt = 0) => {
+    const sid = session_id.value;
+    const mid = resolveAssistantMessageId(message);
+    if (!sid || !mid) {
+        // 消息 id 可能晚于渲染完成才持久化，稍后重试一次
+        if (attempt < 1) {
+            setTimeout(() => { if (session_id.value === sid) void hydrateMessageReferences(message, 1); }, 2500);
+        }
+        return;
+    }
+    if (message.knowledge_references?.length) return;
+    try {
+        const res = await fetchMessageList({ session_id: sid, limit: 10 });
+        if (session_id.value !== sid) return;
+        const batch = res?.data || [];
+        const match = batch.find((m) => m.id === mid);
+        if (match?.knowledge_references?.length) {
+            message.knowledge_references = match.knowledge_references;
+        }
+    } catch (err) {
+        console.warn('[chat] hydrate knowledge_references failed:', err);
+    }
 };
 
 const loadFollowUpSuggestions = async (message, ensure = false, regenerate = false) => {
