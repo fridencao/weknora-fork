@@ -97,7 +97,8 @@
 
     <!-- Logo - Top Left -->
     <div class="header-logo" :title="$t('common.info')">
-      <img src="@/assets/img/starkb.png" alt="StarKB" class="logo-image" />
+      <img src="@/assets/img/starkb.png" alt="StarKB" class="logo-image starkb-logo-light" />
+      <img src="@/assets/img/starkb-dark.png" alt="StarKB" class="logo-image starkb-logo-dark" />
     </div>
 
     <!-- Header Links - Top Right -->

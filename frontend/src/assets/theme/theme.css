@@ -278,3 +278,8 @@ select:-webkit-autofill {
     --z-popover: 3000;
     --z-toast: 5000;
 }
+
+/* StarKB logo 深色模式适配：浅色主题字标为深色，暗背景不可读——双图按主题切换 */
+.starkb-logo-dark { display: none; }
+html[theme-mode="dark"] .starkb-logo-light { display: none; }
+html[theme-mode="dark"] .starkb-logo-dark { display: inline; }
