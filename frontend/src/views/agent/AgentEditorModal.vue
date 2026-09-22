@@ -5271,6 +5271,12 @@ const handleSave = async () => {
   align-items: flex-start;
   overflow: hidden;
 
+  // 滑杆 thumb 在值为 0 时中心对齐轨道左端、向左伸出 8px，
+  // overflow:hidden 会把左半圆裁成月牙——含滑杆的容器放开裁剪
+  &:has(.t-slider) {
+    overflow: visible;
+  }
+
   .reasoning-effort-select {
     width: 100%;
     max-width: 220px;
