@@ -264,9 +264,14 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 
 	// Separate and fuse retrieval results. The graph channel (M3 G3) recalls
 	// LightRAG evidence on top of the store fan-out; it degrades to nil and the
-	// fusion then behaves as the legacy two-way form.
+	// fusion then behaves as the legacy two-way form. Config resolves first so
+	// the channel switch (UI-set tenant config, env default) is available.
 	vectorResults, keywordResults := classifyRetrievalResults(ctx, retrieveResults)
-	graphResults := s.graphRecallForSearch(ctx, searchKBIDs, params.QueryText, matchCount)
+	var retrievalCfg *types.RetrievalConfig
+	if tenantInfo != nil {
+		retrievalCfg = tenantInfo.RetrievalConfig
+	}
+	graphResults := s.graphRecallForSearch(ctx, searchKBIDs, params.QueryText, matchCount, retrievalCfg)
 	if len(vectorResults) == 0 && len(keywordResults) == 0 && len(graphResults) == 0 {
 		logger.Info(ctx, "No search results found")
 		return nil, nil
@@ -274,10 +279,6 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	logger.Infof(ctx, "Result count before fusion: vector=%d, keyword=%d, graph=%d",
 		len(vectorResults), len(keywordResults), len(graphResults))
 
-	var retrievalCfg *types.RetrievalConfig
-	if tenantInfo != nil {
-		retrievalCfg = tenantInfo.RetrievalConfig
-	}
 	deduplicatedChunks := fuseOrDeduplicate(ctx, vectorResults, keywordResults, graphResults, retrievalCfg)
 
 	kb.EnsureDefaults()

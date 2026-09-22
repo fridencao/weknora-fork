@@ -6,6 +6,19 @@
     </div>
 
     <div class="settings-group">
+      <!-- Graph Channel (M3 G3)：LightRAG 图谱召回开关，显式设置优先于部署默认 -->
+      <div class="setting-item">
+        <div class="setting-label-row">
+          <span>{{ t('retrievalSettings.graphChannelLabel') }}</span>
+          <t-switch
+            v-model="graphChannelUi"
+            :disabled="!canEdit"
+            @change="handleGraphChannelChange"
+          />
+        </div>
+        <p class="setting-desc">{{ t('retrievalSettings.graphChannelDescription') }}</p>
+      </div>
+
       <!-- Rerank Model -->
       <div class="setting-item">
         <div class="setting-label">
@@ -109,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onMounted, nextTick } from 'vue'
+import { reactive, ref, computed, onMounted, nextTick } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
 import ModelSelector from '@/components/ModelSelector.vue'
@@ -126,6 +139,13 @@ const authStore = useAuthStore()
 // banner + lock all controls for non-Admins so they can read the
 // configuration without tripping a 403 mid-edit.
 const canEdit = computed(() => authStore.hasRole('admin'))
+
+// 图谱开关 UI 三态归一：undefined/null = 跟随部署默认（GRAPH_CHANNEL_ENABLED）。
+// 部署默认经 /deployment-capabilities 探测不在本页职责内，这里以「开启」为
+// 展示默认——保存时总是写入显式 boolean，服务端由此获得确定的 UI 意图。
+const deploymentDefault = true
+const graphChannelUi = ref<boolean>(deploymentDefault)
+let graphChannelLoaded: boolean | null = null
 
 const defaultConfig: RetrievalConfig = {
   embedding_top_k: 50,
@@ -153,6 +173,8 @@ const loadConfig = async () => {
         rerank_threshold: cfg.rerank_threshold ?? defaultConfig.rerank_threshold,
         rerank_model_id: cfg.rerank_model_id || '',
       })
+      graphChannelLoaded = cfg.graph_channel_enabled ?? null
+      graphChannelUi.value = graphChannelLoaded ?? deploymentDefault
       initialConfig = { ...localConfig }
     }
   } catch (error: any) {
@@ -165,13 +187,17 @@ const loadConfig = async () => {
 }
 
 const hasConfigChanged = (): boolean => {
+  if (graphChannelUi.value !== graphChannelLoaded) return true
   return JSON.stringify(localConfig) !== JSON.stringify(initialConfig)
 }
 
 const saveConfig = async () => {
   if (!hasConfigChanged()) return
   try {
-    const response = await updateTenantRetrievalConfig({ ...localConfig })
+    const response = await updateTenantRetrievalConfig({
+      ...localConfig,
+      graph_channel_enabled: graphChannelUi.value,
+    })
     if (response.data) {
       initialConfig = { ...localConfig }
     }
@@ -192,6 +218,10 @@ const debouncedSave = () => {
   }, 500)
 }
 
+const handleGraphChannelChange = () => {
+  graphChannelLoaded = graphChannelUi.value
+  debouncedSave()
+}
 const handleParamChange = () => debouncedSave()
 const handleModelChange = (modelId: string) => {
   localConfig.rerank_model_id = modelId

@@ -1271,6 +1271,7 @@ export default {
     autoCheckUpdate: '更新の自動ダウンロード',
     autoCheckUpdateDesc: '有効にすると、バックグラウンドで最新バージョンを自動的に確認・ダウンロードします。',
     vectorStoreEngine: 'ベクトルDBエンジン',
+    retrievalSettings: '検索設定',
     parserEngine: '解析エンジン',
     storageEngine: 'ストレージエンジン',
     sandbox: {
@@ -2307,6 +2308,8 @@ export default {
   retrievalSettings: {
     title: '検索設定',
     description: 'ナレッジベース検索とメッセージ検索に共通する検索パラメータを設定します',
+      graphChannelLabel: 'グラフ検索チャネル（LightRAG）',
+      graphChannelDescription: '有効にすると、検索とチャットで LightRAG グラフからエンティティ・関係のエビデンスチャンクを呼び出し、ベクトル/キーワードと RRF 融合します。未設定の場合はデプロイ既定（環境変数 GRAPH_CHANNEL_ENABLED）に従います。',
     embeddingTopKLabel: 'ベクトル検索のTop K',
     vectorThresholdLabel: 'ベクトル類似度のしきい値',
     keywordThresholdLabel: 'キーワード一致のしきい値',

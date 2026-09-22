@@ -1271,6 +1271,7 @@ export default {
     autoCheckUpdate: 'Auto Download Updates',
     autoCheckUpdateDesc: 'When enabled, automatically check and download the latest version in the background.',
     vectorStoreEngine: 'Vector DB Engine',
+    retrievalSettings: 'Retrieval Settings',
     parserEngine: 'Parser Engine',
     storageEngine: 'Storage Engine',
     sandbox: {
@@ -2307,6 +2308,8 @@ export default {
   retrievalSettings: {
     title: 'Search Settings',
     description: 'Configure global retrieval parameters for knowledge search and message search',
+      graphChannelLabel: 'Graph recall channel (LightRAG)',
+      graphChannelDescription: 'When enabled, search and chat also recall entity/relation evidence chunks from the LightRAG graph and fuse them with vector/keyword via RRF. If unset, the deployment default (GRAPH_CHANNEL_ENABLED env) applies.',
     embeddingTopKLabel: 'Vector Search Top K',
     vectorThresholdLabel: 'Vector Similarity Threshold',
     keywordThresholdLabel: 'Keyword Match Threshold',

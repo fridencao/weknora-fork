@@ -39,6 +39,11 @@ type RetrievalConfig struct {
 	// docs/07 G3). The graph channel is additive — vector/keyword keep their
 	// defaults so the graph acts as a supplement, not a dilution. Default: 0.2.
 	RRFGraphWeight float64 `json:"rrf_graph_weight,omitempty"`
+	// GraphChannelEnabled toggles the LightRAG graph recall channel (docs/07
+	// G3). Nil means "not configured in the UI": the deployment default
+	// (GRAPH_CHANNEL_ENABLED env) applies, so existing deployments keep their
+	// behavior. Settings UI sets it explicitly per tenant.
+	GraphChannelEnabled *bool `json:"graph_channel_enabled,omitempty"`
 }
 
 // DefaultRetrievalTopK is the retrieval depth used when a caller supplies no
@@ -114,13 +119,22 @@ func (c *RetrievalConfig) GetEffectiveRRFWeights() (vector, keyword float64) {
 
 // GetEffectiveRRFGraphWeight returns the graph channel weight (default 0.2).
 // A zero/negative value falls back to the default, never to "disabled" —
-// disabling is the graph channel's own switch (GRAPH_CHANNEL_ENABLED), which
+// disabling is the graph channel's own switch (GraphChannelEnabled), which
 // simply yields an empty graph candidate set.
 func (c *RetrievalConfig) GetEffectiveRRFGraphWeight() float64 {
 	if c == nil || c.RRFGraphWeight <= 0 {
 		return 0.2
 	}
 	return c.RRFGraphWeight
+}
+
+// GetGraphChannelEnabled resolves the graph channel switch: an explicit UI
+// setting wins; otherwise the deployment env default applies.
+func (c *RetrievalConfig) GetGraphChannelEnabled(envDefault bool) bool {
+	if c != nil && c.GraphChannelEnabled != nil {
+		return *c.GraphChannelEnabled
+	}
+	return envDefault
 }
 
 // Value implements the driver.Valuer interface for database serialization

@@ -5235,6 +5235,8 @@ export default {
   retrievalSettings: {
     title: '搜索设置',
     description: '配置知识库搜索和消息搜索的全局检索参数',
+      graphChannelLabel: '图谱召回通道（LightRAG）',
+      graphChannelDescription: '开启后，检索与聊天会从 LightRAG 图谱召回实体关系与证据 chunk，并与向量/关键词通道做 RRF 融合。未显式设置时跟随部署默认（环境变量 GRAPH_CHANNEL_ENABLED）。',,
     embeddingTopKLabel: '向量检索数量 (Top K)',
     vectorThresholdLabel: '向量相似度阈值',
     keywordThresholdLabel: '关键词匹配阈值',
@@ -5571,6 +5573,7 @@ export default {
     autoCheckUpdate: '自动下载更新',
     autoCheckUpdateDesc: '开启后自动检查并在后台下载最新版本安装包。',
     vectorStoreEngine: '向量数据库引擎',
+    retrievalSettings: '检索设置',
     parserEngine: '解析引擎',
     storageEngine: '存储引擎',
     sandbox: {

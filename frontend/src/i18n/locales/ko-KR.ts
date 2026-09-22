@@ -5233,6 +5233,8 @@ export default {
   retrievalSettings: {
     title: '검색 설정',
     description: '전역 검색 파라미터를 설정합니다. 지식베이스 검색과 메시지 검색이 이 설정을 공유합니다',
+      graphChannelLabel: '그래프 리콜 채널(LightRAG)',
+      graphChannelDescription: '활성화하면 검색과 채팅이 LightRAG 그래프에서 엔티티/관계 증거 청크를 불러와 벡터/키워드와 RRF 융합합니다. 미설정 시 배포 기본값(GRAPH_CHANNEL_ENABLED 환경변수)을 따릅니다.',
     embeddingTopKLabel: '벡터 검색 Top K',
     vectorThresholdLabel: '벡터 유사도 임계값',
     keywordThresholdLabel: '키워드 매칭 임계값',
@@ -5569,6 +5571,7 @@ export default {
     autoCheckUpdate: '업데이트 자동 다운로드',
     autoCheckUpdateDesc: '활성화하면 시작 시 최신 버전을 자동으로 확인하고 백그라운드에서 다운로드합니다.',
     vectorStoreEngine: '벡터 DB 엔진',
+    retrievalSettings: '검색 설정',
     parserEngine: '파싱 엔진',
     storageEngine: '스토리지 엔진',
     sandbox: {

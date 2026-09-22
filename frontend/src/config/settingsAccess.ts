@@ -16,6 +16,7 @@ export const SETTINGS_SECTION_MIN_ROLE: Record<string, SettingsRoleKey> = {
   chathistory: 'admin',
   vectorstore: 'admin',
   parser: 'admin',
+  retrieval: 'admin',
   storage: 'admin',
   sandbox: 'admin',
   // Install writes a root shell into the sandbox image every session of

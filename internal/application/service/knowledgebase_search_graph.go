@@ -21,18 +21,20 @@ import (
 // graphRecallTimeout 图谱通道软超时：检索主链路不应被图谱抖动拖死。
 const graphRecallTimeout = 8 * time.Second
 
-// graphChannelEnabled 与 chat 通道共用同一开关（GRAPH_CHANNEL_ENABLED）。
-func graphChannelEnabled() bool {
+// graphChannelEnvDefault 部署级默认（GRAPH_CHANNEL_ENABLED），与 chat 通道共用。
+func graphChannelEnvDefault() bool {
 	return os.Getenv("GRAPH_CHANNEL_ENABLED") == "true"
 }
 
 // graphRecallForSearch 对 API 层检索执行图谱召回：
 // 查询词 → LightRAG mix 查询 → 证据 chunk key 解析 → KB 范围文档过滤 → chunk 回查。
+// 开关：tenant 检索配置（设置 UI）优先，未配置时回落部署默认。
 // 任何失败返回 nil（调用方按二通道继续），不向调用方透出错误。
 func (s *knowledgeBaseService) graphRecallForSearch(
 	ctx context.Context, kbIDs []string, query string, topK int,
+	retrievalCfg *types.RetrievalConfig,
 ) []*types.IndexWithScore {
-	if !graphChannelEnabled() || query == "" || len(kbIDs) == 0 {
+	if !retrievalCfg.GetGraphChannelEnabled(graphChannelEnvDefault()) || query == "" || len(kbIDs) == 0 {
 		return nil
 	}
 	tenantID, ok := types.TenantIDFromContext(ctx)

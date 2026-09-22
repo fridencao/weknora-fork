@@ -140,3 +140,16 @@ func TestRetrievalConfig_GraphWeightDefault(t *testing.T) {
 	require.InDelta(t, 0.2, (*types.RetrievalConfig)(nil).GetEffectiveRRFGraphWeight(), 1e-9)
 	require.InDelta(t, 0.35, (&types.RetrievalConfig{RRFGraphWeight: 0.35}).GetEffectiveRRFGraphWeight(), 1e-9)
 }
+
+func TestRetrievalConfig_GraphChannelEnabled(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, (*types.RetrievalConfig)(nil).GetGraphChannelEnabled(true))
+	require.False(t, (*types.RetrievalConfig)(nil).GetGraphChannelEnabled(false))
+	off := false
+	require.False(t, (&types.RetrievalConfig{GraphChannelEnabled: &off}).GetGraphChannelEnabled(true),
+		"UI 显式 false 应覆盖 env 默认 true")
+	on := true
+	require.True(t, (&types.RetrievalConfig{GraphChannelEnabled: &on}).GetGraphChannelEnabled(false),
+		"UI 显式 true 应覆盖 env 默认 false")
+}

@@ -34,6 +34,7 @@ func NewPluginSearchGraph(
 		lightrag:      NewLightragClientFromEnv(),
 		chunkRepo:     chunkRepository,
 		knowledgeRepo: knowledgeRepository,
+		// p.enabled = 部署级默认；运行时被 tenant 检索配置（UI）覆盖（见 OnEvent）。
 		enabled:       os.Getenv("GRAPH_CHANNEL_ENABLED") == "true",
 		topK:          20,
 	}
@@ -56,7 +57,12 @@ func (p *PluginSearchGraph) OnEvent(
 	chatManage *types.ChatManage,
 	next func() *PluginError,
 ) *PluginError {
-	if !p.enabled {
+	// 开关：tenant 检索配置（设置 UI 显式设置）优先，未配置回落部署默认。
+	enabled := p.enabled
+	if info, ok := types.TenantInfoFromContext(ctx); ok && info != nil && info.RetrievalConfig != nil {
+		enabled = info.RetrievalConfig.GetGraphChannelEnabled(p.enabled)
+	}
+	if !enabled {
 		return next()
 	}
 	if len(chatManage.Entity) == 0 || len(chatManage.EntityKBIDs) == 0 {

@@ -4664,7 +4664,7 @@ export default {
     originsHint: 'Укажите сайты, которым разрешено встраивание (A), а не адрес StarKB (B). Один полный Origin на строку, например https://shop.example.com; минимум один. Поддерживается *.example.com.',
     originsRequired: 'Укажите хотя бы один разрешённый домен',
     originsInvalid: 'Неверный домен: {origin}',
-    originsWildcardProd: 'В production запрещён wildcard \'*\'',
+    originsWildcardProd: 'В production запрещён wildcard \'*\',
     originsPlaceholder: 'https://shop.example.com',
     rateLimitLabel: 'Запросов в минуту',
     rateLimitDesc: 'На IP посетителя, макс. запросов к API встраивания в минуту; избыток временно отклоняется. По умолчанию 30.',
@@ -5233,6 +5233,8 @@ export default {
   retrievalSettings: {
     title: 'Настройки поиска',
     description: 'Настройте глобальные параметры поиска, общие для поиска по знаниям и сообщениям',
+      graphChannelLabel: 'Канал графа (LightRAG)',
+      graphChannelDescription: 'Если включено, поиск и чат также извлекают фрагменты сущностей/отношений из графа LightRAG и объединяют их с вектором/ключевыми словами через RRF. Если не задано, применяется значение по умолчанию (переменная GRAPH_CHANNEL_ENABLED).',
     embeddingTopKLabel: 'Векторный поиск Top K',
     vectorThresholdLabel: 'Порог векторного сходства',
     keywordThresholdLabel: 'Порог совпадения ключевых слов',
@@ -5569,6 +5571,7 @@ export default {
     autoCheckUpdate: 'Автоматическая загрузка обновлений',
     autoCheckUpdateDesc: 'При включении автоматически проверять и скачивать последнюю версию в фоновом режиме при запуске.',
     vectorStoreEngine: 'Движок векторной БД',
+    retrievalSettings: 'Настройки поиска',
     parserEngine: 'Движок парсинга',
     storageEngine: 'Движок хранения',
     sandbox: {
