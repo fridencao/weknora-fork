@@ -3169,8 +3169,8 @@ const handleAddToKnowledge = (answerEvent: any) => {
   gap: 0;
   margin-bottom: 10px;
   position: relative;
-  --agent-step-text-size: 14px;
-  --agent-step-summary-size: 13px;
+  --agent-step-text-size: var(--app-text-base);
+  --agent-step-summary-size: var(--app-text-base);
   --agent-step-line-color: color-mix(in srgb, var(--td-text-color-primary) 16%, transparent);
   --agent-step-icon-color: var(--td-text-color-placeholder);
   --stream-brand-2: color-mix(in srgb, var(--td-brand-color) 2%, transparent);

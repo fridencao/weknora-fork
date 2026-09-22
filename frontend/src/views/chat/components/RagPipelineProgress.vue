@@ -584,8 +584,8 @@ onBeforeUnmount(() => {
 @import '@/components/css/chat-timeline-loading.less';
 
 .rag-pipeline-progress {
-  --agent-step-text-size: 14px;
-  --agent-step-summary-size: 13px;
+  --agent-step-text-size: var(--app-text-base);
+  --agent-step-summary-size: var(--app-text-base);
   --agent-step-line-color: color-mix(in srgb, var(--td-text-color-primary) 16%, transparent);
   --agent-step-icon-color: var(--td-text-color-placeholder);
 
