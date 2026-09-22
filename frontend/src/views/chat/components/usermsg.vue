@@ -1,5 +1,7 @@
 <template>
     <div class="user_msg_container" ref="containerRef" :class="{ 'is-embedded': embeddedMode }">
+        <div class="user_msg_layout">
+        <div class="user_msg_body">
         <!-- 显示@的知识库和文件 -->
         <div v-if="mentioned_items && mentioned_items.length > 0" class="mentioned_items">
             <span v-for="item in mentioned_items" :key="item.id" class="mentioned_tag" :class="[
@@ -81,6 +83,10 @@
             <t-tooltip :content="t('input.steerRetry')"><button type="button" :aria-label="t('input.steerRetry')" @click="emit('retry-steer')"><t-icon name="refresh" /></button></t-tooltip>
             <t-tooltip :content="t('common.remove')"><button type="button" :aria-label="t('common.remove')" @click="emit('remove-steer')"><t-icon name="close" /></button></t-tooltip>
         </div>
+        </div><!-- /user_msg_body -->
+        <ChatAvatar v-if="!embeddedMode" variant="user" :src="authStore.user?.avatar || ''"
+            :name="authStore.user?.username || authStore.user?.email || ''" />
+        </div><!-- /user_msg_layout -->
         <picturePreview :reviewImg="reviewImg" :reviewUrl="reviewUrl" @closePreImg="closePreImg" />
     </div>
 </template>
@@ -94,9 +100,12 @@ import { isPreviewableAttachment, resolveAttachmentFileType } from '@/utils/atta
 import { SKILL_ICON } from '@/types/mention';
 import { copyWithToast } from '@/utils/clipboard';
 import { formatMessageTimestamp, getConversationTimestampModel } from '@/utils/messageTimestamp';
+import { useAuthStore } from '@/stores/auth';
+import ChatAvatar from '@/components/chat/ChatAvatar.vue';
 const emit = defineEmits(['retry-steer', 'remove-steer', 'fork', 'rewind']);
 
 const { t } = useI18n();
+const authStore = useAuthStore();
 
 const mentionTagClass = (item) => {
     if (item.type === 'kb') return item.kb_type === 'faq' ? 'faq-tag' : 'kb-tag';
@@ -260,6 +269,24 @@ const closePreImg = () => {
     align-items: flex-end;
     gap: 6px;
     width: 100%;
+}
+
+.user_msg_layout {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.user_msg_body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .mentioned_items {

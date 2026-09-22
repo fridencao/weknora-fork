@@ -30,8 +30,9 @@ test('steer seals animation while keeping the preceding timeline open without co
 })
 
 test('agent steps use compact muted timeline styling', () => {
-  assert.match(source, /--agent-step-text-size:\s*14px/)
-  assert.match(source, /--agent-step-summary-size:\s*13px/)
+  // 字号阶梯化后 step 文案走 --app-text-base（12/13/14 三档），不再硬编码 px
+  assert.match(source, /--agent-step-text-size:\s*var\(--app-text-base\)/)
+  assert.match(source, /--agent-step-summary-size:\s*var\(--app-text-base\)/)
   assert.match(source, /--agent-step-icon-color:\s*var\(--td-text-color-placeholder\)/)
   assert.match(source, /max-height:\s*none/)
   assert.match(source, /overflow-y:\s*visible/)

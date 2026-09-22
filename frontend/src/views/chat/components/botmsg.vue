@@ -1,5 +1,7 @@
 <template>
     <div class="bot_msg" :class="{ 'is-embedded': embeddedMode }">
+        <ChatAvatar v-if="!embeddedMode" variant="bot" class="bot_msg_avatar" />
+        <div class="bot_msg_body">
         <div style="display: flex;flex-direction: column; gap:8px">
             <!-- 显示@的知识库和文件（非 Agent 模式下显示） -->
             <div v-if="!session.isAgentMode && mentionedItems && mentionedItems.length > 0" class="mentioned_items">
@@ -123,6 +125,7 @@
             <div v-if="isImgLoading" class="img_loading"><t-loading size="small"></t-loading><span>{{
                 $t('common.loading') }}</span></div>
         </div>
+        </div><!-- /bot_msg_body -->
         <picturePreview :reviewImg="reviewImg" :reviewUrl="reviewUrl" @closePreImg="closePreImg"></picturePreview>
         <Teleport to="body">
             <ChatCitationFloat :float="citationFloat" :on-enter="cancelCitationClose"
@@ -148,6 +151,7 @@ import RagPipelineProgress from './RagPipelineProgress.vue';
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue';
 import ChatCitationFloat from '@/components/ChatCitationFloat.vue';
 import picturePreview from '@/components/picture-preview.vue';
+import ChatAvatar from '@/components/chat/ChatAvatar.vue';
 import ChatArtifactsDrawer from './ChatArtifactsDrawer.vue';
 import { isCollectingSkillArtifacts } from '@/utils/skillArtifacts';
 import { useArtifactArriveMotion } from '@/composables/useArtifactArriveMotion';
@@ -595,6 +599,9 @@ onBeforeUnmount(() => {
 
 .bot_msg {
     // background: var(--td-bg-color-container);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
     border-radius: var(--app-radius-xs);
     color: var(--td-text-color-primary);
     font-size: var(--app-text-xl);
@@ -604,6 +611,11 @@ onBeforeUnmount(() => {
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+}
+
+.bot_msg_body {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .botanswer_laoding_gif {
