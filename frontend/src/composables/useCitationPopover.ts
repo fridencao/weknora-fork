@@ -16,6 +16,8 @@ export type CitationFloatState = {
   url: string
   loading: boolean
   error: string
+  /** 角标所在句子的上下文（悬浮卡用于定位 chunk 内的相关段落） */
+  context: string
 }
 
 type CitationPopoverOptions = {
@@ -42,6 +44,7 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
     url: '',
     loading: false,
     error: '',
+    context: '',
   })
 
   let hoverTimer: number | null = null
@@ -64,6 +67,7 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
     float.value.loading = false
     float.value.content = ''
     float.value.error = ''
+    float.value.context = ''
   }
 
   const resolveChunkId = (el: HTMLElement) => {
@@ -89,6 +93,7 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
     float.value.content = ''
     float.value.loading = false
     float.value.error = ''
+    float.value.context = ''
     float.value.visible = true
     positionFor(el)
   }
@@ -102,8 +107,22 @@ export function useCitationPopover(rootRef: Ref<HTMLElement | null>, options: Ci
     float.value.type = 'kb'
     float.value.title = title
     float.value.url = ''
+    float.value.context =
+      el.closest('li, p, dd, h1, h2, h3, h4, h5, h6, tr')?.textContent?.trim() || ''
     float.value.visible = true
     positionFor(el, 4)
+
+    // 优先用引用条目自带的父 chunk 全文：单一子块常只覆盖相邻章节，
+    // 从头展示会与声明「对不上」；全文 + 相关段定位可读性更好
+    const refs = options.getKnowledgeReferences?.() || []
+    const parent = refs.find(
+      (r) => Array.isArray(r.sub_chunk_id) && r.sub_chunk_id.includes(chunkId),
+    )
+    if (parent?.content && parent.content.trim()) {
+      float.value.content = parent.content
+      float.value.loading = false
+      return
+    }
 
     const scope = options.getCacheScope()
     const cached = getCitationChunkCache(scope, chunkId)

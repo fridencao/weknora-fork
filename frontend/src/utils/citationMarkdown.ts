@@ -39,6 +39,10 @@ export type CitationKnowledgeRef = {
   chunk_index?: number
   chunk_type?: string
   knowledge_base_id?: string
+  /** 父 chunk 全文（消息引用自带，供悬浮卡整体展示 + 相关段定位） */
+  content?: string
+  /** 父 chunk 的子块 ID 列表（用于反查 chunk_id 所属引用） */
+  sub_chunk_id?: string[]
 }
 
 function parseTagAttributes(attrString: string): Record<string, string> {
