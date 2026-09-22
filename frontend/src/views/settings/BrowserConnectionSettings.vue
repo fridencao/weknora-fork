@@ -18,11 +18,8 @@
             <div class="product-heading">
               <div class="product-name">
                 <strong>BrowserSkill</strong>
-                <a class="product-link" href="https://github.com/Tencent/BrowserSkill" target="_blank"
-                  rel="noopener noreferrer" aria-label="BrowserSkill">
-                  <t-icon name="jump" size="14px" />
-                </a>
-              </div>
+
+</div>
               <span class="status-pill" :class="{ online: status.connected, idle: !status.connected && status.device }">
                 <i />{{ t(status.connected ? 'localBrowser.connected' : status.device ? 'localBrowser.offline' : 'localBrowser.notPaired') }}
               </span>

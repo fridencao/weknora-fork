@@ -154,11 +154,7 @@
                   ? $t('settings.sandbox.secretConfigured')
                   : $t('settings.sandbox.cubeApiKeyOptional') }}
               </p>
-              <a class="inline-guide-link" :href="clusterGuideUrl" target="_blank" rel="noopener noreferrer">
-                <t-icon name="link" />
-                {{ $t('settings.sandbox.cubeApiKeyWhere') }}
-              </a>
-            </div>
+</div>
           </t-form-item>
           <t-form-item :label="$t('settings.sandbox.cubeDnsServers')"
             :help="$t('settings.sandbox.cubeDnsServersHelp')">
@@ -816,7 +812,6 @@ const isMaskedSecret = (value?: string) => value === secretPlaceholder
 // the sandbox account cannot write.
 const defaultDockerImage = 'wechatopenai/weknora-sandbox:main'
 
-const clusterGuideUrl = 'https://github.com/Tencent/WeKnora/blob/main/docs/sandbox-cluster.md'
 const e2bApiKeysUrl = 'https://e2b.dev/dashboard?tab=keys'
 
 const backendOptions = computed(() => {

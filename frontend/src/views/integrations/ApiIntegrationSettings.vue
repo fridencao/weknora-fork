@@ -31,11 +31,8 @@
             <label>{{ $t('tenant.api.docLabel') }}</label>
             <p>
               {{ $t('tenant.api.docDescription') }}
-              <a class="doc-link" @click="openApiDoc">
-                {{ $t('tenant.api.openDoc') }}
-                <t-icon name="link" class="link-icon" />
-              </a>
-            </p>
+
+</p>
           </div>
         </div>
 
@@ -1227,10 +1224,6 @@ async function saveIfNeeded(options: { showSuccess?: boolean } = {}) {
 
 async function copy(text: string) {
   await copyWithToast(text, 'integrations.api.copySuccess')
-}
-
-function openApiDoc() {
-  window.open('https://github.com/Tencent/WeKnora/blob/main/docs/api/README.md', '_blank')
 }
 
 function openCreateAPIKeyDialog() {
