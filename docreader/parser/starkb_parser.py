@@ -28,6 +28,10 @@ logger.setLevel(logging.INFO)
 STARKB_API_URL_DEFAULT = os.environ.get("STARKB_API_URL", "http://starkb-api:8300")
 POLL_INTERVAL = 3.0
 POLL_TIMEOUT = 900.0
+# /parse/jobs/{id}/run 是同步端点（内部提交 MinerU 并轮询至完成），真实研报在
+# MinerU 上耗时数分钟——HTTP 超时须覆盖全程。上限 29min，低于 Go 侧
+# DocReaderCallTimeout 的 30min，超时时报错方为 starkb 而非被上游截胡。
+RUN_TIMEOUT = 29 * 60.0
 
 
 class StarkbParser(BaseParser):
@@ -75,7 +79,7 @@ class StarkbParser(BaseParser):
         logger.info("starkb parse job=%s tier=%s", job_id, job.get("tier"))
 
         # 2) 同步执行（docreader gRPC 调用本身是同步语义）
-        run = self._api(f"/parse/jobs/{job_id}/run", "POST")
+        run = self._api(f"/parse/jobs/{job_id}/run", "POST", timeout=RUN_TIMEOUT)
         if run.get("status") != "completed":
             raise RuntimeError(f"starkb 解析失败: {run}")
 
