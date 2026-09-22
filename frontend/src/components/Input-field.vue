@@ -16,7 +16,6 @@ import { stopSession } from '@/api/chat';
 import type { SteerQueueItem } from '@/api/chat/steer';
 import { chatSubmitShortcut } from '@/utils/chatSubmitShortcut';
 import { useOrganizationStore } from '@/stores/organization';
-import { useAuthStore } from '@/stores/auth';
 import KnowledgeBaseSelector from './KnowledgeBaseSelector.vue';
 import MentionSelector from './MentionSelector.vue';
 import AgentSelector from './AgentSelector.vue';
@@ -60,7 +59,6 @@ const settingsStore = useSettingsStore();
 const browserConnection = useBrowserConnectionStore();
 const uiStore = useUIStore();
 const orgStore = useOrganizationStore();
-const authStore = useAuthStore();
 const menuStore = useMenuStore();
 const chatResources = useChatResourcesStore();
 const editorResources = useEditorResourcesStore();
@@ -639,7 +637,7 @@ const scopeKnowledgeBaseLabel = computed(() => {
   const ids = settingsStore.settings.selectedKnowledgeBases || []
   if (!ids.length) return ''
   const pool = [
-    ...(authStore.knowledgeBases || []),
+    ...knowledgeBases.value,
     ...((orgStore.sharedKnowledgeBases || [])
       .map((s: any) => s?.knowledge_base)
       .filter(Boolean)),
@@ -3398,6 +3396,7 @@ const getImgSrc = (url: string) => {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    flex-shrink: 0;
   }
 
   &:hover:not(.disabled):not(.active) {
@@ -3469,6 +3468,7 @@ const getImgSrc = (url: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
 
   &.is-default {
     color: var(--td-text-color-placeholder);
