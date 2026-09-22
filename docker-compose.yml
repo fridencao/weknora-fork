@@ -85,6 +85,12 @@ services:
       # STARKB_ALIGN_ON_INGEST=false 或 STARKB_API_URL 留空时关闭。
       - STARKB_API_URL=${STARKB_API_URL:-http://starkb-api:8300}
       - STARKB_ALIGN_ON_INGEST=${STARKB_ALIGN_ON_INGEST:-true}
+      # ========== StarKB (C2) 图谱召回通道 ==========
+      # LightRAG server 已入栈（见下方 lightrag-server 服务），app 经服务名访问；
+      # LIGHT_RAG_BASE_URL 留空则图谱通道降级跳过（退二通道），不影响主链路。
+      - LIGHT_RAG_BASE_URL=${LIGHT_RAG_BASE_URL:-http://lightrag-server:9621}
+      - LIGHT_RAG_API_KEY=${LIGHTRAG_API_KEY:-}
+      - GRAPH_CHANNEL_ENABLED=${GRAPH_CHANNEL_ENABLED:-true}
       # ========== 日志 ==========
       # 日志级别，默认debug
       - LOG_LEVEL=${LOG_LEVEL:-debug}
@@ -514,10 +520,12 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # StarKB (WS1) 服务侧：解析任务编排 / 档位路由 / 复核队列 / 源注册表 / 配置中心。
+  # StarKB (WS1) 服务侧：解析任务编排 / 档位路由 / 复核队列 / 源注册表 / 配置中心
+  #                    / 图表资产库 / 图谱投喂（A2 进程内建图）。
   # 本地构建，不发布 Docker Hub。MinerU api-server 跑在宿主机（模型在 .venv-mineru），
   # 地址经 .env 的 MINERU_BASE_URL 注入（lima/docker-in-vm 环境用宿主网关 IP，
-  # 而非 host.docker.internal）；契约包与 sqlite 落在宿主 data/ 目录，与批处理共享。
+  # 而非 host.docker.internal）；契约包、sqlite 与 LightRAG workspace 落在宿主
+  # data/ 目录，与宿主机批处理共享。
   starkb-api:
     build:
       context: ../../services/starkb-api
@@ -525,6 +533,10 @@ services:
       additional_contexts:
         # 契约归一层包（starkb_contract）在主仓另一目录，经附加上下文进镜像
         - contract=../../contract
+        # A2：建图用的 LightRAG 库（与 lightrag-server 同源同版本，ADR-001 锁 commit）
+        - lightrag=../../thirdparty/LightRAG
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     image: starkb-api:local
     container_name: WeKnora-starkb-api
     environment:
@@ -533,6 +545,20 @@ services:
       - STARKB_CONTRACT_ROOT=/data/processed
       - MINERU_BASE_URL=${MINERU_BASE_URL:-http://host.docker.internal:8310}
       - MINERU_API_KEY=${MINERU_API_KEY:-}
+      # ========== StarKB (A2) 建图内化：进程内 LightRAG，配置全走环境变量 ==========
+      # workspace 与 lightrag-server 共用同一目录（单一图谱空间）；
+      # 建图与查询仍应避免同时进行（A4：JSON 存储不支持多进程并发写）。
+      - STARKB_GRAPH_WORK_DIR=${STARKB_GRAPH_WORK_DIR:-/data/processed/lightrag_a3}
+      - STARKB_GRAPH_REPORT_DIR=${STARKB_GRAPH_REPORT_DIR:-/data/processed/graph_reports}
+      - STARKB_GRAPH_LLM_BASE_URL=${LIGHTRAG_LLM_BINDING_HOST:-https://api.siliconflow.cn/v1}
+      - STARKB_GRAPH_LLM_API_KEY=${LIGHTRAG_LLM_API_KEY:-}
+      - STARKB_GRAPH_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      - STARKB_GRAPH_EMBED_BASE_URL=${LIGHTRAG_EMBEDDING_BINDING_HOST:-https://api.siliconflow.cn/v1}
+      - STARKB_GRAPH_EMBED_API_KEY=${LIGHTRAG_EMBEDDING_API_KEY:-}
+      - STARKB_GRAPH_EMBED_MODEL=${LIGHTRAG_EMBEDDING_MODEL:-BAAI/bge-m3}
+      - STARKB_GRAPH_EMBED_DIM=${LIGHTRAG_EMBEDDING_DIM:-1024}
+      - STARKB_GRAPH_LLM_INTERVAL_S=${STARKB_GRAPH_LLM_INTERVAL_S:-2.0}
+      - STARKB_GRAPH_MAX_ASYNC=${STARKB_GRAPH_MAX_ASYNC:-2}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -545,6 +571,51 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
+  # StarKB 图谱服务（docs/08 C2）：LightRAG server 作为图谱存储/查询的唯一属主。
+  # 自建镜像（services/lightrag/Dockerfile）预装依赖并锁定 fork tag（ADR-001），
+  # 取代原先「python:3.11-slim + 挂宿主源码 + 运行时 pip install」的手工 docker run
+  # ——compose down/up 后自动恢复，不再丢失。
+  # workspace 卷挂宿主 data/processed/lightrag_a3，与宿主机批处理共用同一图谱空间。
+  # 注意（A4 架构债）：LightRAG 默认 JSON/NanoVectorDB 存储不支持多进程并发写，
+  # 建图与查询仍应避免同时进行；切换 PG 后端后此项消解。
+  lightrag-server:
+    build:
+      context: ../../services/lightrag
+      dockerfile: Dockerfile
+      additional_contexts:
+        # LightRAG 源码在主仓 thirdparty/（ADR-001 锁 commit c7e7a24-starkb-base）。
+        # 不从 GitHub 克隆：部署环境 Docker VM 对国际大文件下载不稳定。
+        - lightrag=../../thirdparty/LightRAG
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: starkb-lightrag:local
+    container_name: WeKnora-lightrag-server
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - WORKING_DIR=/data/lightrag
+      - HOST=0.0.0.0
+      - PORT=9621
+      # 服务鉴权：设置后 app 侧 LIGHT_RAG_API_KEY 需一致；留空=关闭（与 M2 形态一致）
+      - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-}
+      # LLM 绑定（默认硅基流动 Qwen2.5-72B，与既有图谱数据一致）
+      - LLM_BINDING=${LIGHTRAG_LLM_BINDING:-openai}
+      - LLM_BINDING_HOST=${LIGHTRAG_LLM_BINDING_HOST:-https://api.siliconflow.cn/v1}
+      - LLM_BINDING_API_KEY=${LIGHTRAG_LLM_API_KEY:-}
+      - LLM_MODEL=${LIGHTRAG_LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      # Embedding 绑定（bge-m3 / 1024 维，与 workspace 既有向量维度一致）
+      - EMBEDDING_BINDING=${LIGHTRAG_EMBEDDING_BINDING:-openai}
+      - EMBEDDING_BINDING_HOST=${LIGHTRAG_EMBEDDING_BINDING_HOST:-https://api.siliconflow.cn/v1}
+      - EMBEDDING_BINDING_API_KEY=${LIGHTRAG_EMBEDDING_API_KEY:-}
+      - EMBEDDING_MODEL=${LIGHTRAG_EMBEDDING_MODEL:-BAAI/bge-m3}
+      - EMBEDDING_DIM=${LIGHTRAG_EMBEDDING_DIM:-1024}
+    volumes:
+      - ../../data/processed/lightrag_a3:/data/lightrag
+    ports:
+      - "127.0.0.1:${LIGHTRAG_PORT:-9621}:9621"
     networks:
       - WeKnora-network
     restart: unless-stopped
