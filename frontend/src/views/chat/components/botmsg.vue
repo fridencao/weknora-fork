@@ -1,5 +1,6 @@
 <template>
     <div class="bot_msg" :class="{ 'is-embedded': embeddedMode }">
+        <div class="bot_msg_main">
         <ChatAvatar v-if="!embeddedMode" variant="bot" class="bot_msg_avatar" />
         <div class="bot_msg_body">
         <div style="display: flex;flex-direction: column; gap:8px">
@@ -126,6 +127,7 @@
                 $t('common.loading') }}</span></div>
         </div>
         </div><!-- /bot_msg_body -->
+        </div><!-- /bot_msg_main -->
         <picturePreview :reviewImg="reviewImg" :reviewUrl="reviewUrl" @closePreImg="closePreImg"></picturePreview>
         <Teleport to="body">
             <ChatCitationFloat :float="citationFloat" :on-enter="cancelCitationClose"
@@ -599,9 +601,6 @@ onBeforeUnmount(() => {
 
 .bot_msg {
     // background: var(--td-bg-color-container);
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
     border-radius: var(--app-radius-xs);
     color: var(--td-text-color-primary);
     font-size: var(--app-text-xl);
@@ -611,6 +610,16 @@ onBeforeUnmount(() => {
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+}
+
+/* 头像 + 正文横向一行；图片预览等覆盖层作为 bot_msg 的纵向兄弟留在下方，
+   不参与这一行（否则 484px 的 t-image-viewer__trigger 会挤占正文宽度） */
+.bot_msg_main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
 }
 
 .bot_msg_body {
