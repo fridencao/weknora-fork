@@ -230,24 +230,6 @@ function formatUptime(totalSeconds: number): string {
   return parts.join(' ')
 }
 
-  const errMsg = systemInfo.value?.db_migration_error
-  if (errMsg) {
-    const body = [
-      '### Environment',
-      `- WeKnora version: ${systemInfo.value?.version || 'unknown'}`,
-      `- Commit: ${systemInfo.value?.commit_id || 'unknown'}`,
-      `- Frontend version: ${frontendVersion} (${frontendCommit})`,
-      `- DB version reported: ${systemInfo.value?.db_version || 'unknown'}`,
-      '',
-      '### Migration error',
-      '```',
-      errMsg,
-      '```',
-    ].join('\n')
-    params.set('body', body)
-  }
-  return `${base}?${params.toString()}`
-})
 
 // Methods
 const loadInfo = async () => {
