@@ -16,6 +16,7 @@ import { stopSession } from '@/api/chat';
 import type { SteerQueueItem } from '@/api/chat/steer';
 import { chatSubmitShortcut } from '@/utils/chatSubmitShortcut';
 import { useOrganizationStore } from '@/stores/organization';
+import { useAuthStore } from '@/stores/auth';
 import KnowledgeBaseSelector from './KnowledgeBaseSelector.vue';
 import MentionSelector from './MentionSelector.vue';
 import AgentSelector from './AgentSelector.vue';
@@ -59,6 +60,7 @@ const settingsStore = useSettingsStore();
 const browserConnection = useBrowserConnectionStore();
 const uiStore = useUIStore();
 const orgStore = useOrganizationStore();
+const authStore = useAuthStore();
 const menuStore = useMenuStore();
 const chatResources = useChatResourcesStore();
 const editorResources = useEditorResourcesStore();
@@ -630,6 +632,24 @@ const selectedMCPItems = computed<MentionItem[]>(() => {
     .filter((svc): svc is MCPService => !!svc && isMCPAllowedByAgent(svc))
     .map(toMCPMentionItem);
 });
+
+// 生效的知识库范围（设置/侧栏勾选的 KB）：@ 按钮上显示名称，
+// 避免「其实已选了知识库、按钮却毫无体现」的困惑。有 @ 提及时以 chips 为准。
+const scopeKnowledgeBaseLabel = computed(() => {
+  const ids = settingsStore.settings.selectedKnowledgeBases || []
+  if (!ids.length) return ''
+  const pool = [
+    ...(authStore.knowledgeBases || []),
+    ...((orgStore.sharedKnowledgeBases || [])
+      .map((s: any) => s?.knowledge_base)
+      .filter(Boolean)),
+  ]
+  const names = ids
+    .map((id) => pool.find((kb: any) => String(kb?.id) === String(id))?.name)
+    .filter(Boolean)
+  if (!names.length) return t('input.knowledgeBaseWithCount', { count: ids.length })
+  return names.length === 1 ? String(names[0]) : t('input.knowledgeBaseWithCount', { count: names.length })
+})
 
 // 合并所有选中项（用于输入框内显示）
 // 现在智能体配置的知识库也在 store 中，统一从 selectedKbs 获取
@@ -2819,7 +2839,8 @@ defineExpose({
               }) : $t('input.knowledgeBase') }}</span>
             </template>
             <div ref="atButtonRef" class="control-btn kb-btn" data-guide="chat-kb-mention" :class="{
-              'active': allSelectedItems.length > 0,
+              'active': allSelectedItems.length > 0 || !!scopeKnowledgeBaseLabel,
+              'has-scope-label': !!scopeKnowledgeBaseLabel,
               'disabled': isMentionDisabled
             }" @click.stop @mousedown.prevent="triggerMention">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"
@@ -2829,7 +2850,15 @@ defineExpose({
                   d="M13.5 10V11.5C13.5 12.163 13.7634 12.7989 14.2322 13.2678C14.7011 13.7366 15.337 14 16 14C16.663 14 17.2989 13.7366 17.7678 13.2678C18.2366 12.7989 18.5 12.163 18.5 11.5V10C18.5 7.74566 17.6045 5.58365 16.0104 3.98959C14.4163 2.39553 12.2543 1.5 10 1.5C7.74566 1.5 5.58365 2.39553 3.98959 3.98959C2.39553 5.58365 1.5 7.74566 1.5 10C1.5 12.2543 2.39553 14.4163 3.98959 16.0104C5.58365 17.6045 7.74566 18.5 10 18.5H12"
                   stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <span v-if="allSelectedItems.length > 0" class="kb-count">{{ allSelectedItems.length }}</span>
+              <span
+                v-if="scopeKnowledgeBaseLabel"
+                class="kb-scope-label"
+                :title="scopeKnowledgeBaseLabel"
+              >{{ scopeKnowledgeBaseLabel }}</span>
+              <span
+                v-if="allSelectedItems.length > 0 && !scopeKnowledgeBaseLabel"
+                class="kb-count"
+              >{{ allSelectedItems.length }}</span>
             </div>
           </t-tooltip>
 
@@ -3354,6 +3383,15 @@ const getImgSrc = (url: string) => {
   min-width: auto;
   position: relative;
 
+  &.has-scope-label {
+    width: auto;
+    min-width: 28px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   &:hover:not(.disabled):not(.active) {
     color: var(--td-text-color-primary);
   }
@@ -3412,6 +3450,20 @@ const getImgSrc = (url: string) => {
 }
 
 .kb-btn.active .kb-btn-text {
+  color: var(--td-brand-color);
+}
+
+.kb-scope-label {
+  font-size: var(--app-text-sm);
+  color: var(--td-text-color-secondary);
+  font-weight: 500;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-btn.active .kb-scope-label {
   color: var(--td-brand-color);
 }
 

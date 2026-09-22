@@ -70,6 +70,21 @@ interface OllamaConfig {
   enabled: boolean;  // 是否启用
 }
 
+// 知识库选择跨刷新恢复：此前设置对象整体写入 localStorage 却从不回读，
+// 用户选过的知识库在刷新后静默丢失（composer 角标与检索范围同时失效）。
+// 这里只恢复 KB 列表这一个字段，其余设置仍按默认值初始化。
+function loadSelectedKnowledgeBases(): string[] {
+  try {
+    const raw = localStorage.getItem('WeKnora_settings')
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as { selectedKnowledgeBases?: unknown }
+    const list = parsed?.selectedKnowledgeBases
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 // 默认设置
 const defaultSettings: Settings = {
   endpoint: getApiBaseUrl(),
@@ -82,7 +97,7 @@ const defaultSettings: Settings = {
     allowedTools: [],  // 默认为空，需要通过 API 从后端加载
     system_prompt: "",
   },
-  selectedKnowledgeBases: [],  // 默认为空数组
+  selectedKnowledgeBases: loadSelectedKnowledgeBases(),  // 从 localStorage 恢复（此前写而不读，刷新即丢失）
   selectedFiles: [], // 默认为空数组
   selectedFileKbMap: {},  // 文件ID -> 知识库ID
   selectedTags: [],
