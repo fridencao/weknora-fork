@@ -272,11 +272,18 @@
           </div>
           <div class="form-item">
             <label class="form-label">{{ t('settings.parser.language') }}</label>
-            <t-input
+            <t-select
               v-model="config.mineru_language"
               :placeholder="$t('settings.parser.languagePlaceholder')"
-              clearable
-            />
+              filterable
+            >
+              <t-option
+                v-for="lang in MINERU_LANGUAGES"
+                :key="lang.value"
+                :value="lang.value"
+                :label="lang.label"
+              />
+            </t-select>
           </div>
         </section>
 
@@ -313,11 +320,18 @@
           </div>
           <div class="form-item">
             <label class="form-label">{{ t('settings.parser.language') }}</label>
-            <t-input
+            <t-select
               v-model="config.mineru_cloud_language"
               :placeholder="$t('settings.parser.languagePlaceholder')"
-              clearable
-            />
+              filterable
+            >
+              <t-option
+                v-for="lang in MINERU_LANGUAGES"
+                :key="lang.value"
+                :value="lang.value"
+                :label="lang.label"
+              />
+            </t-select>
           </div>
         </section>
 
@@ -427,6 +441,25 @@ const ENGINE_DOC_LINKS: Record<string, string> = {
   paddleocr_vl: 'https://github.com/PaddlePaddle/PaddleOCR',
   paddleocr_vl_cloud: 'https://aistudio.baidu.com/paddleocr',
 }
+
+/** MinerU 解析支持的语言列表（value 与 MinerU lang 参数一致，默认 ch） */
+const MINERU_LANGUAGES: { value: string; label: string }[] = [
+  { value: 'ch', label: '简体中文 (ch)' },
+  { value: 'en', label: '英语 (en)' },
+  { value: 'chinese_cht', label: '繁体中文 (chinese_cht)' },
+  { value: 'japan', label: '日语 (japan)' },
+  { value: 'korean', label: '韩语 (korean)' },
+  { value: 'french', label: '法语 (french)' },
+  { value: 'german', label: '德语 (german)' },
+  { value: 'latin', label: '拉丁语系 (latin)' },
+  { value: 'arabic', label: '阿拉伯语 (arabic)' },
+  { value: 'cyrillic', label: '西里尔语系 (cyrillic)' },
+  { value: 'east_slavic', label: '东斯拉夫语系 (east_slavic)' },
+  { value: 'devanagari', label: '天城文 (devanagari)' },
+  { value: 'te', label: '泰卢固语 (te)' },
+  { value: 'ta', label: '泰米尔语 (ta)' },
+  { value: 'ka', label: '格鲁吉亚语 (ka)' },
+]
 
 /** 解析引擎配置默认值（与 DocReader/Python 侧一致） */
 const DEFAULT_PARSER_CONFIG: ParserEngineConfig = {

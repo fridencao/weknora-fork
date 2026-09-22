@@ -6210,7 +6210,7 @@ export default {
       saveFailed: 'Ошибка сохранения',
       mineruEndpointPlaceholder: 'напр. https://your-mineru.example.com',
       defaultPipeline: 'Pipeline по умолчанию',
-      languagePlaceholder: 'напр. ch, en, ja (по умолчанию ch)',
+      languagePlaceholder: 'Выберите язык (по умолчанию ch — упрощённый китайский)',
       mineruCloudApiKeyPlaceholder: 'MinerU Cloud API Key',
       vlmLabel: 'vlm (визуальная языковая модель)',
       mineruHtmlLabel: 'MinerU-HTML (HTML парсинг)',

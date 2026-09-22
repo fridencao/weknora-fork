@@ -1859,7 +1859,7 @@ export default {
       saveFailed: '保存に失敗しました',
       mineruEndpointPlaceholder: '例: https://your-mineru.example.com',
       defaultPipeline: 'デフォルトのパイプライン',
-      languagePlaceholder: '例: ch、en、ja（デフォルトはch）',
+      languagePlaceholder: '言語を選択（デフォルトは ch・簡体字中国語）',
       mineruCloudApiKeyPlaceholder: 'MinerU Cloud API Key',
       vlmLabel: 'vlm（視覚言語モデル）',
       mineruHtmlLabel: 'MinerU-HTML（HTML解析）',

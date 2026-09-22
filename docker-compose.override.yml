@@ -1,0 +1,9 @@
+# StarKB M3 部署：本地自建镜像（fork starkb/m2 @ d1257fe+）+ 图谱通道接线
+services:
+  app:
+    image: starkb-app:local
+    environment:
+      GRAPH_CHANNEL_ENABLED: "true"
+      LIGHT_RAG_BASE_URL: "http://lightrag-server:9621"
+  frontend:
+    image: starkb-ui:local

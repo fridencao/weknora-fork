@@ -1859,7 +1859,7 @@ export default {
       saveFailed: 'Save failed',
       mineruEndpointPlaceholder: 'e.g. https://your-mineru.example.com',
       defaultPipeline: 'Default pipeline',
-      languagePlaceholder: 'e.g. ch, en, ja (default ch)',
+      languagePlaceholder: 'Select a language; default ch (Simplified Chinese)',
       mineruCloudApiKeyPlaceholder: 'MinerU Cloud API Key',
       vlmLabel: 'vlm (Visual Language Model)',
       mineruHtmlLabel: 'MinerU-HTML (HTML Parsing)',

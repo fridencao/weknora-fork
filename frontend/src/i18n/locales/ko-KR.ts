@@ -6210,7 +6210,7 @@ export default {
       saveFailed: '저장 실패',
       mineruEndpointPlaceholder: '예: https://your-mineru.example.com',
       defaultPipeline: '기본 pipeline',
-      languagePlaceholder: '예: ch, en, ja (기본 ch)',
+      languagePlaceholder: '언어 선택 (기본 ch, 간체 중국어)',
       mineruCloudApiKeyPlaceholder: 'MinerU 클라우드 API Key',
       vlmLabel: 'vlm (시각 언어 모델)',
       mineruHtmlLabel: 'MinerU-HTML (HTML 파싱)',
