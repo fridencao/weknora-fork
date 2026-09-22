@@ -1043,6 +1043,25 @@ const getmsgList = (data, isScrollType = false, scrollHeight) => {
             hasMoreHistory.value = false;
         }
         created_at.value = nextCursor;
+        // 从历史消息引用恢复本会话实际使用的知识库范围：
+        // 此前 KB 选择只存在于请求参数里（且刷新即丢），composer 因此显示不出
+        // 「正在按哪个知识库问答」。恢复后 @ 按钮可见、后续问答沿用同一范围。
+        if (!isScrollType) {
+            const historyKbIds = new Set();
+            for (const m of batch) {
+                for (const ref of (m.knowledge_references || [])) {
+                    if (ref?.knowledge_base_id) historyKbIds.add(ref.knowledge_base_id);
+                }
+            }
+            if (historyKbIds.size) {
+                const current = new Set(useSettingsStoreInstance.settings.selectedKnowledgeBases || []);
+                let changed = false;
+                for (const id of historyKbIds) {
+                    if (!current.has(id)) { current.add(id); changed = true; }
+                }
+                if (changed) useSettingsStoreInstance.selectKnowledgeBases([...current]);
+            }
+        }
         await handleMsgList(batch, isScrollType, scrollHeight);
     }).catch((err) => {
         console.error('Failed to load messages:', err);
