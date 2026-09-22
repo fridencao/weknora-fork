@@ -313,10 +313,10 @@ function close() {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  color: var(--td-warning-color, var(--td-brand-color));
+  color: var(--td-warning-color);
 
   .is-dim {
-    color: var(--td-bg-color-component-disabled, var(--td-component-stroke));
+    color: var(--td-bg-color-component-disabled);
   }
 }
 
