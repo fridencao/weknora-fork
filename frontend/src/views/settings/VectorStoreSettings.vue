@@ -802,9 +802,7 @@ onMounted(async () => {
   .provider-card();
   flex-direction: column;
 
-  &--env {
-    background: var(--td-bg-color-secondarycontainer);
-  }
+
 
   &--clickable {
     .provider-card-interactive();
@@ -856,6 +854,9 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  // store-card 是纵向 flex 且 align-items:flex-start，main 不撑满的话
+  // 头部会收缩到内容宽、DEFAULT 标签贴在标题后而不是右对齐
+  align-self: stretch;
 }
 
 .store-card__badge {
@@ -918,13 +919,14 @@ onMounted(async () => {
 
 .store-card__pill {
   flex-shrink: 0;
-  padding: 1px 6px;
+  margin-left: auto;
+  padding: 2px 8px;
   font-size: var(--app-text-xs);
   font-weight: 500;
   line-height: 16px;
-  border-radius: 3px;
-  color: var(--td-warning-color-7);
-  background: var(--td-warning-color-1);
+  border-radius: var(--app-radius-sm);
+  color: var(--td-brand-color);
+  background: var(--td-brand-color-1);
 }
 
 .store-card__more {
