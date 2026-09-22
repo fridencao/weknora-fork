@@ -5161,6 +5161,18 @@ export default {
     next: '다음'
   },
   graphSettings: {
+    lightragTitle: 'LightRAG 지식 그래프',
+    lightragDescription: '지식베이스 단위 LightRAG 그래프: 문서가 파싱 완료되면 자동으로 지식 그래프를 구축하며, 검색·Q&A의 그래프 리콜 채널로 동작합니다(근거 추적 포함).',
+    autoBuildLabel: '자동 그래프 구축',
+    autoBuildDescription: '활성화하면 이 지식베이스의 문서는 파싱 완료 후 자동으로 그래프 구축에 투입됩니다. 실패 항목은 아래 상태에 표시되며 재시도할 수 있습니다.',
+    statusTitle: '그래프 상태',
+    statusDescription: '그래프 규모와 최근 구축 작업(그래프 서비스 헬스 엔드포인트 제공)',
+    statDocs: '구축된 문서',
+    statEntities: '엔티티',
+    statRelations: '관계',
+    statChunks: '그래프 청크',
+    statusUnavailable: '그래프 상태를 사용할 수 없습니다',
+    refresh: '새로 고침',
     title: '지식 그래프 설정',
     description: '엔티티-관계 추출 기능을 구성하여 텍스트에서 자동으로 엔티티와 관계를 추출하여 지식 그래프를 구축합니다 (참고: Wiki의 \'페이지 링크 그래프\'와는 다릅니다. 후자는 Wiki 페이지 간의 참조 관계를 보여주며, 이쪽은 LLM이 추출한 엔티티-관계 그래프입니다)',
     enableLabel: '엔티티 관계 추출 활성화',

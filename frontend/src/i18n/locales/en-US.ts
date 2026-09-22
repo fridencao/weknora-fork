@@ -2324,6 +2324,18 @@ export default {
     }
   },
   graphSettings: {
+    lightragTitle: 'LightRAG Knowledge Graph',
+    lightragDescription: 'Knowledge-base-level LightRAG graph: documents are automatically turned into a knowledge graph after parsing and serve as the graph recall channel in retrieval and Q&A (with evidence provenance).',
+    autoBuildLabel: 'Automatic graph building',
+    autoBuildDescription: 'When enabled, finished documents in this knowledge base are automatically fed into graph building; failures are listed below and can be retried.',
+    statusTitle: 'Graph status',
+    statusDescription: 'Graph scale and recent build jobs (from the graph service health endpoint)',
+    statDocs: 'Docs in graph',
+    statEntities: 'Entities',
+    statRelations: 'Relations',
+    statChunks: 'Graph chunks',
+    statusUnavailable: 'Graph status unavailable',
+    refresh: 'Refresh',
     title: 'Knowledge Graph Configuration',
     description: 'Configure entity-relationship extraction to automatically build a knowledge graph from text (note: this is different from the "page-link graph" inside the Wiki — that one shows references between Wiki pages, while this one is an LLM-extracted entity-relationship graph)',
     enableLabel: 'Enable Entity-Relationship Extraction',

@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     vlm_config JSONB NOT NULL DEFAULT '{}',
     extract_config JSONB NULL DEFAULT NULL,
     auto_tag_config JSONB NULL,
+    graph_config JSONB NULL,
     profile_config JSONB NULL,
     generated_profile JSONB NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

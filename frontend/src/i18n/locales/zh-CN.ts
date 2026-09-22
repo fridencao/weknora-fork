@@ -5163,6 +5163,18 @@ export default {
     next: '下一步'
   },
   graphSettings: {
+    lightragTitle: 'LightRAG 图谱',
+    lightragDescription: '配置知识库级 LightRAG 图谱：上传文档解析完成后自动构建知识图谱，并在检索问答中作为图谱召回通道（带证据溯源）。',
+    autoBuildLabel: '自动建图',
+    autoBuildDescription: '开启后，本知识库内文档解析完成将自动投喂图谱构建（无需手工触发）；构建失败会在下方状态中列出并支持重试。',
+    statusTitle: '图谱状态',
+    statusDescription: '图谱规模与最近建图任务（数据来自图谱服务健康度接口）',
+    statDocs: '已建图文档',
+    statEntities: '实体',
+    statRelations: '关系',
+    statChunks: '图谱 chunk',
+    statusUnavailable: '图谱状态不可用',
+    refresh: '刷新',
     title: '知识图谱配置',
     description: '配置实体-关系提取功能，自动从文本中抽取实体和关系构建知识图谱（注意：这与 Wiki 知识库中的「页面链接图谱」是两回事——前者是基于 LLM 的实体-关系图，后者是 Wiki 页面之间的引用关系图）',
     enableLabel: '启用实体关系提取',

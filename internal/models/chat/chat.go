@@ -134,6 +134,9 @@ func NewChat(config *ChatConfig, ollamaService *ollama.OllamaService) (Chat, err
 	}
 	c, err = wrapChatDebug(c, err)
 	c, err = wrapChatLangfuse(c, err)
+	// B2：finish_reason=length 加倍预算重试一次，仍截断则显式报错。
+	// 置于 concurrency 之内：重试的两次 provider 往返共用同一并发槽位。
+	c, err = wrapChatLengthRetry(c, err)
 	// Outermost: hold the per-model concurrency slot only around the real
 	// provider round-trip, so the wait is excluded from debug/langfuse timing.
 	return wrapChatConcurrency(c, config.MaxConcurrency, err)

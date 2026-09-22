@@ -542,6 +542,10 @@ func (s *knowledgeBaseService) UpdateKnowledgeBase(ctx context.Context,
 			config.AutoTagConfig.Normalize()
 			kb.AutoTagConfig = config.AutoTagConfig
 		}
+		// ADR-008 决策 3：KB 级 LightRAG 建图开关（nil = 不变）
+		if config.GraphConfig != nil {
+			kb.GraphConfig = config.GraphConfig
+		}
 		if config.ProfileConfig != nil {
 			profileWasEnabled = kb.ProfileConfig.IsEnabled()
 			kb.ProfileConfig = config.ProfileConfig

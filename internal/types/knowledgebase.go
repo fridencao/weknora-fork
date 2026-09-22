@@ -109,6 +109,8 @@ type KnowledgeBase struct {
 	QuestionGenerationConfig *QuestionGenerationConfig `yaml:"question_generation_config" json:"question_generation_config" gorm:"column:question_generation_config;type:json"`
 	// AutoTagConfig controls asynchronous association of existing tags after parsing.
 	AutoTagConfig *AutoTagConfig `yaml:"auto_tag_config" json:"auto_tag_config" gorm:"type:json"`
+	// GraphConfig controls KB-level LightRAG graph building (ADR-008 决策 3.2)
+	GraphConfig *GraphConfig `yaml:"graph_config" json:"graph_config" gorm:"type:json"`
 	// ProfileConfig controls automatic generation of the knowledge-base
 	// description from per-document profiles (document knowledge bases only).
 	ProfileConfig *KnowledgeBaseProfileConfig `yaml:"profile_config" json:"profile_config" gorm:"column:profile_config;type:json"` //nolint:lll // one-line struct tag
@@ -167,6 +169,9 @@ type KnowledgeBaseConfig struct {
 	WikiConfig *WikiConfig `yaml:"wiki_config"             json:"wiki_config"`
 	// AutoTagConfig controls optional automatic association of existing KB tags.
 	AutoTagConfig *AutoTagConfig `yaml:"auto_tag_config" json:"auto_tag_config"`
+	// GraphConfig controls KB-level LightRAG graph building (ADR-008 决策 3.2).
+	// nil means "no change" when updating.
+	GraphConfig *GraphConfig `yaml:"graph_config" json:"graph_config"`
 	// ProfileConfig controls optional automatic knowledge-base description
 	// generation. nil means "no change" when updating.
 	ProfileConfig *KnowledgeBaseProfileConfig `yaml:"profile_config" json:"profile_config"`
@@ -181,6 +186,36 @@ const (
 	// MaximumAutoTagMaxTags caps how many tags one document may auto-acquire.
 	MaximumAutoTagMaxTags = 10
 )
+
+// GraphConfig controls KB-level LightRAG graph building (ADR-008 决策 3.2).
+// Deliberately opt-in per KB: upgrading an existing deployment must not start
+// LLM-priced graph extraction unexpectedly (auto_build 默认关).
+type GraphConfig struct {
+	AutoBuild bool `yaml:"auto_build" json:"auto_build"`
+	// BuildModelID 可选：建图抽取模型覆盖（空 = starkb-api 部署默认模型）
+	BuildModelID string `yaml:"build_model_id,omitempty" json:"build_model_id,omitempty"`
+	// BackfillMaxDocsPerHour 补齐限速（ADR-008 决策 3.4，0 = 服务端默认 3）
+	BackfillMaxDocsPerHour int `yaml:"backfill_max_docs_per_hour,omitempty" json:"backfill_max_docs_per_hour,omitempty"`
+}
+
+// Value serializes the graph configuration for database storage.
+func (c GraphConfig) Value() (driver.Value, error) { return json.Marshal(c) }
+
+// Scan deserializes the graph configuration from a database value.
+func (c *GraphConfig) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		if s, ok := value.(string); ok {
+			b = []byte(s)
+		} else {
+			return nil
+		}
+	}
+	return json.Unmarshal(b, c)
+}
 
 // AutoTagConfig controls asynchronous document auto-tagging. It is deliberately
 // opt-in so upgrading an existing deployment does not add model calls or alter

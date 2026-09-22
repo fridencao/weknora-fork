@@ -51,10 +51,23 @@ docker build \
   -f docker/Dockerfile.app -t starkb-app:local .
 
 echo "== 3/3 构建 frontend（nginx + dist）=="
-docker build \
-  --build-arg VITE_FRONTEND_COMMIT="$COMMIT_ID" \
-  --build-arg NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}" \
-  -t starkb-ui:local frontend/
+# C1（docs/09 WS4.1）：frontend 默认走预构建模式——dist 在宿主机构建后仅 COPY
+# 进镜像。容器内 npm run build 在小内存宿主（≤6GB VM）反复 OOM-137（实测 3 次）。
+# USE_PREBUILT=0 退回容器内构建（Dockerfile.frontend，机器内存充裕时可用）。
+if [ "${USE_PREBUILT:-1}" = "1" ]; then
+  echo "-- 预构建模式：宿主机 npm ci + build（USE_PREBUILT=0 可退回容器内构建）--"
+  ( cd frontend \
+    && npm ci --registry="${NPM_REGISTRY:-https://registry.npmmirror.com}" \
+    && VITE_IS_DOCKER=true VITE_FRONTEND_COMMIT="$COMMIT_ID" npm run build )
+  docker build \
+    -f docker/Dockerfile.frontend-prebuilt \
+    -t starkb-ui:local .
+else
+  docker build \
+    --build-arg VITE_FRONTEND_COMMIT="$COMMIT_ID" \
+    --build-arg NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}" \
+    -t starkb-ui:local frontend/
+fi
 
 # 让 docker compose 直接使用本地镜像（compose 自动合并 override）
 cat > docker-compose.override.yml <<'EOF'

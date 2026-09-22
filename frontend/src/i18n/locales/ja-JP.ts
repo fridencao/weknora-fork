@@ -2324,6 +2324,18 @@ export default {
     }
   },
   graphSettings: {
+    lightragTitle: 'LightRAG ナレッジグラフ',
+    lightragDescription: 'ナレッジベース単位の LightRAG グラフ：解析完了したドキュメントから自動でナレッジグラフを構築し、検索・Q&A のグラフ召回チャネルとして機能します（エビデンス溯源付き）。',
+    autoBuildLabel: '自動グラフ構築',
+    autoBuildDescription: '有効にすると、このナレッジベースのドキュメントは解析完了後に自動でグラフ構築に投入されます。失敗は下記ステータスに表示され、再実行できます。',
+    statusTitle: 'グラフステータス',
+    statusDescription: 'グラフ規模と最近の構築ジョブ（グラフサービスのヘルスエンドポイントより）',
+    statDocs: '構築済みドキュメント',
+    statEntities: 'エンティティ',
+    statRelations: 'リレーション',
+    statChunks: 'グラフチャンク',
+    statusUnavailable: 'グラフステータスを取得できません',
+    refresh: '更新',
     title: 'ナレッジグラフの設定',
     description: 'エンティティとリレーションの抽出を設定し、テキストからナレッジグラフを自動的に構築します（注: Wiki内の「ページリンクグラフ」とは別のものです。あちらはWikiページ間の参照関係を示し、こちらはLLMが抽出したエンティティとリレーションのグラフです）',
     enableLabel: 'エンティティとリレーションの抽出を有効化',

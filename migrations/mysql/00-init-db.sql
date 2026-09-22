@@ -53,6 +53,7 @@ CREATE TABLE knowledge_bases (
     vlm_config JSON NOT NULL,
     extract_config JSON NULL,
     auto_tag_config JSON NULL,
+    graph_config JSON NULL,
     profile_config JSON NULL,
     generated_profile JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

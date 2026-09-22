@@ -151,6 +151,7 @@ export function updateKnowledgeBase(id: string, data: {
       extraction_instructions?: string;
     };
     auto_tag_config?: { enabled: boolean; model_id?: string; max_tags?: number; skip_if_tagged?: boolean };
+    graph_config?: { auto_build: boolean; build_model_id?: string; backfill_max_docs_per_hour?: number };
     profile_config?: KnowledgeBaseProfileConfig;
     indexing_strategy?: {
       vector_enabled: boolean;
@@ -699,4 +700,9 @@ export function batchReparseKnowledge(kbId: string, ids: string[], processConfig
     ids,
     process_config: processConfig,
   });
+}
+
+/** A3（docs/09）：KB 级 LightRAG 图谱健康度（Go 代理 starkb-api /graph/status）。 */
+export function getKnowledgeBaseGraphStatus(kbId: string) {
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/status`);
 }

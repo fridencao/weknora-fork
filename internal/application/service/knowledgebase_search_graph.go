@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	chatpipeline "github.com/Tencent/WeKnora/internal/application/service/chat_pipeline"
@@ -67,7 +68,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 	}
 	gctx, cancel := context.WithTimeout(ctx, graphRecallTimeout)
 	defer cancel()
-	data, err := client.QueryData(gctx, query, topK)
+	data, err := s.graphQueryMerged(gctx, client, kbIDs, query, topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: 查询失败（降级二通道）: %v", err)
 		return nil
@@ -115,4 +116,44 @@ func graphChunksPerHit() int {
 		fmt.Sscanf(v, "%d", &n)
 	}
 	return n
+}
+
+// graphQueryMerged 图谱查询（WS6.2）：shared 模式单次查询默认空间；kb 模式按
+// 用户可访问 KB 各自的图谱空间并行查询（docs/03 §4「不可达的图直接不查」），
+// 证据 chunk 按 chunk_id 去重合并后交给统一的 KB 范围过滤与锚点回跳。
+func (s *knowledgeBaseService) graphQueryMerged(
+	ctx context.Context, client *chatpipeline.LightragClient,
+	kbIDs []string, query string, topK int,
+) (*chatpipeline.LightragQueryData, error) {
+	if os.Getenv("STARKB_GRAPH_WORKSPACE_MODE") != "kb" {
+		return client.QueryDataInWorkspace(ctx, query, topK, "")
+	}
+	merged := &chatpipeline.LightragQueryData{}
+	seen := make(map[string]struct{})
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, kbID := range kbIDs {
+		wg.Add(1)
+		go func(kbID string) {
+			defer wg.Done()
+			d, err := client.QueryDataInWorkspace(ctx, query, topK, kbID)
+			if err != nil {
+				logger.Warnf(ctx, "graph recall: 空间 %s 查询失败（跳过）: %v", kbID, err)
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			for _, c := range d.Data.Chunks {
+				if _, dup := seen[c.ChunkID]; dup {
+					continue
+				}
+				seen[c.ChunkID] = struct{}{}
+				merged.Data.Chunks = append(merged.Data.Chunks, c)
+			}
+			merged.Data.Entities = append(merged.Data.Entities, d.Data.Entities...)
+			merged.Data.Relationships = append(merged.Data.Relationships, d.Data.Relationships...)
+		}(kbID)
+	}
+	wg.Wait()
+	return merged, nil
 }

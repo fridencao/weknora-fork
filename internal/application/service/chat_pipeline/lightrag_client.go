@@ -88,6 +88,15 @@ type LightragQueryData struct {
 
 // QueryData 调用 LightRAG /query/data（mode=mix：KG + 向量证据召回）。
 func (c *LightragClient) QueryData(ctx context.Context, query string, topK int) (*LightragQueryData, error) {
+	return c.QueryDataInWorkspace(ctx, query, topK, "")
+}
+
+// QueryDataInWorkspace 同 QueryData，可指定图谱空间（WS6）：非空 workspace 以
+// X-Workspace 头路由到 multi_workspace_server 的对应子 app；空 = 默认空间
+// （shared 模式，与存量单图谱空间一致）。
+func (c *LightragClient) QueryDataInWorkspace(ctx context.Context, query string, topK int,
+	workspace string,
+) (*LightragQueryData, error) {
 	if c.baseURL == "" {
 		return nil, fmt.Errorf("LIGHT_RAG_BASE_URL 未配置")
 	}
@@ -104,6 +113,9 @@ func (c *LightragClient) QueryData(ctx context.Context, query string, topK int) 
 	req.Header.Set("Content-Type", "application/json")
 	if c.apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
+	if workspace != "" {
+		req.Header.Set("X-Workspace", workspace)
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {

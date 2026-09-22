@@ -185,6 +185,10 @@ func (s *KnowledgePostProcessService) Handle(ctx context.Context, task *asynq.Ta
 	// 注意在子任务派发前执行，保证 embed/检索读到的 metadata 已带锚点。
 	AlignProvenanceOnIngest(ctx, s.chunkRepo, payload.TenantID, knowledge, chunks)
 
+	// A1（docs/09 WS1.2）：KB 开启自动建图时，解析完成后向 starkb-api 投喂建图。
+	// best-effort（与上面对齐钩子同款），不占 pending_subtasks 槽位，不阻断入库。
+	GraphBuildOnIngest(ctx, kb, knowledge)
+
 	// Gather all text-like chunks (including newly added OCR and Caption from multimodal tasks)
 	var textChunks []*types.Chunk
 	for _, c := range chunks {

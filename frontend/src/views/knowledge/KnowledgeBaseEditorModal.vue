@@ -418,7 +418,10 @@
           :graph-extract="formData.nodeExtractConfig"
           :model-id="formData.modelConfig.llmModelId"
           :all-models="allModels"
+          :kb-id="activeKbId || ''"
+          :graph-config="formData.graphConfig"
           @update:graphExtract="handleNodeExtractUpdate"
+          @update:graphConfig="handleGraphConfigUpdate"
         />
       </div>
 
@@ -812,6 +815,9 @@ const initFormData = (type: 'document' | 'faq' = 'document') => {
       modelId: '',
       language: ''
     },
+    autoGraphConfig: {
+      enabled: false,
+    },
     nodeExtractConfig: {
       enabled: false,
       text: '',
@@ -960,6 +966,10 @@ const loadKBData = async (
         enabled: !!kb.asr_config?.enabled,
         modelId: kb.asr_config?.model_id || '',
         language: kb.asr_config?.language || ''
+      },
+      graphConfig: {
+        autoBuild: !!kb.graph_config?.auto_build,
+        buildModelId: kb.graph_config?.build_model_id || '',
       },
       nodeExtractConfig: {
         enabled: kb.extract_config?.enabled || false,
@@ -1231,6 +1241,12 @@ const handleAdoptProfileGist = () => {
   MessagePlugin.success(t('knowledgeEditor.basic.profile.adopted'))
 }
 
+const handleGraphConfigUpdate = (config: { autoBuild: boolean; buildModelId?: string }) => {
+  if (formData.value) {
+    formData.value.graphConfig = { ...config }
+  }
+}
+
 const handleNodeExtractUpdate = (config: any) => {
   if (formData.value) {
     formData.value.nodeExtractConfig = { ...config }
@@ -1416,6 +1432,14 @@ const buildSubmitData = () => {
       keyword_enabled: formData.value.indexingStrategy?.keywordEnabled ?? true,
       wiki_enabled: formData.value.indexingStrategy?.wikiEnabled ?? false,
       graph_enabled: formData.value.indexingStrategy?.graphEnabled ?? false,
+    }
+  }
+
+  // A3/ADR-008：LightRAG 建图开关（graph_config.auto_build）
+  if (formData.value.graphConfig) {
+    data.graph_config = {
+      auto_build: !!formData.value.graphConfig.autoBuild,
+      build_model_id: formData.value.graphConfig.buildModelId || '',
     }
   }
 
