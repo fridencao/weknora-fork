@@ -91,6 +91,9 @@ services:
       - LIGHT_RAG_BASE_URL=${LIGHT_RAG_BASE_URL:-http://lightrag-server:9621}
       - LIGHT_RAG_API_KEY=${LIGHTRAG_API_KEY:-}
       - GRAPH_CHANNEL_ENABLED=${GRAPH_CHANNEL_ENABLED:-true}
+      # A0 回跳配额：单条图谱证据最多回跳的 WeKnora 子 chunk 数（整体上限为 top_k）。
+      # 图谱 chunk 平均覆盖 ~11 个子 chunk，全量返回会淹没向量/关键词通道，故按轮转限额。
+      - GRAPH_CHANNEL_CHUNKS_PER_HIT=${GRAPH_CHANNEL_CHUNKS_PER_HIT:-2}
       # ========== 日志 ==========
       # 日志级别，默认debug
       - LOG_LEVEL=${LOG_LEVEL:-debug}

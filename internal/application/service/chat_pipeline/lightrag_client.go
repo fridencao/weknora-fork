@@ -11,19 +11,38 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
 
-// LightragChunkKeyLen 溯源键定长规则（docs/02 §7）：{doc36}-{chunk36} = 73 字符。
+// LightragChunkKeyLen docs/02 §7 的溯源键定长设计：{doc36}-{chunk36} = 73 字符。
+//
+// 保留仅为兼容历史数据与单测构造——真实 LightRAG（1.5.8）从未产出该格式，
+// 其实际 key 为 `{docID}-chunk-NNN`，见 ParseLightragChunkKey。
 const LightragChunkKeyLen = 73
 
-// ParseLightragChunkKey 将 source_id/chunk key 无损解析回 (docID, chunkID)。
-func ParseLightragChunkKey(key string) (docID, chunkID string, err error) {
-	if len(key) != LightragChunkKeyLen || key[36] != '-' {
-		return "", "", fmt.Errorf("lightrag key 长度/格式非法: %q", key)
+// lightragGraphChunkKeyRe LightRAG 真实产出的 chunk key：{docID}-chunk-{NNN}。
+var lightragGraphChunkKeyRe = regexp.MustCompile(`^(.+)-chunk-(\d+)$`)
+
+// ParseLightragChunkKey 把 LightRAG 证据 chunk key 解析为 (docID, graphChunkKey)。
+//
+// docID = WeKnora knowledge doc id（建图时以知识文档 ID 入队，KB 权限过滤依据）。
+// graphChunkKey = LightRAG 侧 chunk 标识，**不是** WeKnora chunk id：两侧分块粒度
+// 相差约 16 倍（图谱 chunk ≈5k 字符 / WeKnora 子 chunk ≈308 字符），按序号映射不可行，
+// 回跳必须走正文契约锚点（见 graph_anchor.go）。
+//
+// 历史缺陷（A0，docs/08）：旧实现按 73 字符强校验 `{doc36}-{chunk36}`，真实数据
+// 恒解析失败 → 证据 chunk 全部被丢弃 → 图谱通道静默召回 0 条。
+func ParseLightragChunkKey(key string) (docID, graphChunkKey string, err error) {
+	if m := lightragGraphChunkKeyRe.FindStringSubmatch(key); m != nil {
+		return m[1], key, nil
 	}
-	return key[:36], key[37:73], nil
+	// 兼容 docs/02 §7 定长设计（历史数据/单测构造）
+	if len(key) == LightragChunkKeyLen && key[36] == '-' {
+		return key[:36], key, nil
+	}
+	return "", "", fmt.Errorf("lightrag key 格式非法: %q", key)
 }
 
 // LightragClient LightRAG 服务查询客户端（OpenAI 兼容部署，鉴权用静态 API Key）。

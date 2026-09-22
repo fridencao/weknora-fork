@@ -12,16 +12,18 @@ import (
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
-// PluginSearchGraph 图谱召回通道（M2，docs03 §4 / ADR-005）。
-// 与 PluginSearchEntity 互补：实体词经 LightRAG mix 查询拿 KG 上下文与证据 chunk
-// （chunk key 定长 {doc36}-{chunk36}，无损解析回 WeKnora chunk），补入检索结果；
-// 权限继承：仅返回当前租户/KB 范围内可读的 chunk（下推 ListChunksByID + KB 过滤）。
+// PluginSearchGraph 图谱召回通道（M2，docs03 §4 / ADR-005；A0 回跳修复见 graph_anchor.go）。
+// 与 PluginSearchEntity 互补：实体词经 LightRAG mix 查询拿 KG 上下文与证据 chunk，
+// 证据经**正文契约锚点**回跳为 WeKnora 子 chunk（chunk_type=text，与向量/关键词
+// 通道同粒度），补入检索结果；
+// 权限继承：仅返回当前租户/KB 范围内可读的 chunk（KB 文档 ID 集合过滤 + 租户查询）。
 type PluginSearchGraph struct {
 	lightrag      *LightragClient
 	chunkRepo     interfaces.ChunkRepository
 	knowledgeRepo interfaces.KnowledgeRepository
 	enabled       bool
 	topK          int
+	chunksPerHit  int
 }
 
 // NewPluginSearchGraph 创建图谱召回通道插件（container.Invoke 接线）。
@@ -37,9 +39,13 @@ func NewPluginSearchGraph(
 		// p.enabled = 部署级默认；运行时被 tenant 检索配置（UI）覆盖（见 OnEvent）。
 		enabled:       os.Getenv("GRAPH_CHANNEL_ENABLED") == "true",
 		topK:          20,
+		chunksPerHit:  DefaultGraphChunksPerHit,
 	}
 	if v := os.Getenv("GRAPH_CHANNEL_TOP_K"); v != "" {
 		fmt.Sscanf(v, "%d", &p.topK)
+	}
+	if v := os.Getenv("GRAPH_CHANNEL_CHUNKS_PER_HIT"); v != "" {
+		fmt.Sscanf(v, "%d", &p.chunksPerHit)
 	}
 	eventManager.Register(p)
 	return p
@@ -80,28 +86,21 @@ func (p *PluginSearchGraph) OnEvent(
 		return next()
 	}
 
-	// 证据 chunk key → WeKnora chunk（跨权限双重过滤：KB 范围文档校验 + 租户查询）。
-	// M3 口径对齐（与 service 层 knowledgebase_search_graph.go 一致）：建图时
-	// LightRAG 的 document_id = WeKnora knowledge doc_id，因此 key 前段必须对照
-	// KB 范围内的**文档 ID** 集合——M2 直接用 KB ID 对照，真实数据上全部命中被过滤。
+	// 证据 chunk → WeKnora 子 chunk：KB 范围文档过滤 + 正文契约锚点回跳
+	// （见 graph_anchor.go；A0 修复前此处按 73 字符定长键解析，真实数据恒失败）。
 	allowed := expandAllowedDocIDs(ctx, p.knowledgeRepo, tenantID, chatManage.EntityKBIDs)
-	chunkIDs := make([]string, 0, len(data.Data.Chunks))
-	keyToKB := make(map[string]string)
-	for _, c := range data.Data.Chunks {
-		if docID, chunkID, err := ParseLightragChunkKey(c.ChunkID); err == nil {
-			if _, ok := allowed[docID]; ok && docID != chunkID {
-				chunkIDs = append(chunkIDs, chunkID)
-				keyToKB[chunkID] = docID
-			}
-		}
-	}
-	if len(chunkIDs) == 0 {
-		logger.Infof(ctx, "graph search: 无可回跳 chunk（查询词域外或全部被过滤）")
+	refs := CollectGraphEvidence(data, allowed)
+	if len(refs) == 0 {
+		logger.Infof(ctx, "graph search: 无可回跳证据（查询词域外或全部被过滤）")
 		return next()
 	}
-	chunks, err := p.chunkRepo.ListChunksByID(ctx, tenantID, chunkIDs)
+	chunks, err := ResolveGraphEvidence(ctx, p.chunkRepo, tenantID, refs, p.chunksPerHit, p.topK)
 	if err != nil {
-		logger.Errorf(ctx, "graph search: chunk 回查失败: %v", err)
+		logger.Errorf(ctx, "graph search: chunk 回跳失败: %v", err)
+		return next()
+	}
+	if len(chunks) == 0 {
+		logger.Infof(ctx, "graph search: %d 条证据均无契约锚点可定位", len(refs))
 		return next()
 	}
 
@@ -131,7 +130,8 @@ func (p *PluginSearchGraph) OnEvent(
 		})
 		appended++
 	}
-	logger.Infof(ctx, "graph search: 命中 %d 个新 chunk（实体 %d）", appended, len(chatManage.Entity))
+	logger.Infof(ctx, "graph search: 命中 %d 个新 chunk（图谱证据 %d 条，实体 %d）",
+		appended, len(refs), len(chatManage.Entity))
 	return next()
 }
 

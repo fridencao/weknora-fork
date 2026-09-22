@@ -10,6 +10,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -27,7 +28,7 @@ func graphChannelEnvDefault() bool {
 }
 
 // graphRecallForSearch 对 API 层检索执行图谱召回：
-// 查询词 → LightRAG mix 查询 → 证据 chunk key 解析 → KB 范围文档过滤 → chunk 回查。
+// 查询词 → LightRAG mix 查询 → KB 文档范围过滤 → 正文契约锚点回跳 WeKnora 子 chunk。
 // 开关：tenant 检索配置（设置 UI）优先，未配置时回落部署默认。
 // 任何失败返回 nil（调用方按二通道继续），不向调用方透出错误。
 func (s *knowledgeBaseService) graphRecallForSearch(
@@ -72,23 +73,22 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 		return nil
 	}
 
-	chunkIDs := make([]string, 0, len(data.Data.Chunks))
-	for _, c := range data.Data.Chunks {
-		docID, chunkID, err := chatpipeline.ParseLightragChunkKey(c.ChunkID)
-		if err != nil {
-			continue
-		}
-		if _, ok := allowed[docID]; ok {
-			chunkIDs = append(chunkIDs, chunkID)
-		}
-	}
-	if len(chunkIDs) == 0 {
+	// 图谱证据 → WeKnora 子 chunk：KB 文档范围过滤 + 正文契约锚点回跳（A0 修复）。
+	// 旧实现按 73 字符定长键解析 `{doc36}-{chunk36}`，而 LightRAG 实际产出
+	// `{docID}-chunk-NNN`，真实数据上恒失败 → 图谱通道静默召回 0 条。
+	refs := chatpipeline.CollectGraphEvidence(data, allowed)
+	if len(refs) == 0 {
 		logger.Infof(ctx, "graph recall: 图谱证据均在 KB 范围外或键非法")
 		return nil
 	}
-	chunks, err := s.chunkRepo.ListChunksByID(ctx, tenantID, chunkIDs)
+	chunks, err := chatpipeline.ResolveGraphEvidence(
+		ctx, s.chunkRepo, tenantID, refs, graphChunksPerHit(), topK)
 	if err != nil {
-		logger.Warnf(ctx, "graph recall: chunk 回查失败: %v", err)
+		logger.Warnf(ctx, "graph recall: chunk 回跳失败: %v", err)
+		return nil
+	}
+	if len(chunks) == 0 {
+		logger.Infof(ctx, "graph recall: %d 条证据均无契约锚点可定位", len(refs))
 		return nil
 	}
 
@@ -103,7 +103,16 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 			IsEnabled:   true,
 		})
 	}
-	logger.Infof(ctx, "graph recall: 命中 %d chunk（候选 %d，KB 范围 %d 文档）",
-		len(results), len(data.Data.Chunks), len(allowed))
+	logger.Infof(ctx, "graph recall: 命中 %d chunk（图谱证据 %d 条，KB 范围 %d 文档）",
+		len(results), len(refs), len(allowed))
 	return results
+}
+
+// graphChunksPerHit 单条图谱证据最多回跳的 WeKnora 子 chunk 数。
+func graphChunksPerHit() int {
+	n := chatpipeline.DefaultGraphChunksPerHit
+	if v := os.Getenv("GRAPH_CHANNEL_CHUNKS_PER_HIT"); v != "" {
+		fmt.Sscanf(v, "%d", &n)
+	}
+	return n
 }
