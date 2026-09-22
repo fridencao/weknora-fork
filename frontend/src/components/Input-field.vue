@@ -3696,6 +3696,8 @@ const getImgSrc = (url: string) => {
 
   &.disabled {
     background-color: var(--td-success-color-light);
+    // 浅绿底上白图标对比度不足（浅色模式下几乎不可见），禁用态改用灰色图标
+    color: var(--td-text-color-placeholder);
   }
 
   img {
