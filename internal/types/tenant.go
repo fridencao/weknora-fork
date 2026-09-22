@@ -114,8 +114,11 @@ type Tenant struct {
 	DefaultStorageBackendID *string `yaml:"default_storage_backend_id" json:"default_storage_backend_id,omitempty" gorm:"column:default_storage_backend_id;type:varchar(36)"`
 	// Chat history config: knowledge base configuration for indexing and searching chat messages via vector search
 	ChatHistoryConfig *ChatHistoryConfig `yaml:"chat_history_config" json:"chat_history_config" gorm:"type:jsonb"`
-	// Retrieval config: global search/retrieval parameters shared by knowledge search and message search
-	RetrievalConfig *RetrievalConfig `yaml:"retrieval_config" json:"retrieval_config" gorm:"type:jsonb"`
+	// RetrievalConfig 已退休（ADR-008 决策 2）：检索参数的缺省来源统一为部署层
+	// （config.ConversationConfig.RetrievalDefaults），策略参数下沉到智能体做三态覆盖。
+	// 租户级「检索设置」页已删除，字段不再读写。
+	// 数据库列 tenants.retrieval_config 暂时保留（不破坏性迁移），后续可单独清理。
+	RetrievalConfig *RetrievalConfig `yaml:"retrieval_config" json:"retrieval_config,omitempty" gorm:"type:jsonb"`
 	// Memory config: workspace switch for cross-session long-term memory
 	MemoryConfig *MemoryConfig `yaml:"memory_config" json:"memory_config" gorm:"type:jsonb"`
 	// API principal config: controls how X-API-Key requests map to terminal principals.

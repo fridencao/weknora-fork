@@ -12,6 +12,7 @@ import (
 	"github.com/Tencent/WeKnora/internal/application/access"
 	"github.com/Tencent/WeKnora/internal/application/repository"
 	"github.com/Tencent/WeKnora/internal/application/service/retriever"
+	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/datasource"
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
@@ -31,6 +32,9 @@ const kbTaskCleanupTimeout = 5 * time.Second
 
 // knowledgeBaseService implements the knowledge base service interface
 type knowledgeBaseService struct {
+	// cfg 提供检索参数的**唯一缺省来源**（ADR-008 决策 2：租户「检索设置」退休后，
+	// 部署层成为缺省来源，智能体再在其上做三态覆盖）。
+	cfg             *config.Config
 	repo            interfaces.KnowledgeBaseRepository
 	kgRepo          interfaces.KnowledgeRepository
 	chunkRepo       interfaces.ChunkRepository
@@ -55,7 +59,8 @@ type knowledgeBaseService struct {
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
-func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
+func NewKnowledgeBaseService(cfg *config.Config,
+	repo interfaces.KnowledgeBaseRepository,
 	kgRepo interfaces.KnowledgeRepository,
 	chunkRepo interfaces.ChunkRepository,
 	shareRepo interfaces.KBShareRepository,
@@ -78,6 +83,7 @@ func NewKnowledgeBaseService(repo interfaces.KnowledgeBaseRepository,
 	wikiRepo interfaces.WikiPageRepository,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
+		cfg:             cfg,
 		repo:            repo,
 		kgRepo:          kgRepo,
 		chunkRepo:       chunkRepo,

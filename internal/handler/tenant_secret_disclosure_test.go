@@ -150,11 +150,14 @@ func secretTenantFixture() *types.Tenant {
 
 func TestGetTenantKVViewerAllowedForNonSecretKey(t *testing.T) {
 	tenant := secretTenantFixture()
-	tenant.RetrievalConfig = &types.RetrievalConfig{}
+	// 样例原为 retrieval-config，该 KV 已随租户「检索设置」退休（ADR-008 决策 2），
+	// 现改用同属非敏感 KV 的 memory-config——本用例验证的是"Viewer 可读非敏感键"，
+	// 与具体是哪个键无关。
+	tenant.MemoryConfig = &types.MemoryConfig{}
 	engine := newTenantHandlerTestEngine(t, types.TenantRoleViewer, tenant)
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/tenants/kv/retrieval-config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tenants/kv/memory-config", nil)
 	engine.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 }

@@ -1656,6 +1656,14 @@
             </div>
           </div>
 
+          <!-- 三态覆盖（ADR-008 决策 2）：开关关闭 = 继承部署缺省（显示提示），
+               打开 = 用本智能体的显式值。改造前这些字段恒为具体数值，
+               后端 EnsureDefaults 又会补非 0 值，导致智能体永远覆盖、无法"继承"。 -->
+          <div class="retrieval-override-hint">
+            <t-icon name="info-circle" size="14px" />
+            <span>{{ t('agentEditor.retrieval.threeStateHint') }}</span>
+          </div>
+
           <!-- 向量召回TopK -->
           <div class="setting-row">
             <div class="setting-info">
@@ -1663,7 +1671,13 @@
               <p class="desc">{{ $t('agentEditor.desc.embeddingTopK') }}</p>
             </div>
             <div class="setting-control">
-              <t-input-number v-model="formData.config.embedding_top_k" :min="1" :max="50" theme="column" />
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('embedding_top_k')"
+                  @change="(v: boolean) => setRetrievalOverride('embedding_top_k', v)" />
+                <t-input-number v-if="hasRetrievalOverride('embedding_top_k')"
+                  v-model="formData.config.embedding_top_k" :min="1" :max="50" theme="column" />
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
+              </div>
             </div>
           </div>
 
@@ -1674,9 +1688,14 @@
               <p class="desc">{{ $t('agentEditor.desc.keywordThreshold') }}</p>
             </div>
             <div class="setting-control">
-              <div class="slider-wrapper">
-                <t-slider v-model="formData.config.keyword_threshold" :min="0" :max="1" :step="0.01" />
-                <span class="slider-value">{{ formData.config.keyword_threshold?.toFixed(2) }}</span>
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('keyword_threshold')"
+                  @change="(v: boolean) => setRetrievalOverride('keyword_threshold', v)" />
+                <div v-if="hasRetrievalOverride('keyword_threshold')" class="slider-wrapper">
+                  <t-slider v-model="formData.config.keyword_threshold" :min="0" :max="1" :step="0.01" />
+                  <span class="slider-value">{{ formData.config.keyword_threshold?.toFixed(2) }}</span>
+                </div>
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
               </div>
             </div>
           </div>
@@ -1688,9 +1707,14 @@
               <p class="desc">{{ $t('agentEditor.desc.vectorThreshold') }}</p>
             </div>
             <div class="setting-control">
-              <div class="slider-wrapper">
-                <t-slider v-model="formData.config.vector_threshold" :min="0" :max="1" :step="0.01" />
-                <span class="slider-value">{{ formData.config.vector_threshold?.toFixed(2) }}</span>
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('vector_threshold')"
+                  @change="(v: boolean) => setRetrievalOverride('vector_threshold', v)" />
+                <div v-if="hasRetrievalOverride('vector_threshold')" class="slider-wrapper">
+                  <t-slider v-model="formData.config.vector_threshold" :min="0" :max="1" :step="0.01" />
+                  <span class="slider-value">{{ formData.config.vector_threshold?.toFixed(2) }}</span>
+                </div>
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
               </div>
             </div>
           </div>
@@ -1702,7 +1726,13 @@
               <p class="desc">{{ $t('agentEditor.desc.rerankTopK') }}</p>
             </div>
             <div class="setting-control">
-              <t-input-number v-model="formData.config.rerank_top_k" :min="1" :max="20" theme="column" />
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('rerank_top_k')"
+                  @change="(v: boolean) => setRetrievalOverride('rerank_top_k', v)" />
+                <t-input-number v-if="hasRetrievalOverride('rerank_top_k')"
+                  v-model="formData.config.rerank_top_k" :min="1" :max="20" theme="column" />
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
+              </div>
             </div>
           </div>
 
@@ -1713,9 +1743,32 @@
               <p class="desc">{{ $t('agentEditor.desc.rerankThreshold') }}</p>
             </div>
             <div class="setting-control">
-              <div class="slider-wrapper">
-                <t-slider v-model="formData.config.rerank_threshold" :min="-10" :max="10" :step="0.01" />
-                <span class="slider-value">{{ formData.config.rerank_threshold?.toFixed(1) }}</span>
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('rerank_threshold')"
+                  @change="(v: boolean) => setRetrievalOverride('rerank_threshold', v)" />
+                <div v-if="hasRetrievalOverride('rerank_threshold')" class="slider-wrapper">
+                  <t-slider v-model="formData.config.rerank_threshold" :min="-10" :max="10" :step="0.01" />
+                  <span class="slider-value">{{ formData.config.rerank_threshold?.toFixed(1) }}</span>
+                </div>
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 图谱召回通道（读侧，ADR-008 决策 1/3.1）：建图是 KB 的属性，
+               用图是智能体的属性。关闭 = 本次检索不走向图谱通道。 -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <label>{{ $t('agentEditor.retrieval.graphChannelLabel') }}</label>
+              <p class="desc">{{ $t('agentEditor.retrieval.graphChannelDesc') }}</p>
+            </div>
+            <div class="setting-control">
+              <div class="override-control">
+                <t-switch size="small" :model-value="hasRetrievalOverride('graph_channel_enabled')"
+                  @change="(v: boolean) => setRetrievalOverride('graph_channel_enabled', v)" />
+                <t-switch v-if="hasRetrievalOverride('graph_channel_enabled')"
+                  v-model="formData.config.graph_channel_enabled" />
+                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
               </div>
             </div>
           </div>
@@ -2390,12 +2443,6 @@ const defaultRewritePromptSystem = ref('');
 const defaultRewritePromptUser = ref('');
 const defaultFallbackPrompt = ref('');
 const defaultFallbackResponse = ref('');
-// 默认检索参数
-const defaultEmbeddingTopK = ref(10);
-const defaultKeywordThreshold = ref(0.3);
-const defaultVectorThreshold = ref(0.5);
-const defaultRerankTopK = ref(5);
-const defaultRerankThreshold = ref(0.5);
 const defaultQuickAnswerMaxCompletionTokens = 2048;
 const defaultSmartReasoningMaxCompletionTokens = 4096;
 const defaultSandboxWriteMaxCompletionTokens = 24576;
@@ -2879,6 +2926,44 @@ const defaultFormData = {
 };
 
 const formData = ref(JSON.parse(JSON.stringify(defaultFormData)));
+
+// ===== 检索策略的三态覆盖（ADR-008 决策 2）=====
+// undefined / null = **继承部署缺省**（后端 config.ConversationConfig.RetrievalDefaults，
+// 由部署 YAML 决定，前端不持有该值）；显式值 = 本智能体覆盖。
+// 改造前这些字段是普通数值，配合后端 `if x > 0` 判断 + EnsureDefaults 补非 0 值，
+// 智能体永远覆盖上层且无法表达"关闭/继承"。
+type RetrievalOverrideKey =
+  | 'embedding_top_k'
+  | 'keyword_threshold'
+  | 'vector_threshold'
+  | 'rerank_top_k'
+  | 'rerank_threshold'
+  | 'graph_channel_enabled';
+
+// 打开覆盖时的**编辑起点**，不是"继承到的值"（后者在部署配置里）。
+// 数值与后端 types.RetrievalConfig.GetEffective* 的内置默认一致，仅作便利。
+const RETRIEVAL_OVERRIDE_SEED: Record<RetrievalOverrideKey, number | boolean> = {
+  embedding_top_k: 50,
+  keyword_threshold: 0.3,
+  vector_threshold: 0.15,
+  rerank_top_k: 10,
+  rerank_threshold: 0.2,
+  graph_channel_enabled: false,
+};
+
+function hasRetrievalOverride(key: RetrievalOverrideKey): boolean {
+  const v = (formData.value.config as Record<string, unknown>)[key];
+  return v !== undefined && v !== null;
+}
+
+function setRetrievalOverride(key: RetrievalOverrideKey, on: boolean): void {
+  const cfg = formData.value.config as Record<string, unknown>;
+  if (on) {
+    cfg[key] = RETRIEVAL_OVERRIDE_SEED[key];
+  } else {
+    delete cfg[key];
+  }
+}
 
 const starterSuggestionModeOptions = computed(() => [
   { value: 'curated', label: t('agentEditor.questionSuggestions.modeCurated') },
@@ -3569,12 +3654,10 @@ watch(() => props.visible, async (val) => {
     } else {
       // 创建新智能体，使用系统默认值
       const newFormData = JSON.parse(JSON.stringify(defaultFormData));
-      // 应用系统默认检索参数
-      newFormData.config.embedding_top_k = defaultEmbeddingTopK.value;
-      newFormData.config.keyword_threshold = defaultKeywordThreshold.value;
-      newFormData.config.vector_threshold = defaultVectorThreshold.value;
-      newFormData.config.rerank_top_k = defaultRerankTopK.value;
-      newFormData.config.rerank_threshold = defaultRerankThreshold.value;
+      // 检索参数**刻意不预填**（ADR-008 决策 2）：留空即"继承部署缺省"，
+      // 用户需要时才在「检索策略」里打开覆盖开关。改造前这里会把具体数值写进
+      // 新智能体，使其一创建就永久覆盖部署层——与后端 EnsureDefaults 的
+      // materialize 是同一个问题的两端，必须一起清掉，否则"继承"永远不生效。
       newFormData.config.max_completion_tokens = 0;
       newFormData.config.temperature = defaultTemperature.value;
       // 应用系统默认提示词（根据模式填充）
@@ -4007,12 +4090,8 @@ const loadDependencies = async () => {
       placeholderData.value = editorResources.placeholders;
     }
 
-    const rc = editorResources.tenantRetrievalConfig as Record<string, number> | null;
-    if (rc?.embedding_top_k) defaultEmbeddingTopK.value = rc.embedding_top_k;
-    if (rc?.keyword_threshold !== undefined) defaultKeywordThreshold.value = rc.keyword_threshold;
-    if (rc?.vector_threshold !== undefined) defaultVectorThreshold.value = rc.vector_threshold;
-    if (rc?.rerank_top_k) defaultRerankTopK.value = rc.rerank_top_k;
-    if (rc?.rerank_threshold !== undefined) defaultRerankThreshold.value = rc.rerank_threshold;
+    // 租户级检索设置已退休（ADR-008 决策 2），不再有可回填的缺省值：
+    // 检索字段留空 = 继承部署配置，前端不需要也不持有该值。
   } catch (e) {
     console.error('Failed to load dependencies', e);
   }
@@ -5562,6 +5641,36 @@ const handleSave = async () => {
   :deep(.t-slider) {
     flex: 1;
   }
+}
+
+// 三态覆盖（ADR-008 决策 2）：左侧开关 = 是否覆盖部署缺省，
+// 右侧为控件（覆盖时）或「继承部署默认」提示（继承时）。
+.override-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+
+  .slider-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.inherit-hint {
+  font-size: var(--app-text-base);
+  color: var(--td-text-color-placeholder);
+  white-space: nowrap;
+}
+
+.retrieval-override-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: var(--app-text-base);
+  color: var(--td-text-color-secondary);
 }
 
 .slider-value {

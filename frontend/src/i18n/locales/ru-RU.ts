@@ -1075,6 +1075,12 @@ export default {
     }
   },
   agentEditor: {
+    retrieval: {
+      threeStateHint: 'Выключено — наследуется значение развёртывания; включено — переопределяется для этого агента',
+      inherit: 'Наследовать значение развёртывания',
+      graphChannelLabel: 'Использовать поиск по графу',
+      graphChannelDesc: 'Обращается ли этот агент к графовому каналу (LightRAG). Отключение влияет только на поиск, но не на построение графа базы знаний',
+    },
     builtinHint: 'Это встроенный агент. Имя и описание нельзя изменить, но можно настроить параметры конфигурации.',
     fileTypes: {
       label: 'Поддерживаемые типы файлов',
@@ -1777,7 +1783,6 @@ export default {
   commandPalette: {
     placeholder: 'Поиск по базам знаний, файлам, диалогам…',
     clearRecent: 'Очистить',
-    retrieval: 'Параметры поиска',
     untitledSession: 'Безымянный диалог',
     hotkey: {
       select: 'Навигация',
@@ -1789,7 +1794,6 @@ export default {
     empty: {
       noResults: 'Совпадений не найдено',
       askAi: 'Спросить ИИ',
-      adjustRetrieval: 'Настроить поиск'
     },
     quick: {
       newChat: 'Новый диалог',
@@ -5210,24 +5214,6 @@ export default {
     disabledWarning: 'База данных графа знаний не включена, извлечение сущностей и отношений будет недоступно',
     howToEnable: 'Как включить граф знаний?'
   },
-  retrievalSettings: {
-    title: 'Настройки поиска',
-    description: 'Настройте глобальные параметры поиска, общие для поиска по знаниям и сообщениям',
-      graphChannelLabel: 'Канал графа (LightRAG)',
-      graphChannelDescription: 'Если включено, поиск и чат также извлекают фрагменты сущностей/отношений из графа LightRAG и объединяют их с вектором/ключевыми словами через RRF. Если не задано, применяется значение по умолчанию (переменная GRAPH_CHANNEL_ENABLED).',
-    embeddingTopKLabel: 'Векторный поиск Top K',
-    vectorThresholdLabel: 'Порог векторного сходства',
-    keywordThresholdLabel: 'Порог совпадения ключевых слов',
-    rerankTopKLabel: 'Rerank Top K',
-    rerankThresholdLabel: 'Порог Rerank',
-    rerankModelLabel: 'Модель Rerank',
-    rerankModelDescription: 'Выберите модель для повторного ранжирования результатов поиска',
-    rerankModelRequired: 'Пожалуйста, выберите модель Rerank. Функция поиска требует эту модель для ранжирования результатов.',
-    toasts: {
-      saveSuccess: 'Конфигурация поиска сохранена',
-      saveFailed: 'Не удалось сохранить конфигурацию: {message}'
-    }
-  },
   memorySettings: {
     title: 'Моя память',
     description: 'То, что ассистент помнит о вас между разговорами. Записи можно просматривать, изменять и удалять; удалённые больше не используются.',
@@ -5551,7 +5537,6 @@ export default {
     autoCheckUpdate: 'Автоматическая загрузка обновлений',
     autoCheckUpdateDesc: 'При включении автоматически проверять и скачивать последнюю версию в фоновом режиме при запуске.',
     vectorStoreEngine: 'Движок векторной БД',
-    retrievalSettings: 'Настройки поиска',
     parserEngine: 'Движок парсинга',
     storageEngine: 'Движок хранения',
     sandbox: {

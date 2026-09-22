@@ -1077,6 +1077,12 @@ export default {
     }
   },
   agentEditor: {
+    retrieval: {
+      threeStateHint: '关闭开关 = 继承部署默认；打开后用本智能体的值覆盖',
+      inherit: '继承部署默认',
+      graphChannelLabel: '使用图谱检索',
+      graphChannelDesc: '本次检索是否走向图谱通道（LightRAG）。关闭只影响检索，不影响知识库是否建图',
+    },
     builtinHint: '这是内置智能体，名称和描述不可修改，但可以调整配置参数',
     fileTypes: {
       label: '支持的文件类型',
@@ -1779,7 +1785,6 @@ export default {
   commandPalette: {
     placeholder: '搜索知识库、文件、对话…',
     clearRecent: '清除',
-    retrieval: '检索参数',
     untitledSession: '未命名对话',
     hotkey: {
       select: '选择',
@@ -1791,7 +1796,6 @@ export default {
     empty: {
       noResults: '没有找到匹配结果',
       askAi: '直接向 AI 提问',
-      adjustRetrieval: '调整检索参数'
     },
     quick: {
       newChat: '新建对话',
@@ -5212,24 +5216,6 @@ export default {
     disabledWarning: '知识图谱数据库未启用，实体关系提取功能将无法使用',
     howToEnable: '如何启用知识图谱？'
   },
-  retrievalSettings: {
-    title: '搜索设置',
-    description: '配置知识库搜索和消息搜索的全局检索参数',
-      graphChannelLabel: '图谱召回通道（LightRAG）',
-      graphChannelDescription: '开启后，检索与聊天会从 LightRAG 图谱召回实体关系与证据 chunk，并与向量/关键词通道做 RRF 融合。未显式设置时跟随部署默认（环境变量 GRAPH_CHANNEL_ENABLED）。',
-    embeddingTopKLabel: '向量检索数量 (Top K)',
-    vectorThresholdLabel: '向量相似度阈值',
-    keywordThresholdLabel: '关键词匹配阈值',
-    rerankTopKLabel: 'Rerank 数量 (Top K)',
-    rerankThresholdLabel: 'Rerank 阈值',
-    rerankModelLabel: 'Rerank 模型',
-    rerankModelDescription: '选择用于搜索结果重排序的模型',
-    rerankModelRequired: '请选择 Rerank 模型，搜索功能需要此模型对结果进行重排序',
-    toasts: {
-      saveSuccess: '检索配置已保存',
-      saveFailed: '保存配置失败: {message}'
-    }
-  },
   memorySettings: {
     title: '我的记忆',
     description: '这里是助手跨会话记住的关于你的内容。你可以随时查看、修改和删除，删除后不会再被使用。',
@@ -5553,7 +5539,6 @@ export default {
     autoCheckUpdate: '自动下载更新',
     autoCheckUpdateDesc: '开启后自动检查并在后台下载最新版本安装包。',
     vectorStoreEngine: '向量数据库引擎',
-    retrievalSettings: '检索设置',
     parserEngine: '解析引擎',
     storageEngine: '存储引擎',
     sandbox: {

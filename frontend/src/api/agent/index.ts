@@ -120,12 +120,18 @@ export interface CustomAgentConfig {
   // 这里打开也不会生效。
   memory_enabled?: boolean;
 
-  // ===== 检索策略设置 =====
+  // ===== 检索策略设置（三态，ADR-008 决策 2）=====
+  // undefined = 继承部署缺省（后端 config.ConversationConfig.RetrievalDefaults），
+  // 显式值 = 覆盖。改造前是普通数值 + `if x > 0` 判断，无法表达"继承"，
+  // 且后端 EnsureDefaults 会填非 0 值使智能体永远覆盖。
   embedding_top_k?: number;         // 向量召回TopK
   keyword_threshold?: number;       // 关键词召回阈值
   vector_threshold?: number;        // 向量召回阈值
   rerank_top_k?: number;            // 重排TopK
   rerank_threshold?: number;        // 重排阈值
+  // 图谱召回通道（读侧）开关：undefined = 继承部署缺省。
+  // ADR-008 决策 1：建图是 KB 的属性，用图是智能体的属性。
+  graph_channel_enabled?: boolean;
 
   // ===== 高级设置（主要用于普通模式）=====
   enable_query_expansion?: boolean; // 是否启用查询扩展

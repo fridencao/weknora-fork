@@ -1271,7 +1271,6 @@ export default {
     autoCheckUpdate: 'Auto Download Updates',
     autoCheckUpdateDesc: 'When enabled, automatically check and download the latest version in the background.',
     vectorStoreEngine: 'Vector DB Engine',
-    retrievalSettings: 'Retrieval Settings',
     parserEngine: 'Parser Engine',
     storageEngine: 'Storage Engine',
     sandbox: {
@@ -2302,24 +2301,6 @@ export default {
     statsNotConfiguredDesc: 'Enable and select an embedding model to start auto-indexing conversation messages',
     toasts: {
       saveSuccess: 'Message management configuration saved',
-      saveFailed: 'Failed to save configuration: {message}'
-    }
-  },
-  retrievalSettings: {
-    title: 'Search Settings',
-    description: 'Configure global retrieval parameters for knowledge search and message search',
-      graphChannelLabel: 'Graph recall channel (LightRAG)',
-      graphChannelDescription: 'When enabled, search and chat also recall entity/relation evidence chunks from the LightRAG graph and fuse them with vector/keyword via RRF. If unset, the deployment default (GRAPH_CHANNEL_ENABLED env) applies.',
-    embeddingTopKLabel: 'Vector Search Top K',
-    vectorThresholdLabel: 'Vector Similarity Threshold',
-    keywordThresholdLabel: 'Keyword Match Threshold',
-    rerankTopKLabel: 'Rerank Top K',
-    rerankThresholdLabel: 'Rerank Threshold',
-    rerankModelLabel: 'Rerank Model',
-    rerankModelDescription: 'Select the model for reranking search results',
-    rerankModelRequired: 'Please select a Rerank model. Search requires this model to rerank results.',
-    toasts: {
-      saveSuccess: 'Retrieval configuration saved',
       saveFailed: 'Failed to save configuration: {message}'
     }
   },
@@ -5718,7 +5699,6 @@ export default {
   commandPalette: {
     placeholder: 'Search knowledge bases, files, conversations…',
     clearRecent: 'Clear',
-    retrieval: 'Retrieval settings',
     untitledSession: 'Untitled conversation',
     scope: {
       placeholder: 'Search within this knowledge base…',
@@ -5749,7 +5729,6 @@ export default {
     empty: {
       noResults: 'No matches found',
       askAi: 'Ask the AI directly',
-      adjustRetrieval: 'Adjust retrieval'
     },
     hotkey: {
       select: 'Navigate',
@@ -6080,6 +6059,12 @@ export default {
     }
   },
   agentEditor: {
+    retrieval: {
+      threeStateHint: 'Switch off to inherit the deployment default; switch on to override it for this agent',
+      inherit: 'Inherit deployment default',
+      graphChannelLabel: 'Use graph retrieval',
+      graphChannelDesc: 'Whether this agent queries the graph channel (LightRAG). Turning it off affects retrieval only, not whether the knowledge base is graphed',
+    },
     builtinHint: 'This is a built-in agent. Name and description cannot be modified, but configuration parameters can be adjusted.',
     navGroups: {
       basic: 'Basics',

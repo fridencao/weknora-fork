@@ -14,7 +14,6 @@ import {
 import { listMCPServices, type MCPService } from '@/api/mcp-service'
 import { listSkillCatalog, listSkills, type SkillCatalogItem, type SkillInfo } from '@/api/skill'
 import { getAgentTypePresets, getPlaceholders, type AgentTypePreset, type PlaceholdersResponse } from '@/api/agent'
-import { getTenantRetrievalConfig } from '@/api/retrieval'
 import { isStorageConfigDenied } from './storageEngineAccess'
 
 const CACHE_TTL_MS = 60_000
@@ -48,7 +47,6 @@ type EditorResourceKey =
   | 'agentTypePresets'
   | 'promptTemplates'
   | 'placeholders'
-  | 'tenantRetrievalConfig'
   | 'parserEngines'
   | 'systemInfo'
 
@@ -64,7 +62,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
   const agentTypePresets = ref<AgentTypePreset[]>([])
   const promptTemplates = ref<PromptTemplatesConfig | null>(null)
   const placeholders = ref<PlaceholdersResponse | null>(null)
-  const tenantRetrievalConfig = ref<Record<string, unknown> | null>(null)
   const parserEngines = ref<ParserEngineInfo[]>([])
   const systemInfo = ref<SystemInfo | null>(null)
 
@@ -179,14 +176,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
     })
   }
 
-  async function ensureTenantRetrievalConfig(force = false): Promise<void> {
-    return runOnce('tenantRetrievalConfig', force, async () => {
-      const retrievalRes: any = await getTenantRetrievalConfig()
-      tenantRetrievalConfig.value = retrievalRes?.data ?? null
-      loadedAt.value.tenantRetrievalConfig = Date.now()
-    })
-  }
-
   async function ensureParserEngines(force = false): Promise<void> {
     return runOnce('parserEngines', force, async () => {
       const resp = await getParserEngines()
@@ -211,7 +200,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
       ensurePromptTemplates(force),
       ensureStorageEngine(force),
       ensurePlaceholders(force),
-      ensureTenantRetrievalConfig(force),
     ])
   }
 
@@ -229,7 +217,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
       agentTypePresets.value = []
       promptTemplates.value = null
       placeholders.value = null
-      tenantRetrievalConfig.value = null
       parserEngines.value = []
       systemInfo.value = null
       inflight.clear()
@@ -252,7 +239,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
     agentTypePresets,
     promptTemplates,
     placeholders,
-    tenantRetrievalConfig,
     parserEngines,
     systemInfo,
     ensureStorageEngine,
@@ -263,7 +249,6 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
     ensureAgentTypePresets,
     ensurePromptTemplates,
     ensurePlaceholders,
-    ensureTenantRetrievalConfig,
     ensureParserEngines,
     ensureSystemInfo,
     prefetchAgentEditorDeps,

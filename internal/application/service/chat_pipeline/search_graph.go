@@ -36,10 +36,11 @@ func NewPluginSearchGraph(
 		lightrag:      NewLightragClientFromEnv(),
 		chunkRepo:     chunkRepository,
 		knowledgeRepo: knowledgeRepository,
-		// p.enabled = 部署级默认；运行时被 tenant 检索配置（UI）覆盖（见 OnEvent）。
-		enabled:       os.Getenv("GRAPH_CHANNEL_ENABLED") == "true",
-		topK:          20,
-		chunksPerHit:  DefaultGraphChunksPerHit,
+		// p.enabled = 部署级默认（GRAPH_CHANNEL_ENABLED）；运行时被
+		// chatManage.GraphChannelEnabled 覆盖（部署缺省 → 智能体三态，见 OnEvent）。
+		enabled:      os.Getenv("GRAPH_CHANNEL_ENABLED") == "true",
+		topK:         20,
+		chunksPerHit: DefaultGraphChunksPerHit,
 	}
 	if v := os.Getenv("GRAPH_CHANNEL_TOP_K"); v != "" {
 		fmt.Sscanf(v, "%d", &p.topK)
@@ -56,6 +57,17 @@ func (p *PluginSearchGraph) ActivationEvents() []types.EventType {
 	return []types.EventType{types.GRAPH_SEARCH}
 }
 
+// graphChannelEnabled 解析图谱通道（读侧）开关：chatManage 上的三态值优先
+// （部署缺省 → 智能体覆盖），nil 表示"未设置"，回落部署默认（插件构造时读的
+// GRAPH_CHANNEL_ENABLED）。抽成自由函数以便单测覆盖优先级——这是 ADR-008
+// 决策 2 / 3.1 的验收点。
+func graphChannelEnabled(chatManage *types.ChatManage, envDefault bool) bool {
+	if chatManage != nil && chatManage.GraphChannelEnabled != nil {
+		return *chatManage.GraphChannelEnabled
+	}
+	return envDefault
+}
+
 // OnEvent 执行图谱召回：实体词 → LightRAG mix 查询 → 证据 chunk → 追加检索结果。
 func (p *PluginSearchGraph) OnEvent(
 	ctx context.Context,
@@ -63,12 +75,11 @@ func (p *PluginSearchGraph) OnEvent(
 	chatManage *types.ChatManage,
 	next func() *PluginError,
 ) *PluginError {
-	// 开关：tenant 检索配置（设置 UI 显式设置）优先，未配置回落部署默认。
-	enabled := p.enabled
-	if info, ok := types.TenantInfoFromContext(ctx); ok && info != nil && info.RetrievalConfig != nil {
-		enabled = info.RetrievalConfig.GetGraphChannelEnabled(p.enabled)
-	}
-	if !enabled {
+	// 开关（ADR-008 决策 2 / 3.1）：chatManage 上的三态值优先（部署缺省 →
+	// 智能体覆盖），未设置则回落插件构造时的部署默认（GRAPH_CHANNEL_ENABLED）。
+	// 改造前这里直接读租户上下文（TenantInfoFromContext.RetrievalConfig），
+	// 导致同一请求里"要不要用图谱"与"rerank 阈值"取自两个不同的源。
+	if !graphChannelEnabled(chatManage, p.enabled) {
 		return next()
 	}
 	if len(chatManage.Entity) == 0 || len(chatManage.EntityKBIDs) == 0 {

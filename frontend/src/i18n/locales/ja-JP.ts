@@ -1271,7 +1271,6 @@ export default {
     autoCheckUpdate: '更新の自動ダウンロード',
     autoCheckUpdateDesc: '有効にすると、バックグラウンドで最新バージョンを自動的に確認・ダウンロードします。',
     vectorStoreEngine: 'ベクトルDBエンジン',
-    retrievalSettings: '検索設定',
     parserEngine: '解析エンジン',
     storageEngine: 'ストレージエンジン',
     sandbox: {
@@ -2302,24 +2301,6 @@ export default {
     statsNotConfiguredDesc: '有効化して埋め込みモデルを選択すると、会話メッセージの自動インデックス作成が始まります',
     toasts: {
       saveSuccess: 'メッセージ管理の設定を保存しました',
-      saveFailed: '設定の保存に失敗しました: {message}'
-    }
-  },
-  retrievalSettings: {
-    title: '検索設定',
-    description: 'ナレッジベース検索とメッセージ検索に共通する検索パラメータを設定します',
-      graphChannelLabel: 'グラフ検索チャネル（LightRAG）',
-      graphChannelDescription: '有効にすると、検索とチャットで LightRAG グラフからエンティティ・関係のエビデンスチャンクを呼び出し、ベクトル/キーワードと RRF 融合します。未設定の場合はデプロイ既定（環境変数 GRAPH_CHANNEL_ENABLED）に従います。',
-    embeddingTopKLabel: 'ベクトル検索のTop K',
-    vectorThresholdLabel: 'ベクトル類似度のしきい値',
-    keywordThresholdLabel: 'キーワード一致のしきい値',
-    rerankTopKLabel: 'リランクのTop K',
-    rerankThresholdLabel: 'リランクのしきい値',
-    rerankModelLabel: 'リランクモデル',
-    rerankModelDescription: '検索結果のリランクに使用するモデルを選択します',
-    rerankModelRequired: 'リランクモデルを選択してください。検索結果のリランクにはこのモデルが必要です。',
-    toasts: {
-      saveSuccess: '検索設定を保存しました',
       saveFailed: '設定の保存に失敗しました: {message}'
     }
   },
@@ -5718,7 +5699,6 @@ export default {
   commandPalette: {
     placeholder: 'ナレッジベース、ファイル、会話を検索…',
     clearRecent: 'クリア',
-    retrieval: '検索設定',
     untitledSession: '無題の会話',
     scope: {
       placeholder: 'このナレッジベース内を検索…',
@@ -5749,7 +5729,6 @@ export default {
     empty: {
       noResults: '一致する項目がありません',
       askAi: 'AIに直接質問する',
-      adjustRetrieval: '検索設定を調整'
     },
     hotkey: {
       select: '移動',
@@ -6080,6 +6059,12 @@ export default {
     }
   },
   agentEditor: {
+    retrieval: {
+      threeStateHint: 'オフでデプロイ既定値を継承、オンでこのエージェントの値に上書きします',
+      inherit: 'デプロイ既定値を継承',
+      graphChannelLabel: 'グラフ検索を使用',
+      graphChannelDesc: 'このエージェントがグラフチャネル（LightRAG）を検索するかどうか。オフにしても検索のみに影響し、ナレッジベースのグラフ構築には影響しません',
+    },
     builtinHint: 'これは組み込みエージェントです。名前と説明は変更できませんが、設定パラメータは調整できます。',
     navGroups: {
       basic: '基本',

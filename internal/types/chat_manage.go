@@ -23,6 +23,13 @@ type PipelineRequest struct {
 	RerankTopK      int     `json:"rerank_top_k"`
 	RerankThreshold float64 `json:"rerank_threshold"`
 
+	// GraphChannelEnabled 图谱召回通道（读侧）开关（ADR-008 决策 2/3.1）。
+	// nil = 用部署缺省（GRAPH_CHANNEL_ENABLED 环境变量）；智能体可三态覆盖。
+	// 迁到这里之后，图谱开关与其它检索参数**同源同层**——改造前它是在插件内部
+	// 直接读租户上下文（TenantInfoFromContext.RetrievalConfig）的，与同请求里
+	// 来自部署 YAML 的 rerank 阈值不同源。
+	GraphChannelEnabled *bool `json:"graph_channel_enabled,omitempty"`
+
 	// Chat model parameters
 	ChatModelID      string           `json:"chat_model_id"`
 	SummaryConfig    SummaryConfig    `json:"summary_config"`
@@ -223,6 +230,7 @@ func (c *ChatManage) Clone() *ChatManage {
 			RerankModelID:            c.RerankModelID,
 			RerankTopK:               c.RerankTopK,
 			RerankThreshold:          c.RerankThreshold,
+			GraphChannelEnabled:      c.GraphChannelEnabled,
 			ChatModelID:              c.ChatModelID,
 			SummaryConfig:            c.SummaryConfig,
 			FallbackStrategy:         c.FallbackStrategy,

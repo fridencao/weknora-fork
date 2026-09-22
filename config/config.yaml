@@ -13,6 +13,17 @@ conversation:
   vector_threshold: 0.2
   rerank_threshold: 0.3
   rerank_top_k: 30
+  # ==== 检索参数的部署级缺省（ADR-008 决策 2）====
+  # 租户级「检索设置」已退休，这里成为检索参数的**唯一缺省来源**；
+  # 智能体「检索策略」可用三态覆盖（留空=继承，显式值=覆盖）。
+  # 以下四项留空时回落到内置默认（60 / 0.7 / 0.3 / 0.2），写出来只为便于调参。
+  rrf_k: 60                  # RRF 平滑常数，建议 30..100
+  rrf_vector_weight: 0.7     # 向量通道融合权重
+  rrf_keyword_weight: 0.3    # 关键词通道融合权重
+  rrf_graph_weight: 0.2      # LightRAG 图谱通道融合权重（低于向量，属补充通道）
+  # 图谱召回通道（读侧）的部署级缺省。留空则回落 GRAPH_CHANNEL_ENABLED 环境变量。
+  # 注意：与 KB 级 auto_graph_config.enabled（写侧：是否自动建图）是**两个正交开关**。
+  # graph_channel_enabled: false
   fallback_strategy: "model"
   fallback_response: "Sorry, I am unable to answer this question."
   fallback_prompt_id: "default_fallback_prompt"  # from prompt_templates/fallback.yaml (mode: "model")

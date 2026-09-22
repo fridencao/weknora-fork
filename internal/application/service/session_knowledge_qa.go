@@ -121,6 +121,9 @@ func (s *sessionService) KnowledgeQA(
 		len(searchTargets),
 	)
 
+	// 检索参数缺省取自部署层（ADR-008 决策 2 的唯一缺省来源），随后由
+	// applyAgentOverridesToChatManage 做智能体三态覆盖。
+	retrievalDefaults := s.cfg.RetrievalDefaults()
 	chatManage := &types.ChatManage{
 		PipelineRequest: types.PipelineRequest{
 			Query:                   req.Query,
@@ -130,11 +133,12 @@ func (s *sessionService) KnowledgeQA(
 			KnowledgeBaseIDs:        knowledgeBaseIDs,
 			KnowledgeIDs:            knowledgeIDs,
 			SearchTargets:           searchTargets,
-			VectorThreshold:         s.cfg.Conversation.VectorThreshold,
-			KeywordThreshold:        s.cfg.Conversation.KeywordThreshold,
-			EmbeddingTopK:           s.cfg.Conversation.EmbeddingTopK,
-			RerankTopK:              s.cfg.Conversation.RerankTopK,
-			RerankThreshold:         s.cfg.Conversation.RerankThreshold,
+			VectorThreshold:         retrievalDefaults.GetEffectiveVectorThreshold(),
+			KeywordThreshold:        retrievalDefaults.GetEffectiveKeywordThreshold(),
+			EmbeddingTopK:           retrievalDefaults.GetEffectiveEmbeddingTopK(),
+			RerankTopK:              retrievalDefaults.GetEffectiveRerankTopK(),
+			RerankThreshold:         retrievalDefaults.GetEffectiveRerankThreshold(),
+			GraphChannelEnabled:     retrievalDefaults.GraphChannelEnabled,
 			ChatModelID:             chatModelID,
 			SummaryConfig:           summaryConfig,
 			FallbackStrategy:        fallbackStrategy,
@@ -852,28 +856,26 @@ func (s *sessionService) SearchKnowledge(ctx context.Context,
 		return []*types.SearchResult{}, nil
 	}
 
-	// Create default retrieval parameters — prefer tenant RetrievalConfig, fallback to built-in defaults
+	// Create default retrieval parameters —— 缺省来源为部署层（ADR-008 决策 2）。
+	// 改造前这里读租户 RetrievalConfig，而对话路径读部署 YAML，同一系统两条路径
+	// 的缺省值不同源（实测 YAML 30/0.2/0.3/30/0.3 vs 内置 50/0.15/0.3/10/0.2）。
 	userID := types.SessionOwnerIDFromContext(ctx)
-
-	// Load tenant-level retrieval config (nil is safe — GetEffective* methods handle nil receiver)
-	var rc *types.RetrievalConfig
-	if tenant, err2 := s.tenantService.GetTenantByID(ctx, tenantID); err2 == nil {
-		rc = tenant.RetrievalConfig
-	}
+	rc := s.cfg.RetrievalDefaults()
 
 	chatManage := &types.ChatManage{
 		PipelineRequest: types.PipelineRequest{
-			Query:            query,
-			UserID:           userID,
-			KnowledgeBaseIDs: knowledgeBaseIDs,
-			KnowledgeIDs:     knowledgeIDs,
-			SearchTargets:    searchTargets,
-			MaxRounds:        s.cfg.Conversation.MaxRounds,
-			EmbeddingTopK:    rc.GetEffectiveEmbeddingTopK(),
-			VectorThreshold:  rc.GetEffectiveVectorThreshold(),
-			KeywordThreshold: rc.GetEffectiveKeywordThreshold(),
-			RerankTopK:       rc.GetEffectiveRerankTopK(),
-			RerankThreshold:  rc.GetEffectiveRerankThreshold(),
+			Query:               query,
+			UserID:              userID,
+			KnowledgeBaseIDs:    knowledgeBaseIDs,
+			KnowledgeIDs:        knowledgeIDs,
+			SearchTargets:       searchTargets,
+			MaxRounds:           s.cfg.Conversation.MaxRounds,
+			EmbeddingTopK:       rc.GetEffectiveEmbeddingTopK(),
+			VectorThreshold:     rc.GetEffectiveVectorThreshold(),
+			KeywordThreshold:    rc.GetEffectiveKeywordThreshold(),
+			RerankTopK:          rc.GetEffectiveRerankTopK(),
+			RerankThreshold:     rc.GetEffectiveRerankThreshold(),
+			GraphChannelEnabled: rc.GraphChannelEnabled,
 		},
 		PipelineState: types.PipelineState{
 			RewriteQuery: query,
@@ -888,7 +890,7 @@ func (s *sessionService) SearchKnowledge(ctx context.Context,
 	}
 
 	// Use rerank model from RetrievalConfig if set, otherwise auto-select the first available
-	if rc != nil && rc.RerankModelID != "" {
+	if rc.RerankModelID != "" {
 		chatManage.RerankModelID = rc.RerankModelID
 	} else {
 		for _, model := range models {

@@ -1329,9 +1329,6 @@ func (h *TenantHandler) GetTenantKV(c *gin.Context) {
 	case "chat-history-config":
 		h.GetTenantChatHistoryConfig(c)
 		return
-	case "retrieval-config":
-		h.GetTenantRetrievalConfig(c)
-		return
 	case "memory-config":
 		h.GetTenantMemoryConfig(c)
 		return
@@ -1379,9 +1376,6 @@ func (h *TenantHandler) UpdateTenantKV(c *gin.Context) {
 		return
 	case "chat-history-config":
 		h.updateTenantChatHistoryConfigInternal(c)
-		return
-	case "retrieval-config":
-		h.updateTenantRetrievalConfigInternal(c)
 		return
 	case "memory-config":
 		h.updateTenantMemoryConfigInternal(c)
@@ -1729,82 +1723,14 @@ func (h *TenantHandler) updateTenantChatHistoryConfigInternal(c *gin.Context) {
 	})
 }
 
-// GetTenantRetrievalConfig returns the tenant's global retrieval configuration.
-func (h *TenantHandler) GetTenantRetrievalConfig(c *gin.Context) {
-	ctx := c.Request.Context()
-	tenant, _ := types.TenantInfoFromContext(ctx)
-	if tenant == nil {
-		logger.Error(ctx, "Workspace is empty")
-		c.Error(errors.NewBadRequestError("Workspace is empty"))
-		return
-	}
-	data := tenant.RetrievalConfig
-	if data == nil {
-		data = &types.RetrievalConfig{}
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    data,
-	})
-}
-
-// updateTenantRetrievalConfigInternal updates the tenant's global retrieval configuration.
-func (h *TenantHandler) updateTenantRetrievalConfigInternal(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var cfg types.RetrievalConfig
-	if err := c.ShouldBindJSON(&cfg); err != nil {
-		logger.Error(ctx, "Failed to parse request parameters", err)
-		c.Error(errors.NewValidationError("Invalid request data").WithDetails(err.Error()))
-		return
-	}
-
-	// Validate thresholds
-	if cfg.VectorThreshold < 0 || cfg.VectorThreshold > 1 {
-		c.Error(errors.NewBadRequestError("vector_threshold must be between 0 and 1"))
-		return
-	}
-	if cfg.KeywordThreshold < 0 || cfg.KeywordThreshold > 1 {
-		c.Error(errors.NewBadRequestError("keyword_threshold must be between 0 and 1"))
-		return
-	}
-	if cfg.RerankThreshold < -10 || cfg.RerankThreshold > 10 {
-		c.Error(errors.NewBadRequestError("rerank_threshold must be between -10 and 10"))
-		return
-	}
-	if cfg.EmbeddingTopK < 0 || cfg.EmbeddingTopK > 200 {
-		c.Error(errors.NewBadRequestError("embedding_top_k must be between 0 and 200"))
-		return
-	}
-	if cfg.RerankTopK < 0 || cfg.RerankTopK > 200 {
-		c.Error(errors.NewBadRequestError("rerank_top_k must be between 0 and 200"))
-		return
-	}
-
-	tenant, _ := types.TenantInfoFromContext(ctx)
-	if tenant == nil {
-		logger.Error(ctx, "Workspace is empty")
-		c.Error(errors.NewBadRequestError("Workspace is empty"))
-		return
-	}
-
-	tenant.RetrievalConfig = &cfg
-	updatedTenant, err := h.service.UpdateTenant(ctx, tenant)
-	if err != nil {
-		if appErr, ok := errors.IsAppError(err); ok {
-			c.Error(appErr)
-		} else {
-			logger.ErrorWithFields(ctx, err, nil)
-			c.Error(errors.NewInternalServerError("Failed to update retrieval config").WithDetails(err.Error()))
-		}
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    updatedTenant.RetrievalConfig,
-		"message": "Retrieval configuration updated successfully",
-	})
-}
+// GetTenantRetrievalConfig / updateTenantRetrievalConfigInternal 已删除
+// （ADR-008 决策 2）。租户级「检索设置」整体退休：
+//   - 检索参数的**缺省来源**统一为部署层 config.ConversationConfig；
+//   - 策略参数（含图谱读侧开关）下沉到智能体做三态覆盖；
+//   - 其中 6/7 个字段本就与智能体「检索策略」重复，保留只会继续被 EnsureDefaults 架空。
+// 对应前端页面 frontend/src/views/settings/RetrievalSettings.vue 一并删除。
+// 路由 kv 分发里的 "retrieval-config" 分支同步移除，因此该 key 现在会返回
+// unsupported key（预期行为）。
 
 // GetTenantMemoryConfig returns the workspace long-term memory configuration.
 func (h *TenantHandler) GetTenantMemoryConfig(c *gin.Context) {
