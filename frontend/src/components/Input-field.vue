@@ -651,6 +651,13 @@ const scopeKnowledgeBaseLabel = computed(() => {
   return names.length === 1 ? String(names[0]) : t('input.knowledgeBaseWithCount', { count: names.length })
 })
 
+// 未显式选择任何知识库时，检索默认覆盖全部知识库——如实展示，避免「已生效但不可见」
+const defaultScopeLabel = computed(() =>
+  !scopeKnowledgeBaseLabel.value && allSelectedItems.value.length === 0
+    ? t('input.allKnowledgeBases')
+    : '',
+)
+
 // 合并所有选中项（用于输入框内显示）
 // 现在智能体配置的知识库也在 store 中，统一从 selectedKbs 获取
 const allSelectedItems = computed(() => {
@@ -2851,10 +2858,11 @@ defineExpose({
                   stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
               <span
-                v-if="scopeKnowledgeBaseLabel"
+                v-if="scopeKnowledgeBaseLabel || defaultScopeLabel"
                 class="kb-scope-label"
-                :title="scopeKnowledgeBaseLabel"
-              >{{ scopeKnowledgeBaseLabel }}</span>
+                :class="{ 'is-default': !scopeKnowledgeBaseLabel }"
+                :title="scopeKnowledgeBaseLabel || defaultScopeLabel"
+              >{{ scopeKnowledgeBaseLabel || defaultScopeLabel }}</span>
               <span
                 v-if="allSelectedItems.length > 0 && !scopeKnowledgeBaseLabel"
                 class="kb-count"
@@ -3461,6 +3469,11 @@ const getImgSrc = (url: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  &.is-default {
+    color: var(--td-text-color-placeholder);
+    font-weight: 400;
+  }
 }
 
 .kb-btn.active .kb-scope-label {
