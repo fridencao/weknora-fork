@@ -26,16 +26,20 @@ const letter = computed(() => (props.name || '').trim().charAt(0).toUpperCase())
 </script>
 
 <style lang="less" scoped>
+/* 与侧边栏账号头像（UserMenu .user-avatar）同款视觉：
+   24px 圆形 + 品牌色渐变底 + 白色内容，两 variant 仅内容不同。 */
 .chat-avatar {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--td-radius-circle);
   overflow: hidden;
-  font-size: var(--app-text-xl);
+  background: linear-gradient(135deg, var(--td-brand-color) 0%, var(--td-brand-color-active) 100%);
+  font-size: var(--app-text-sm);
+  color: var(--td-text-color-anti);
   user-select: none;
 }
 
@@ -46,17 +50,8 @@ const letter = computed(() => (props.name || '').trim().charAt(0).toUpperCase())
 }
 
 .chat-avatar__letter {
-  font-size: var(--app-text-md);
+  font-size: var(--app-text-sm);
   font-weight: 600;
-}
-
-.chat-avatar--user {
-  background: var(--td-bg-color-component);
-  color: var(--td-text-color-secondary);
-}
-
-.chat-avatar--bot {
-  background: var(--td-brand-color-1);
-  color: var(--td-brand-color);
+  line-height: 1;
 }
 </style>
