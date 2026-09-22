@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     storage_backend_id VARCHAR(36),
     wiki_config TEXT,
     indexing_strategy TEXT,
+    graph_config TEXT,
     creator_id VARCHAR(36),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
