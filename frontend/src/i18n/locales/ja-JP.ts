@@ -4857,7 +4857,7 @@ export default {
       monospace: '汎用等幅'
     },
     fontSize: 'フォントサイズ',
-    fontSizeDescription: 'インターフェース全体（文字、アイコン、余白）を拡大縮小し、すぐに反映されます',
+    fontSizeDescription: 'インターフェースの文字サイズを調整し、すぐに反映されます',
     size: {
       small: '小',
       normal: '標準',

@@ -4857,7 +4857,7 @@ export default {
       monospace: 'Generic Monospace'
     },
     fontSize: 'Font Size',
-    fontSizeDescription: 'Scales the entire interface (text, icons, spacing) and applies immediately',
+    fontSizeDescription: 'Adjusts the interface text size and applies immediately',
     size: {
       small: 'Small',
       normal: 'Normal',

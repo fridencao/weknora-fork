@@ -56,6 +56,11 @@ export type MonoFontKey =
   // cross-platform
   | 'monospace'
 
+// Three modes map to explicit token ladders in assets/theme/theme.css
+// (`:root:root:root` for normal, `:root:root[data-font-size=…]` for
+// small/large). applyFont only flips the attribute; the CSS cascade does
+// the rest, so both --app-text-* (app code) and --td-font-size-*
+// (TDesign components + their line-height calc()) follow together.
 export type FontSizeKey = 'small' | 'normal' | 'large'
 
 const SANS_KEY = 'font_sans'
@@ -101,12 +106,6 @@ export const MONO_STACKS: Record<MonoFontKey, string> = {
     '"Liberation Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace',
   // cross-platform
   monospace: 'monospace',
-}
-
-export const FONT_SCALES: Record<FontSizeKey, number> = {
-  small: 0.875,
-  normal: 1,
-  large: 1.125,
 }
 
 export type Platform = 'mac' | 'windows' | 'linux'
@@ -203,10 +202,10 @@ const currentSize = ref<FontSizeKey>(loadSize())
 // Track the last value applied to the DOM so we only rewrite CSS variables
 // that actually changed. Avoids unnecessary style recalculation when the
 // user only flips one of the three knobs.
-const lastApplied: { sans: string; mono: string; scale: string } = {
+const lastApplied: { sans: string; mono: string; size: FontSizeKey } = {
   sans: '',
   mono: '',
-  scale: '',
+  size: DEFAULT_SIZE,
 }
 
 function applyFont() {
@@ -214,7 +213,6 @@ function applyFont() {
   if (!root) return
   const sansStack = SANS_STACKS[currentSans.value] ?? SANS_STACKS[DEFAULT_SANS]
   const monoStack = MONO_STACKS[currentMono.value] ?? MONO_STACKS[DEFAULT_MONO]
-  const scale = String(FONT_SCALES[currentSize.value] ?? FONT_SCALES[DEFAULT_SIZE])
   if (lastApplied.sans !== sansStack) {
     root.style.setProperty('--app-font-family', sansStack)
     lastApplied.sans = sansStack
@@ -223,20 +221,17 @@ function applyFont() {
     root.style.setProperty('--app-font-family-mono', monoStack)
     lastApplied.mono = monoStack
   }
-  if (lastApplied.scale !== scale) {
-    // Apply size via CSS zoom on <html> so the multiplier reaches every
-    // element — including the ~1000+ hard-coded `font-size: NNpx` rules
-    // scattered across the frontend. The previous approach set
-    // `--app-font-scale` and relied on `calc(NNpx * var(--app-font-scale))`,
-    // but calc() only runs where the variable is consumed (a few TDesign
-    // tokens plus the body reset), so users saw only parts of the UI
-    // resize. Zoom composites the whole document at the requested factor
-    // and is supported in all Chromium, WebKit, and modern Firefox (126+).
-    //   https://developer.mozilla.org/en-US/docs/Web/CSS/zoom
-    // setProperty is used instead of root.style.zoom because `zoom` is not
-    // in the standard CSSStyleDeclaration type.
-    root.style.setProperty('zoom', scale)
-    lastApplied.scale = scale
+  if (lastApplied.size !== currentSize.value) {
+    // Size is a token-ladder switch, not a scale factor: normal is the
+    // default ladder baked into theme.css (no attribute), small/large are
+    // override blocks keyed on the data-font-size attribute. Removing the
+    // attribute for normal keeps the attribute absent in the common case.
+    if (currentSize.value === DEFAULT_SIZE) {
+      delete root.dataset.fontSize
+    } else {
+      root.dataset.fontSize = currentSize.value
+    }
+    lastApplied.size = currentSize.value
   }
 }
 

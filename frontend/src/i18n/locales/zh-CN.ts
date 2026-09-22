@@ -2700,7 +2700,7 @@ export default {
     sansPreview: '示例 Sample 字体 Font — Aa Gg Oo 0123',
     monoPreview: 'const msg = \'Hello\'; // 0O1l',
     fontSize: '字体大小',
-    fontSizeDescription: '整体缩放界面（文字、图标、间距等），切换后立即生效',
+    fontSizeDescription: '调整界面文字大小，切换后立即生效',
     size: {
       small: '小',
       normal: '正常',

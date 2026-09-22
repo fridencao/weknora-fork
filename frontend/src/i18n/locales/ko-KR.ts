@@ -2698,7 +2698,7 @@ export default {
     sansPreview: '샘플 Sample 글꼴 — Aa Gg Oo 0123',
     monoPreview: 'const msg = \'Hello\'; // 0O1l',
     fontSize: '글꼴 크기',
-    fontSizeDescription: '인터페이스 전체(텍스트, 아이콘, 간격)를 확대/축소하며 즉시 적용됩니다',
+    fontSizeDescription: '인터페이스 글자 크기를 조정하며 즉시 적용됩니다',
     size: {
       small: '작게',
       normal: '보통',

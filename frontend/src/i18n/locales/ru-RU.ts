@@ -2698,7 +2698,7 @@ export default {
     sansPreview: 'Образец Sample Шрифт — Aa Gg Oo 0123',
     monoPreview: 'const msg = \'Hello\'; // 0O1l',
     fontSize: 'Размер шрифта',
-    fontSizeDescription: 'Масштабирует весь интерфейс (текст, иконки, отступы) и применяется немедленно',
+    fontSizeDescription: 'Регулирует размер текста в интерфейсе и применяется немедленно',
     size: {
       small: 'Маленький',
       normal: 'Обычный',
