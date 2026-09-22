@@ -55,3 +55,11 @@ func TestParserEngineConfigToOverridesMapResolvesMinerUParseMethod(t *testing.T)
 	legacy := (&ParserEngineConfig{MinerUEnableOCR: &falseValue}).ToOverridesMap()
 	assert.Equal(t, MinerUParseMethodText, legacy["mineru_parse_method"])
 }
+
+func TestParserEngineConfigToOverridesMapIncludesStarkbAPIURL(t *testing.T) {
+	withStarkb := (&ParserEngineConfig{StarkbAPIURL: "http://starkb-api:8300"}).ToOverridesMap()
+	assert.Equal(t, "http://starkb-api:8300", withStarkb["starkb_api_url"])
+
+	empty := (&ParserEngineConfig{}).ToOverridesMap()
+	assert.NotContains(t, empty, "starkb_api_url")
+}

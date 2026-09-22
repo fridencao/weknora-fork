@@ -207,8 +207,8 @@ def _build_default_registry() -> ParserEngineRegistry:
         },
         description="StarKB 全管线解析引擎（MinerU 档位路由 + 契约归一层，溯源坐标系）",
         check_available=lambda overrides: (
-            bool(os.environ.get("STARKB_API_URL")),
-            "请配置 STARKB_API_URL 指向 starkb-api 服务",
+            bool((overrides or {}).get("starkb_api_url") or os.environ.get("STARKB_API_URL")),
+            "请配置 STARKB_API_URL 或租户级 starkb_api_url 指向 starkb-api 服务",
         ),
         unavailable_hint="starkb-api 服务不可达",
     )

@@ -25,22 +25,29 @@ from docreader.parser.base_parser import BaseParser
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-STARKB_API_URL = os.environ.get("STARKB_API_URL", "http://starkb-api:8300")
+STARKB_API_URL_DEFAULT = os.environ.get("STARKB_API_URL", "http://starkb-api:8300")
 POLL_INTERVAL = 3.0
 POLL_TIMEOUT = 900.0
 
 
-def _api(path: str, method: str = "GET", body: dict | None = None, timeout: float = 120.0):
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(
-        STARKB_API_URL.rstrip("/") + path, data=data, method=method,
-        headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
-
-
 class StarkbParser(BaseParser):
-    """调用 starkb-api 的全管线解析器（MinerU 档位路由 + 契约归一层）。"""
+    """调用 starkb-api 的全管线解析器（MinerU 档位路由 + 契约归一层）。
+
+    服务地址解析优先级：租户级覆盖（parser_engine_overrides.starkb_api_url，
+    经 parser 构造参数传入）> 环境变量 STARKB_API_URL > 默认 compose 服务名。
+    """
+
+    def __init__(self, *args, starkb_api_url: str = "", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.starkb_api_url = (starkb_api_url or "").strip().rstrip("/") or STARKB_API_URL_DEFAULT
+
+    def _api(self, path: str, method: str = "GET", body: dict | None = None, timeout: float = 120.0):
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(
+            self.starkb_api_url + path, data=data, method=method,
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
 
     def parse_into_text(self, content: bytes) -> Document:
         # 1) 落临时文件并提交任务（form-data 传原始文件名以保留扩展名）
@@ -57,7 +64,7 @@ class StarkbParser(BaseParser):
                 f"Content-Type: application/octet-stream\r\n\r\n"
             ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
             req = urllib.request.Request(
-                STARKB_API_URL.rstrip("/") + "/parse/jobs/upload",
+                self.starkb_api_url + "/parse/jobs/upload",
                 data=body, method="POST",
                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
             with urllib.request.urlopen(req, timeout=120) as r:
@@ -68,10 +75,10 @@ class StarkbParser(BaseParser):
         logger.info("starkb parse job=%s tier=%s", job_id, job.get("tier"))
 
         # 2) 同步执行（docreader gRPC 调用本身是同步语义）
-        run = _api(f"/parse/jobs/{job_id}/run", "POST")
+        run = self._api(f"/parse/jobs/{job_id}/run", "POST")
         if run.get("status") != "completed":
             raise RuntimeError(f"starkb 解析失败: {run}")
 
         # 3) 取契约包 markdown
-        md = _api(f"/parse/jobs/{job_id}/markdown")
+        md = self._api(f"/parse/jobs/{job_id}/markdown")
         return Document(content=md.get("markdown", ""))

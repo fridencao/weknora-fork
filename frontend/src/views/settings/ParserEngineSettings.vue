@@ -375,13 +375,18 @@
           </div>
         </section>
 
-        <!-- Section 3 — starkb 服务拓扑（零租户配置：地址由部署环境注入 docreader） -->
+        <!-- Section 3 — starkb 服务地址（租户级覆盖，留空沿用部署环境 STARKB_API_URL） -->
         <section v-if="currentEngine.Name === 'starkb'" class="setting-drawer__section">
           <h4 class="setting-drawer__section-title">{{ $t('settings.parser.configSection', '配置') }}</h4>
           <div class="form-item">
-            <label class="form-label">STARKB_API_URL</label>
+            <label class="form-label">starkb-api URL</label>
+            <t-input
+              v-model="config.starkb_api_url"
+              placeholder="http://starkb-api:8300"
+              clearable
+            />
             <p class="form-desc">
-              {{ $t('settings.parser.starkbTopology', '服务端地址由部署环境注入（STARKB_API_URL），租户侧零配置。解析链路：docreader → starkb-api（MinerU 档位路由 + 契约归一层）→ MinerU api-server；档位与通道开关在 starkb-api 配置中心（/config）管理。') }}
+              {{ $t('settings.parser.starkbEndpointHint', 'starkb-api 服务地址；留空使用部署环境注入的 STARKB_API_URL。解析链路：docreader → starkb-api（MinerU 档位路由 + 契约归一层）→ MinerU api-server，档位与通道开关在 starkb-api 配置中心（/config）管理。') }}
             </p>
           </div>
         </section>
@@ -411,7 +416,7 @@ const { t } = useI18n()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 
-const CONFIGURABLE_ENGINES = new Set(['mineru', 'mineru_cloud', 'paddleocr_vl', 'paddleocr_vl_cloud'])
+const CONFIGURABLE_ENGINES = new Set(['mineru', 'mineru_cloud', 'paddleocr_vl', 'paddleocr_vl_cloud', 'starkb'])
 
 /** 各解析引擎的项目/官方文档地址 */
 const ENGINE_DOC_LINKS: Record<string, string> = {
@@ -448,6 +453,7 @@ const DEFAULT_PARSER_CONFIG: ParserEngineConfig = {
   paddleocr_vl_cloud_model: 'PaddleOCR-VL-1.6',
   paddleocr_vl_cloud_use_seal_recognition: true,
   paddleocr_vl_cloud_use_chart_recognition: false,
+  starkb_api_url: '',
 }
 
 const engines = ref<ParserEngineInfo[]>([])
@@ -587,6 +593,7 @@ async function loadConfig() {
       paddleocr_vl_cloud_model: data?.paddleocr_vl_cloud_model ?? DEFAULT_PARSER_CONFIG.paddleocr_vl_cloud_model ?? 'PaddleOCR-VL-1.6',
       paddleocr_vl_cloud_use_seal_recognition: data?.paddleocr_vl_cloud_use_seal_recognition ?? DEFAULT_PARSER_CONFIG.paddleocr_vl_cloud_use_seal_recognition ?? true,
       paddleocr_vl_cloud_use_chart_recognition: data?.paddleocr_vl_cloud_use_chart_recognition ?? DEFAULT_PARSER_CONFIG.paddleocr_vl_cloud_use_chart_recognition ?? false,
+      starkb_api_url: data?.starkb_api_url ?? DEFAULT_PARSER_CONFIG.starkb_api_url ?? '',
     }
   } catch {
     config.value = { ...DEFAULT_PARSER_CONFIG }
@@ -626,6 +633,7 @@ function buildConfigPayload(): ParserEngineConfig {
     paddleocr_vl_cloud_model: config.value.paddleocr_vl_cloud_model?.trim() ?? '',
     paddleocr_vl_cloud_use_seal_recognition: config.value.paddleocr_vl_cloud_use_seal_recognition,
     paddleocr_vl_cloud_use_chart_recognition: config.value.paddleocr_vl_cloud_use_chart_recognition,
+    starkb_api_url: config.value.starkb_api_url?.trim() ?? '',
   }
 }
 

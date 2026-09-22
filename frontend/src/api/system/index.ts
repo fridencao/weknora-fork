@@ -140,6 +140,8 @@ export interface ParserEngineConfig {
   paddleocr_vl_cloud_model?: string
   paddleocr_vl_cloud_use_seal_recognition?: boolean | null
   paddleocr_vl_cloud_use_chart_recognition?: boolean | null
+  // StarKB 全管线引擎
+  starkb_api_url?: string
 }
 
 export interface ParserEnginesResponse {

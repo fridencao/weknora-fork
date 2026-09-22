@@ -306,6 +306,10 @@ type ParserEngineConfig struct {
 	PaddleOCRVLCloudModel               string `json:"paddleocr_vl_cloud_model,omitempty"` // e.g. PaddleOCR-VL-1.6
 	PaddleOCRVLCloudUseSealRecognition  *bool  `json:"paddleocr_vl_cloud_use_seal_recognition,omitempty"`
 	PaddleOCRVLCloudUseChartRecognition *bool  `json:"paddleocr_vl_cloud_use_chart_recognition,omitempty"`
+
+	// StarKB 全管线引擎（starkb）：starkb-api 服务地址，覆盖 docreader 的
+	// STARKB_API_URL 环境变量；留空沿用部署环境默认。
+	StarkbAPIURL string `json:"starkb_api_url,omitempty"`
 }
 
 const (
@@ -432,6 +436,9 @@ func (c *ParserEngineConfig) ToOverridesMap() map[string]string {
 	}
 	if c.PaddleOCRVLCloudUseChartRecognition != nil {
 		m["paddleocr_vl_cloud_use_chart_recognition"] = fmt.Sprintf("%v", *c.PaddleOCRVLCloudUseChartRecognition)
+	}
+	if c.StarkbAPIURL != "" {
+		m["starkb_api_url"] = c.StarkbAPIURL
 	}
 	if len(m) == 0 {
 		return nil
