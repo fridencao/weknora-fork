@@ -1043,16 +1043,16 @@ watch(activeDetail, (detail) => {
 }
 
 .detail-capability-tag--on {
-  border-color: rgba(0, 168, 112, 0.2);
-  background: rgba(0, 168, 112, 0.06);
+  border-color: color-mix(in srgb, var(--td-brand-color) 20%, transparent);
+  background: color-mix(in srgb, var(--td-brand-color) 6%, transparent);
 
   .detail-capability-icon-wrap {
-    color: var(--td-success-color);
-    background: rgba(0, 168, 112, 0.12);
+    color: var(--td-brand-color);
+    background: color-mix(in srgb, var(--td-brand-color) 12%, transparent);
   }
 
   .detail-capability-icon {
-    color: var(--td-success-color);
+    color: var(--td-brand-color);
   }
 
   .detail-capability-state {

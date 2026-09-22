@@ -4077,7 +4077,7 @@ const getImgSrc = (url: string) => {
     background: var(--td-brand-color-light);
 
     .agent-mode-option-name {
-      color: var(--td-success-color);
+      color: var(--td-brand-color);
       font-weight: 700;
     }
   }
@@ -4108,7 +4108,7 @@ const getImgSrc = (url: string) => {
 .check-icon {
   width: 14px;
   height: 14px;
-  color: var(--td-success-color);
+  color: var(--td-brand-color);
   flex-shrink: 0;
   margin-left: 6px;
 }
@@ -4132,7 +4132,7 @@ const getImgSrc = (url: string) => {
 }
 
 .agent-mode-link {
-  color: var(--td-success-color);
+  color: var(--td-brand-color);
   text-decoration: none;
   font-size: var(--app-text-xs);
   font-weight: 500;
