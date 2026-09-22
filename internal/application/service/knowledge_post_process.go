@@ -180,6 +180,11 @@ func (s *KnowledgePostProcessService) Handle(ctx context.Context, task *asynq.Ta
 		}
 	}
 
+	// M3 补遗（docs/07 WS1.3 收尾）：starkb 引擎解析的文档在切块后自动执行
+	// 溯源对齐（契约锚点 sbk_* 写回 chunk metadata）。失败仅记日志不阻断。
+	// 注意在子任务派发前执行，保证 embed/检索读到的 metadata 已带锚点。
+	AlignProvenanceOnIngest(ctx, s.chunkRepo, payload.TenantID, knowledge, chunks)
+
 	// Gather all text-like chunks (including newly added OCR and Caption from multimodal tasks)
 	var textChunks []*types.Chunk
 	for _, c := range chunks {

@@ -80,6 +80,11 @@ services:
     env_file:
       - .env
     environment:
+      # ========== StarKB (WS1.3) 溯源自动对齐 ==========
+      # 入库后 post-process 把 chunk 清单发给 starkb-api 对齐契约锚点（sbk_*）写回；
+      # STARKB_ALIGN_ON_INGEST=false 或 STARKB_API_URL 留空时关闭。
+      - STARKB_API_URL=${STARKB_API_URL:-http://starkb-api:8300}
+      - STARKB_ALIGN_ON_INGEST=${STARKB_ALIGN_ON_INGEST:-true}
       # ========== 日志 ==========
       # 日志级别，默认debug
       - LOG_LEVEL=${LOG_LEVEL:-debug}
