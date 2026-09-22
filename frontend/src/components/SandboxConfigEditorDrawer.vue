@@ -374,10 +374,6 @@
           </div>
         </div>
         <t-alert v-if="templatesError" theme="warning" class="compact-alert" :message="templatesError" />
-        <a class="inline-guide-link" :href="clusterGuideUrl" target="_blank" rel="noopener noreferrer">
-          <t-icon name="link" />
-          {{ $t('settings.sandbox.howToBuildTemplate') }}
-        </a>
       </section>
 
       <section v-if="currentStepKey === 'runtime'" class="setting-drawer__section">
