@@ -92,12 +92,32 @@ type VectorDatabaseConfig struct {
 
 // ConversationConfig 对话服务配置
 type ConversationConfig struct {
-	MaxRounds            int            `yaml:"max_rounds"                       json:"max_rounds"`
-	KeywordThreshold     float64        `yaml:"keyword_threshold"                json:"keyword_threshold"`
-	EmbeddingTopK        int            `yaml:"embedding_top_k"                  json:"embedding_top_k"`
-	VectorThreshold      float64        `yaml:"vector_threshold"                 json:"vector_threshold"`
-	RerankTopK           int            `yaml:"rerank_top_k"                     json:"rerank_top_k"`
-	RerankThreshold      float64        `yaml:"rerank_threshold"                 json:"rerank_threshold"`
+	MaxRounds        int     `yaml:"max_rounds"                       json:"max_rounds"`
+	KeywordThreshold float64 `yaml:"keyword_threshold"                json:"keyword_threshold"`
+	EmbeddingTopK    int     `yaml:"embedding_top_k"                  json:"embedding_top_k"`
+	VectorThreshold  float64 `yaml:"vector_threshold"                 json:"vector_threshold"`
+	RerankTopK       int     `yaml:"rerank_top_k"                     json:"rerank_top_k"`
+	RerankThreshold  float64 `yaml:"rerank_threshold"                 json:"rerank_threshold"`
+
+	// ==== RRF 融合与图谱通道（ADR-008 决策 2）====
+	// 租户级「检索设置」已退休，部署层成为检索参数的**唯一缺省来源**：对话路径与
+	// 检索 API 路径都从这里取缺省值，再由智能体做三态覆盖。
+	// 以下字段留 0 / nil 时，由 types.RetrievalConfig 的 GetEffective* 回落到内置默认，
+	// 因此不写 YAML 也能得到与历史一致的行为。
+	//
+	// RRFK 是 Reciprocal Rank Fusion 的平滑常数（内置默认 60，建议 30..100）。
+	RRFK int `yaml:"rrf_k" json:"rrf_k"`
+	// RRFVectorWeight / RRFKeywordWeight 是向量与关键词通道的融合权重
+	// （内置默认 0.7 / 0.3）。
+	RRFVectorWeight  float64 `yaml:"rrf_vector_weight"  json:"rrf_vector_weight"`
+	RRFKeywordWeight float64 `yaml:"rrf_keyword_weight" json:"rrf_keyword_weight"`
+	// RRFGraphWeight 是 LightRAG 图谱通道的融合权重（内置默认 0.2）。
+	RRFGraphWeight float64 `yaml:"rrf_graph_weight" json:"rrf_graph_weight"`
+	// GraphChannelEnabled 是图谱召回通道（读侧）的部署级缺省。
+	// nil 表示回落到 GRAPH_CHANNEL_ENABLED 环境变量，保证既有部署行为不变；
+	// 智能体可三态覆盖它（ADR-008 决策 1：建图是 KB 的属性，用图是智能体的属性）。
+	GraphChannelEnabled *bool `yaml:"graph_channel_enabled" json:"graph_channel_enabled"`
+
 	FallbackStrategy     string         `yaml:"fallback_strategy"                json:"fallback_strategy"`
 	FallbackResponse     string         `yaml:"fallback_response"                json:"fallback_response"`
 	EnableRewrite        bool           `yaml:"enable_rewrite"                   json:"enable_rewrite"`

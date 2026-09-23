@@ -243,20 +243,28 @@ func (s *sessionService) applyAgentOverridesToChatManage(
 		logger.Warnf(ctx, "Custom agent thinking is unset after EnsureDefaults; model thinking param will be omitted")
 	}
 
-	// Override retrieval strategy settings
-	if customAgent.Config.EmbeddingTopK > 0 {
-		cm.EmbeddingTopK = customAgent.Config.EmbeddingTopK
+	// Override retrieval strategy settings —— 三态覆盖（ADR-008 决策 2）：
+	// nil = 继承部署缺省（cm 已由 config.RetrievalDefaults 初始化），显式值 = 覆盖。
+	// 改造前用 `if x > 0` 判断，既无法表达"显式设为 0"（RerankThreshold 的 0 是
+	// 合法阈值），又因为 EnsureDefaults 会 materialize 非 0 值而让智能体永远覆盖。
+	if v := customAgent.Config.EmbeddingTopK; v != nil {
+		cm.EmbeddingTopK = *v
 	}
-	if customAgent.Config.KeywordThreshold > 0 {
-		cm.KeywordThreshold = customAgent.Config.KeywordThreshold
+	if v := customAgent.Config.KeywordThreshold; v != nil {
+		cm.KeywordThreshold = *v
 	}
-	if customAgent.Config.VectorThreshold > 0 {
-		cm.VectorThreshold = customAgent.Config.VectorThreshold
+	if v := customAgent.Config.VectorThreshold; v != nil {
+		cm.VectorThreshold = *v
 	}
-	if customAgent.Config.RerankTopK > 0 {
-		cm.RerankTopK = customAgent.Config.RerankTopK
+	if v := customAgent.Config.RerankTopK; v != nil {
+		cm.RerankTopK = *v
 	}
-	cm.RerankThreshold = customAgent.Config.RerankThreshold
+	if v := customAgent.Config.RerankThreshold; v != nil {
+		cm.RerankThreshold = *v
+	}
+	if v := customAgent.Config.GraphChannelEnabled; v != nil {
+		cm.GraphChannelEnabled = v
+	}
 	if customAgent.Config.RerankModelID != "" {
 		cm.RerankModelID = customAgent.Config.RerankModelID
 	}

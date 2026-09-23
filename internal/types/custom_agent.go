@@ -286,16 +286,32 @@ type CustomAgentConfig struct {
 	MemoryEnabled *bool `yaml:"memory_enabled" json:"memory_enabled,omitempty"`
 
 	// ===== Retrieval Strategy Settings (for both modes) =====
-	// Embedding/Vector retrieval top K
-	EmbeddingTopK int `yaml:"embedding_top_k" json:"embedding_top_k"`
-	// Keyword retrieval threshold
-	KeywordThreshold float64 `yaml:"keyword_threshold" json:"keyword_threshold"`
-	// Vector retrieval threshold
-	VectorThreshold float64 `yaml:"vector_threshold" json:"vector_threshold"`
-	// Rerank top K
-	RerankTopK int `yaml:"rerank_top_k" json:"rerank_top_k"`
-	// Rerank threshold
-	RerankThreshold float64 `yaml:"rerank_threshold" json:"rerank_threshold"`
+	//
+	// 三态覆盖（ADR-008 决策 2）：以下检索字段均为指针，nil = **继承部署缺省**
+	// （config.ConversationConfig，见 config.RetrievalDefaults），显式值 = 覆盖。
+	//
+	// 改造前这些字段是值类型，配合 `if x > 0` 的覆盖判断，导致两个问题：
+	//  1. EnsureDefaults 会把它们 materialize 成非 0，于是智能体**永远**覆盖上层，
+	//     且无法表达"显式设为 0/关闭"；
+	//  2. RerankThreshold 又是无条件覆盖，同段代码两种语义。
+	// 改指针后 EnsureDefaults 不再 materialize，语义统一为"nil 即继承"。
+	// 存量智能体已存的非 0 值按显式值解释，行为与改造前一致，无需数据迁移。
+
+	// EmbeddingTopK 向量召回深度；nil 继承部署缺省。
+	EmbeddingTopK *int `yaml:"embedding_top_k" json:"embedding_top_k,omitempty"`
+	// KeywordThreshold 关键词召回阈值；nil 继承部署缺省。
+	KeywordThreshold *float64 `yaml:"keyword_threshold" json:"keyword_threshold,omitempty"`
+	// VectorThreshold 向量召回阈值；nil 继承部署缺省。
+	VectorThreshold *float64 `yaml:"vector_threshold" json:"vector_threshold,omitempty"`
+	// RerankTopK 重排后保留条数；nil 继承部署缺省。
+	RerankTopK *int `yaml:"rerank_top_k" json:"rerank_top_k,omitempty"`
+	// RerankThreshold 重排阈值；nil 继承部署缺省。0 是合法阈值（不过滤），
+	// 因此必须用指针而非 0 值来表达"继承"。
+	RerankThreshold *float64 `yaml:"rerank_threshold" json:"rerank_threshold,omitempty"`
+	// GraphChannelEnabled 图谱召回通道（读侧）开关；nil 继承部署缺省
+	// （config.conversation.graph_channel_enabled，再回落 GRAPH_CHANNEL_ENABLED）。
+	// ADR-008 决策 1：建图是 KB 的属性，**用图**是智能体的属性。
+	GraphChannelEnabled *bool `yaml:"graph_channel_enabled" json:"graph_channel_enabled,omitempty"`
 
 	// ===== Advanced Settings (mainly for normal mode) =====
 	// Whether to enable query expansion
@@ -569,19 +585,11 @@ func (a *CustomAgent) EnsureDefaults() {
 	if a.Config.HistoryTurns == 0 {
 		a.Config.HistoryTurns = 5
 	}
-	// Retrieval strategy defaults
-	if a.Config.EmbeddingTopK == 0 {
-		a.Config.EmbeddingTopK = 10
-	}
-	if a.Config.KeywordThreshold == 0 {
-		a.Config.KeywordThreshold = 0.3
-	}
-	if a.Config.VectorThreshold == 0 {
-		a.Config.VectorThreshold = 0.5
-	}
-	if a.Config.RerankTopK == 0 {
-		a.Config.RerankTopK = 5
-	}
+	// Retrieval strategy defaults 刻意**不 materialize**（ADR-008 决策 2）。
+	// 检索字段是 nil = 继承部署缺省的三态语义；在这里补一个具体数值会把"继承"
+	// 变成"覆盖"，从而让部署层与智能体层永远打架（这正是改造前的缺陷）。
+	// 缺省值统一由 config.ConversationConfig.RetrievalDefaults + types.RetrievalConfig
+	// 的 GetEffective* 提供。
 	// Advanced settings defaults
 	if a.Config.FallbackStrategy == "" {
 		a.Config.FallbackStrategy = "model"

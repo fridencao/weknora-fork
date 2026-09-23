@@ -116,10 +116,8 @@
           <ParserEngineSettings />
         </div>
 
-        <!-- 检索设置 -->
-        <div v-if="currentSection === 'retrieval'" class="section">
-          <RetrievalSettings />
-        </div>
+        <!-- 检索设置已删除（ADR-008 决策 2）：缺省来源统一为部署配置，
+             策略参数下沉到智能体「检索策略」做三态覆盖。 -->
 
         <!-- 存储引擎 -->
         <div v-if="currentSection === 'storage'" class="section">
@@ -218,7 +216,6 @@ import EnvVarSettings from './EnvVarSettings.vue'
 import MemoryWorkspaceSettings from './MemoryWorkspaceSettings.vue'
 import VectorStoreSettings from './VectorStoreSettings.vue'
 import ParserEngineSettings from './ParserEngineSettings.vue'
-import RetrievalSettings from './RetrievalSettings.vue'
 import StorageBackendSettings from './StorageBackendSettings.vue'
 import SandboxSettings from './SandboxSettings.vue'
 import SkillSettings from './SkillSettings.vue'
@@ -349,7 +346,6 @@ const navItems = computed(() => {
     { key: 'memory', icon: 'bulletpoint', label: t('memoryWorkspaceSettings.title') },
     { key: 'vectorstore', icon: 'data-base', label: t('settings.vectorStoreEngine') },
     { key: 'parser', icon: 'file-search', label: t('settings.parserEngine') },
-    { key: 'retrieval', icon: 'filter', label: t('settings.retrievalSettings') },
     { key: 'storage', icon: 'cloud', label: t('settings.storageEngine') },
     { key: 'sandbox', icon: 'code', label: t('settings.sandbox.title') },
     { key: 'skills', icon: SKILL_ICON, label: t('settings.skills.title') },
@@ -409,7 +405,6 @@ const navGroups = computed<NavGroup[]>(() => {
       label: t('settings.navGroups.dataExtensions'),
       items: pickItems([
         'vectorstore',
-        'retrieval',
         'parser',
         'storage',
         'sandbox',

@@ -19,11 +19,6 @@
         <span v-if="loading" class="cmdk__input-spinner">
           <t-loading size="small" />
         </span>
-        <t-tooltip :content="t('commandPalette.retrieval')" placement="bottom">
-          <button type="button" class="cmdk__icon-btn" :class="{ active: drawerVisible }" @click="drawerVisible = true">
-            <t-icon name="setting" size="var(--app-icon-md)" />
-          </button>
-        </t-tooltip>
         <button type="button" class="cmdk__icon-btn" :aria-label="t('commandPalette.hotkey.esc')" @click="handleClose">
           <t-icon name="close" size="var(--app-icon-md)" />
         </button>
@@ -130,10 +125,6 @@
                 <template #icon><t-icon name="chat" size="var(--app-icon-sm)" /></template>
                 {{ t('commandPalette.empty.askAi') }}
               </t-button>
-              <t-button variant="outline" size="small" @click="drawerVisible = true">
-                <template #icon><t-icon name="setting" size="var(--app-icon-sm)" /></template>
-                {{ t('commandPalette.empty.adjustRetrieval') }}
-              </t-button>
             </div>
           </div>
         </template>
@@ -150,11 +141,7 @@
       </div>
     </div>
 
-    <!-- Retrieval settings drawer (layered on top of the palette) -->
-    <t-drawer v-model:visible="drawerVisible" :header="t('retrievalSettings.title')" size="420px" :footer="false"
-      :close-on-overlay-click="true" class="cmdk-retrieval-drawer">
-      <RetrievalSettings />
-    </t-drawer>
+    <!-- 检索设置抽屉已删除（ADR-008 决策 2）：租户级「检索设置」整体退休。 -->
   </t-dialog>
 </template>
 
@@ -172,7 +159,6 @@ import { useStartChat } from './GlobalCommandPalette/useStartChat'
 import { buildCommands, filterCommands } from './GlobalCommandPalette/commands'
 import ResultGroup from './GlobalCommandPalette/ResultGroup.vue'
 import ResultItem from './GlobalCommandPalette/ResultItem.vue'
-import RetrievalSettings from '@/views/settings/RetrievalSettings.vue'
 import type { MessageSearchGroupItem } from '@/api/chat-history'
 
 const { t } = useI18n()
@@ -205,7 +191,6 @@ const {
   agentsEnabled: () => deploymentCapabilities.isSupported('agents'),
 })
 
-const drawerVisible = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
 
@@ -542,7 +527,6 @@ const onInputKeyDown = (e: KeyboardEvent) => {
 }
 
 const handleClose = () => {
-  drawerVisible.value = false
   commandPaletteStore.closePalette()
 }
 
@@ -599,8 +583,7 @@ watch(open, (val) => {
   } else {
     clearResults()
     query.value = ''
-    drawerVisible.value = false
-    activeKbScope.value = null
+      activeKbScope.value = null
   }
 })
 
@@ -857,12 +840,6 @@ onUnmounted(() => {
   .t-dialog {
     padding: 0;
     overflow: hidden;
-  }
-}
-
-.cmdk-retrieval-drawer {
-  .section-header {
-    font-weight: 600;
   }
 }
 </style>

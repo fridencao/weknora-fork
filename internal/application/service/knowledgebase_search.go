@@ -142,7 +142,8 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	logger.Infof(ctx, "Hybrid search parameters, knowledge base IDs: %v, query text: %s",
 		searchKBIDs, secutils.SanitizeForLog(params.QueryText))
 
-	tenantInfo, _ := types.TenantInfoFromContext(ctx)
+	// tenantInfo 不再需要：检索配置的唯一来源已改为部署层
+	// （ADR-008 决策 2），见下方 s.cfg.RetrievalDefaults()。
 
 	// Batch-load every KB in scope. Required for store grouping,
 	// embedding-model consistency validation, and FAQ type detection.
@@ -264,13 +265,11 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 
 	// Separate and fuse retrieval results. The graph channel (M3 G3) recalls
 	// LightRAG evidence on top of the store fan-out; it degrades to nil and the
-	// fusion then behaves as the legacy two-way form. Config resolves first so
-	// the channel switch (UI-set tenant config, env default) is available.
+	// fusion then behaves as the legacy two-way form.
+	// 缺省来源统一为部署层（ADR-008 决策 2）：租户「检索设置」已退休，图谱通道开关
+	// 与 RRF 参数都取自 config.RetrievalDefaults()。
 	vectorResults, keywordResults := classifyRetrievalResults(ctx, retrieveResults)
-	var retrievalCfg *types.RetrievalConfig
-	if tenantInfo != nil {
-		retrievalCfg = tenantInfo.RetrievalConfig
-	}
+	retrievalCfg := s.cfg.RetrievalDefaults()
 	graphResults := s.graphRecallForSearch(ctx, searchKBIDs, params.QueryText, matchCount, retrievalCfg)
 	if len(vectorResults) == 0 && len(keywordResults) == 0 && len(graphResults) == 0 {
 		logger.Info(ctx, "No search results found")
