@@ -644,6 +644,10 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DATABASE=${STARKB_GRAPH_PG_DATABASE:-starkb_graph}
       - PG_WORKSPACE=${STARKB_GRAPH_PG_WORKSPACE:-}
+      # WS6：多图谱空间（docs/03 V1.x）。设置 LIGHTRAG_WORKSPACES=<ws1>,<ws2> 后
+      # 需将本服务 command 换为 python /app/multi_workspace_server.py <同款启动参数>，
+      # 请求经 X-Workspace 头路由到 per-workspace 子 app；未设置时单空间直通（现状）。
+      - LIGHTRAG_WORKSPACES=${LIGHTRAG_WORKSPACES:-}
     volumes:
       - ../../data/processed/lightrag_a3:/data/lightrag
     ports:

@@ -1,9 +1,6 @@
-# StarKB M3 部署：本地自建镜像（fork starkb/m2 @ d1257fe+）+ 图谱通道接线
+# 由 scripts/build_starkb_images.sh 生成：本地自建镜像替换官方镜像
 services:
   app:
     image: starkb-app:local
-    environment:
-      GRAPH_CHANNEL_ENABLED: "true"
-      LIGHT_RAG_BASE_URL: "http://lightrag-server:9621"
   frontend:
     image: starkb-ui:local
