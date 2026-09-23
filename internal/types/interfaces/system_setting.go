@@ -52,6 +52,9 @@ type SystemSettingService interface {
 	// it through every caller — we'd rather mis-serve a request with
 	// the default than 500 a file upload).
 	GetInt(ctx context.Context, key string, envName string, def int64) int64
+	// GetFloat resolves a fractional tunable (e.g. fusion weights). Same
+	// DB > ENV > def priority as GetInt; the registry type is "float".
+	GetFloat(ctx context.Context, key string, envName string, def float64) float64
 	GetString(ctx context.Context, key string, envName string, def string) string
 	GetBool(ctx context.Context, key string, envName string, def bool) bool
 	// GetStringList resolves a comma-separated list of strings. envName

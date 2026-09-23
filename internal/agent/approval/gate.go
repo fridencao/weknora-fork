@@ -296,8 +296,8 @@ func (g *Gate) NeedsApproval(ctx context.Context, tenantID uint64, serviceID, to
 	if err != nil {
 		// Default fail-close: a transient DB error must NOT silently allow a
 		// dangerous tool to run. Operators can opt into legacy behaviour via
-		// WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN=true.
-		if g.failClose {
+		// the agent.tool_approval_fail_open system setting (DB > ENV > default).
+		if g.effectiveFailClose() {
 			logger.GetLogger(ctx).Warnf("mcp tool approval check failed (fail-close: requiring approval): %v", err)
 			return true
 		}
@@ -355,7 +355,7 @@ func (g *Gate) RequestAndWait(ctx context.Context, req PendingRequest) (Decision
 		_ = json.Unmarshal(req.Args, &argsObj)
 	}
 
-	timeoutSec := int(g.timeout / time.Second)
+	timeoutSec := int(g.effectiveTimeout() / time.Second)
 	if timeoutSec < 1 {
 		timeoutSec = 1
 	}
@@ -392,7 +392,7 @@ func (g *Gate) RequestAndWait(ctx context.Context, req PendingRequest) (Decision
 		return Decision{}, fmt.Errorf("emit tool approval required: %w", err)
 	}
 
-	timer := time.NewTimer(g.timeout)
+	timer := time.NewTimer(g.effectiveTimeout())
 	defer timer.Stop()
 
 	emitResolved := func(d Decision) {
@@ -466,7 +466,7 @@ func (g *Gate) RequestOAuthAndWait(ctx context.Context, req OAuthPendingRequest)
 		g.mu.Unlock()
 	}()
 
-	waitTimeout := g.timeout
+	waitTimeout := g.effectiveTimeout()
 	if req.WaitTimeout > 0 {
 		waitTimeout = req.WaitTimeout
 	}

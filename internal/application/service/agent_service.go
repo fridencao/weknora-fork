@@ -117,6 +117,9 @@ type agentService struct {
 	sandboxResolver      sandbox.TenantSandboxResolver
 	sandboxPinner        *SessionSandboxPinner
 	sandboxPolicy        WorkspaceSandboxPolicy
+	// settings 提供 agent 侧系统设置（LLM 停滞超时、工具审批超时/放行策略），
+	// 迁移前这些值只在启动期从环境变量读入 AgentConfig。
+	settings interfaces.SystemSettingService
 }
 
 // NewAgentService creates a new agent service
@@ -145,6 +148,7 @@ func NewAgentService(
 	sandboxPolicy WorkspaceSandboxPolicy,
 	browserSkill *browserskill.Manager,
 	userRepo interfaces.UserRepository,
+	settings interfaces.SystemSettingService,
 ) interfaces.AgentService {
 	return &agentService{
 		browserSkill:         browserSkill,
@@ -167,10 +171,31 @@ func NewAgentService(
 		memoryService:        memoryService,
 		storageResolver:      storageResolver,
 		toolApprovalGate:     toolApprovalGate,
+		settings:             settings,
 		sandboxMgr:           sandboxMgr,
 		sandboxResolver:      sandboxResolver,
 		sandboxPinner:        sandboxPinner,
 		sandboxPolicy:        sandboxPolicy,
+	}
+}
+
+// applyAgentSettingOverrides 把 agent 侧系统设置写进本轮 AgentConfig
+// （DB > ENV > 默认）。迁移前 LLMCallTimeout 只在 LoadConfig 时从
+// WEKNORA_AGENT_LLM_TIMEOUT 读入，改配置必须重启。
+//
+// 审批超时与 fail-open 不在这里处理：它们挂在 app config.Agent 上，且 Gate
+// 是启动期单例，改由 system_setting.go 的 applyToolApprovalSettings 桥接推送。
+func (s *agentService) applyAgentSettingOverrides(ctx context.Context, config *types.AgentConfig) {
+	if s.settings == nil || config == nil {
+		return
+	}
+	raw := s.settings.GetString(ctx,
+		types.SettingKeyAgentLLMTimeout, types.SettingEnvAgentLLMTimeout, "")
+	if raw == "" {
+		return
+	}
+	if secs, ok := parseDurationSeconds(raw); ok {
+		config.LLMCallTimeout = secs
 	}
 }
 
@@ -230,6 +255,13 @@ func (s *agentService) CreateAgentEngine(
 	}
 
 	// 5. Create engine
+	// 系统设置覆盖（DB > ENV > 默认）：迁移前 LLMCallTimeout /
+	// ToolApprovalTimeoutSeconds 只在启动期从环境变量读入 AgentConfig，
+	// 改了必须重启。这里在每轮创建引擎前用拷贝覆盖，不动调用方共享的 config。
+	cfgCopy := *config
+	config = &cfgCopy
+	s.applyAgentSettingOverrides(ctx, config)
+
 	engine := agent.NewAgentEngine(
 		config, chatModel, toolRegistry, eventBus,
 		kbInfos, selectedDocs, sessionID,

@@ -34,6 +34,9 @@ func (runtimeTestSettings) GetInt(_ context.Context, key, _ string, def int64) i
 	}
 }
 func (runtimeTestSettings) GetString(_ context.Context, _, _, def string) string  { return def }
+func (runtimeTestSettings) GetFloat(_ context.Context, _, _ string, def float64) float64 {
+	return def
+}
 func (runtimeTestSettings) GetBool(_ context.Context, _, _ string, def bool) bool { return def }
 func (runtimeTestSettings) GetStringList(_ context.Context, _, _ string, def []string) []string {
 	return def

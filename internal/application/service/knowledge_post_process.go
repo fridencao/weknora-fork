@@ -29,6 +29,9 @@ type KnowledgePostProcessService struct {
 	pendingRepo   interfaces.TaskPendingOpsRepository
 	redisClient   *redis.Client
 	spanTracker   SpanTracker
+	// settings 提供入库后处理相关开关（starkb.align_on_ingest /
+	// starkb.graph_on_ingest），迁移前由环境变量直读。
+	settings interfaces.SystemSettingService
 }
 
 func NewKnowledgePostProcessService(
@@ -40,6 +43,7 @@ func NewKnowledgePostProcessService(
 	pendingRepo interfaces.TaskPendingOpsRepository,
 	redisClient *redis.Client,
 	spanTracker SpanTracker,
+	settings interfaces.SystemSettingService,
 ) interfaces.TaskHandler {
 	return &KnowledgePostProcessService{
 		knowledgeRepo: knowledgeRepo,
@@ -50,6 +54,7 @@ func NewKnowledgePostProcessService(
 		pendingRepo:   pendingRepo,
 		redisClient:   redisClient,
 		spanTracker:   spanTracker,
+		settings:      settings,
 	}
 }
 
@@ -183,11 +188,10 @@ func (s *KnowledgePostProcessService) Handle(ctx context.Context, task *asynq.Ta
 	// M3 补遗（docs/07 WS1.3 收尾）：starkb 引擎解析的文档在切块后自动执行
 	// 溯源对齐（契约锚点 sbk_* 写回 chunk metadata）。失败仅记日志不阻断。
 	// 注意在子任务派发前执行，保证 embed/检索读到的 metadata 已带锚点。
-	AlignProvenanceOnIngest(ctx, s.chunkRepo, payload.TenantID, knowledge, chunks)
-
+	s.AlignProvenanceOnIngest(ctx, s.chunkRepo, payload.TenantID, knowledge, chunks)
 	// A1（docs/09 WS1.2）：KB 开启自动建图时，解析完成后向 starkb-api 投喂建图。
 	// best-effort（与上面对齐钩子同款），不占 pending_subtasks 槽位，不阻断入库。
-	GraphBuildOnIngest(ctx, kb, knowledge)
+	s.GraphBuildOnIngest(ctx, kb, knowledge)
 
 	// Gather all text-like chunks (including newly added OCR and Caption from multimodal tasks)
 	var textChunks []*types.Chunk

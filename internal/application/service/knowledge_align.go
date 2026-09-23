@@ -50,17 +50,24 @@ type alignProvenanceResponse struct {
 	Results     []alignProvenanceResult `json:"results"`
 }
 
-func alignOnIngestEnabled() bool {
-	return os.Getenv("STARKB_ALIGN_ON_INGEST") == "true" && os.Getenv("STARKB_API_URL") != ""
+// alignOnIngestEnabled 解析入库对齐开关（starkb.align_on_ingest 系统设置，
+// DB > ENV > 默认）。STARKB_API_URL 仍属基础设施连接，留在环境变量。
+func (s *KnowledgePostProcessService) alignOnIngestEnabled(ctx context.Context) bool {
+	if os.Getenv("STARKB_API_URL") == "" || s.settings == nil {
+		return false
+	}
+	return s.settings.GetBool(ctx,
+		types.SettingKeyStarkbAlignOnIngest, types.SettingEnvStarkbAlignOnIngest, true)
 }
 
 // AlignProvenanceOnIngest 在 post-process 阶段对 starkb 引擎解析的文档执行
 // 溯源对齐并把锚点合并写回 chunk metadata。knowledge.FileName 为空（无文件
 // 语义的知识）或服务未配置时为 no-op。
-func AlignProvenanceOnIngest(ctx context.Context, chunkRepo interfaces.ChunkRepository,
+func (s *KnowledgePostProcessService) AlignProvenanceOnIngest(ctx context.Context,
+	chunkRepo interfaces.ChunkRepository,
 	tenantID uint64, knowledge *types.Knowledge, chunks []*types.Chunk,
 ) {
-	if !alignOnIngestEnabled() || knowledge == nil || knowledge.FileName == "" || len(chunks) == 0 {
+	if !s.alignOnIngestEnabled(ctx) || knowledge == nil || knowledge.FileName == "" || len(chunks) == 0 {
 		return
 	}
 	req := alignProvenanceRequest{

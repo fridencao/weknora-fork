@@ -139,7 +139,8 @@ type PipelineState struct {
 	// prompt for this turn, empty when memory is off or nothing matched.
 	MemoryPrompt string `json:"-"`
 	// ClaimReport is the WS3.3 answer-level claim audit result (M3 G4),
-	// attached after chat completion when STARKB_CLAIM_GATE is enabled.
+	// attached after chat completion when the starkb.claim_gate system
+	// setting is enabled.
 	ClaimReport *ClaimReport `json:"-"`
 	// UsedMemories mirrors MemoryPrompt in structured form so the answer can
 	// tell the user which memories it saw.

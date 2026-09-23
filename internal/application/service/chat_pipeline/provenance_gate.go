@@ -8,27 +8,37 @@ package chatpipeline
 import (
 	"context"
 	"encoding/json"
-	"os"
 
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
 // PluginProvenanceGate 溯源完备性门禁插件。
 type PluginProvenanceGate struct {
-	require bool // true=剥离无 L4 指针的 chunk（强绑定）
+	// settings 提供 starkb.require_provenance 开关（DB > ENV > 默认），
+	// 每次请求实时解析，改后立即生效。
+	settings interfaces.SystemSettingService
 }
 
 // NewPluginProvenanceGate 创建门禁插件（container.Invoke 接线）。
-// 开关：STARKB_REQUIRE_PROVENANCE=true 启用强绑定剥离。
+// 开关：starkb.require_provenance 系统设置启用强绑定剥离。
 func NewPluginProvenanceGate(
 	eventManager *EventManager,
+	settings interfaces.SystemSettingService,
 ) *PluginProvenanceGate {
-	p := &PluginProvenanceGate{
-		require: os.Getenv("STARKB_REQUIRE_PROVENANCE") == "true",
-	}
+	p := &PluginProvenanceGate{settings: settings}
 	eventManager.Register(p)
 	return p
+}
+
+// requireProvenance 解析强绑定开关（DB > ENV > 默认 false）。
+func (p *PluginProvenanceGate) requireProvenance(ctx context.Context) bool {
+	if p.settings == nil {
+		return false
+	}
+	return p.settings.GetBool(ctx,
+		types.SettingKeyStarkbRequireProvenance, types.SettingEnvStarkbRequireProvenance, false)
 }
 
 // ActivationEvents 在消息装配前触发（检索结果已定型）。
@@ -67,13 +77,14 @@ func (p *PluginProvenanceGate) OnEvent(
 	if total == 0 {
 		return next()
 	}
+	require := p.requireProvenance(ctx)
 	withPointer := 0
 	kept := chatManage.SearchResult[:0]
 	for _, r := range chatManage.SearchResult {
 		if p.hasL4Pointer(r) {
 			withPointer++
 			kept = append(kept, r)
-		} else if !p.require {
+		} else if !require {
 			kept = append(kept, r)
 		}
 	}
@@ -83,7 +94,7 @@ func (p *PluginProvenanceGate) OnEvent(
 		coverage = withPointer * 100 / total
 	}
 	logger.Infof(ctx, "provenance gate: 溯源覆盖 %d/%d=%d%%（require=%v，剥离 %d）",
-		withPointer, total, coverage, p.require, total-len(kept))
+		withPointer, total, coverage, require, total-len(kept))
 	return next()
 }
 

@@ -50,8 +50,8 @@ func TestAlignProvenanceOnIngest_WritesBackMetadata(t *testing.T) {
 		{ID: "c2", Content: "另一段内容", StartAt: 8, EndAt: 13},
 	}
 
-	AlignProvenanceOnIngest(context.Background(), repo, 1, knowledge, chunks)
-
+	svc := &KnowledgePostProcessService{settings: newEnvOnlySettings()}
+	svc.AlignProvenanceOnIngest(context.Background(), repo, 1, knowledge, chunks)
 	require.Len(t, repo.updated, 2)
 	require.Equal(t, "报告.pdf", gotBody.FileName)
 	require.Len(t, gotBody.Chunks, 2)
@@ -65,15 +65,16 @@ func TestAlignProvenanceOnIngest_DisabledAndGuards(t *testing.T) {
 	t.Setenv("STARKB_ALIGN_ON_INGEST", "false")
 	t.Setenv("STARKB_API_URL", "http://unused")
 	repo := &stubChunkRepo{}
+	svc := &KnowledgePostProcessService{settings: newEnvOnlySettings()}
 	// 开关关闭：不请求、不写回
-	AlignProvenanceOnIngest(context.Background(), repo, 1,
+	svc.AlignProvenanceOnIngest(context.Background(), repo, 1,
 		&types.Knowledge{ID: "k1", FileName: "a.pdf"},
 		[]*types.Chunk{{ID: "c1", Content: "x", StartAt: 0, EndAt: 1}})
 	require.Empty(t, repo.updated)
 
 	// 无文件名：no-op
 	t.Setenv("STARKB_ALIGN_ON_INGEST", "true")
-	AlignProvenanceOnIngest(context.Background(), repo, 1,
+	svc.AlignProvenanceOnIngest(context.Background(), repo, 1,
 		&types.Knowledge{ID: "k1"}, []*types.Chunk{{ID: "c1", Content: "x"}})
 	require.Empty(t, repo.updated)
 }

@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/Tencent/WeKnora/internal/models/rerank"
 	"github.com/Tencent/WeKnora/internal/searchutil"
@@ -21,12 +19,20 @@ import (
 // PluginRerank implements reranking functionality for chat pipeline
 type PluginRerank struct {
 	modelService interfaces.ModelService // Service to access rerank models
+	// settings 提供可靠度权重等系统设置（DB > ENV > 默认）。迁移前该权重
+	// 直读 STARKB_RELIABILITY_WEIGHT 环境变量，绕过了 ADR-005 的 ≥0.25 锁定。
+	settings interfaces.SystemSettingService
 }
 
 // NewPluginRerank creates a new rerank plugin instance
-func NewPluginRerank(eventManager *EventManager, modelService interfaces.ModelService) *PluginRerank {
+func NewPluginRerank(
+	eventManager *EventManager,
+	modelService interfaces.ModelService,
+	settings interfaces.SystemSettingService,
+) *PluginRerank {
 	res := &PluginRerank{
 		modelService: modelService,
+		settings:     settings,
 	}
 	eventManager.Register(res)
 	return res
@@ -193,6 +199,9 @@ func (p *PluginRerank) OnEvent(ctx context.Context,
 	}
 	reranked := make([]*types.SearchResult, 0, len(rerankResp))
 
+	// 可靠度权重在循环外解析一次（系统设置缓存读取），避免逐结果重复查表。
+	reliabilityWeight := reliabilityWeightShare(ctx, p.settings)
+
 	// Process reranked results
 	for _, rr := range rerankResp {
 		if rr.Index >= len(candidatesToRerank) {
@@ -203,7 +212,7 @@ func (p *PluginRerank) OnEvent(ctx context.Context,
 		sr.Metadata["base_score"] = fmt.Sprintf("%.4f", base)
 		modelScore := rr.RelevanceScore
 		sr.Metadata["model_score"] = fmt.Sprintf("%.4f", modelScore)
-		sr.Score = compositeScore(sr, modelScore, base)
+		sr.Score = compositeScore(sr, modelScore, base, reliabilityWeight)
 
 		// Apply FAQ score boost if enabled
 		if chatManage.FAQPriorityEnabled && chatManage.FAQScoreBoost > 1.0 &&
@@ -440,19 +449,21 @@ func safeTopScore(results []rerank.RankResult) float64 {
 
 // compositeScore calculates the composite score for a search result
 // reliabilityWeightShare 可靠度因子在综合分中的权重（方案 §9.2：默认 0.25，
-// 下限锁定 0.25；STARKB_RELIABILITY_WEIGHT 覆盖）。
-func reliabilityWeightShare() float64 {
-	var once sync.Once
-	var v float64
-	once.Do(func() {
-		v = 0.25
-		if raw := strings.TrimSpace(os.Getenv("STARKB_RELIABILITY_WEIGHT")); raw != "" {
-			if parsed, err := strconv.ParseFloat(raw, 64); err == nil && parsed >= 0.25 && parsed <= 0.6 {
-				v = parsed
-			}
-		}
-	})
-	return v
+// 下限锁定 0.25）。迁移后经系统设置解析（DB > ENV > 默认），ADR-005 的
+// ≥0.25 约束由 registry 校验强制执行，不再能被环境变量绕过。
+//
+// 每次调用读的是 systemSettingService 的内存缓存（微秒级），但重排是逐结果
+// 调用，故调用方应在循环外解析一次再传入 compositeScore。
+func reliabilityWeightShare(ctx context.Context, settings interfaces.SystemSettingService) float64 {
+	if settings == nil {
+		return types.SettingDefaultReliabilityWeight
+	}
+	return settings.GetFloat(
+		ctx,
+		types.SettingKeyFusionReliabilityWeight,
+		types.SettingEnvFusionReliabilityWeight,
+		types.SettingDefaultReliabilityWeight,
+	)
 }
 
 // reliabilityNorm 结果可靠度归一（1–5 级 → 0.2–1.0）。
@@ -469,7 +480,7 @@ func reliabilityNorm(sr *types.SearchResult) float64 {
 	return 0.6
 }
 
-func compositeScore(sr *types.SearchResult, modelScore, baseScore float64) float64 {
+func compositeScore(sr *types.SearchResult, modelScore, baseScore, rw float64) float64 {
 	sourceWeight := 1.0
 	switch strings.ToLower(sr.KnowledgeSource) {
 	case "web_search":
@@ -479,7 +490,6 @@ func compositeScore(sr *types.SearchResult, modelScore, baseScore float64) float
 	}
 	// 可靠度因子独立成项（权重默认 25%，锁定下限），其余按原比例缩放
 	base := 0.6*modelScore + 0.3*baseScore + 0.1*sourceWeight
-	rw := reliabilityWeightShare()
 	composite := (1-rw)*base + rw*reliabilityNorm(sr)
 	if composite < 0 {
 		composite = 0

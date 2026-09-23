@@ -528,7 +528,7 @@ func (s *knowledgeService) executeKnowledgeDelete(plan *knowledgeDeletePlan, sin
 	// ADR-008 决策 3.6：登记 LightRAG 图谱清理。只写墓碑不等结果——清理由
 	// starkb-api 异步消化（失败留墓碑重试），不占删除事务的时间；刻意不放进
 	// 下面的 wg，避免 LightRAG 慢时把删除接口一起拖长。
-	GraphCleanupOnDelete(ctx, knowledgeList)
+	s.GraphCleanupOnDelete(ctx, knowledgeList)
 
 	// 4. Delete all chunks associated with this knowledge
 	wg.Go(func() error {

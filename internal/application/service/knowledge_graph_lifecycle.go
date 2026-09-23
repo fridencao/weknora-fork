@@ -74,11 +74,14 @@ func postStarkbGraph(ctx context.Context, path string, payload any) map[string]a
 
 // graphCleanupOnDeleteEnabled 删除清理开关。默认随 STARKB_API_URL 启用——
 // 图谱里有内容就该在文档删除时清掉，这与"是否自动建图"是两件事（决策 3.1）。
-func graphCleanupOnDeleteEnabled() bool {
-	if os.Getenv("STARKB_API_URL") == "" {
+// 开关本体读 starkb.graph_cleanup_on_delete 系统设置（DB > ENV > 默认 true；
+// 迁移前是 STARKB_GRAPH_CLEANUP_ON_DELETE != "false" 的反向默认语义）。
+func (s *knowledgeService) graphCleanupOnDeleteEnabled(ctx context.Context) bool {
+	if os.Getenv("STARKB_API_URL") == "" || s.settings == nil {
 		return false
 	}
-	return os.Getenv("STARKB_GRAPH_CLEANUP_ON_DELETE") != "false"
+	return s.settings.GetBool(ctx,
+		types.SettingKeyStarkbGraphCleanupOnDelete, types.SettingEnvStarkbGraphCleanupOnDelete, true)
 }
 
 // GraphCleanupOnDelete 文档删除后登记图谱清理（ADR-008 决策 3.6）。
@@ -86,8 +89,8 @@ func graphCleanupOnDeleteEnabled() bool {
 // 挂载点：executeKnowledgeDelete（单删/批删的唯一漏斗），与
 // cleanupWikiOnKnowledgeDelete 并列。只登记墓碑不等结果——清理由 starkb-api 的
 // GraphCleanupService 异步消化（失败留墓碑重试），不占删除事务的时间。
-func GraphCleanupOnDelete(ctx context.Context, knowledgeList []*types.Knowledge) {
-	if !graphCleanupOnDeleteEnabled() || len(knowledgeList) == 0 {
+func (s *knowledgeService) GraphCleanupOnDelete(ctx context.Context, knowledgeList []*types.Knowledge) {
+	if !s.graphCleanupOnDeleteEnabled(ctx) || len(knowledgeList) == 0 {
 		return
 	}
 	tenantInfo, ok := types.TenantInfoFromContext(ctx)

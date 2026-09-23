@@ -49,6 +49,9 @@ type HousekeepingService struct {
 
 	mu      sync.Mutex
 	started bool
+	// settings 提供 document.process_timeout（DB > ENV > 默认），用于推算
+	// 孤儿 processing 行的判定阈值。
+	settings interfaces.SystemSettingService
 }
 
 // NewHousekeepingService constructs a HousekeepingService. It does NOT start
@@ -56,11 +59,13 @@ type HousekeepingService struct {
 // cron schedule cannot prevent the rest of the service from coming up.
 func NewHousekeepingService(
 	db *gorm.DB, cfg *config.Config, inspector interfaces.TaskInspector,
+	settings interfaces.SystemSettingService,
 ) *HousekeepingService {
 	return &HousekeepingService{
 		db:        db,
 		cfg:       cfg,
 		inspector: inspector,
+		settings:  settings,
 		cron: cron.New(cron.WithSeconds(), cron.WithChain(
 			cron.Recover(cron.DefaultLogger),
 		)),
@@ -110,7 +115,7 @@ func (h *HousekeepingService) Stop() {
 // runSweep is exported on the type for testability — tests can drive a
 // single sweep without waiting for the cron tick.
 func (h *HousekeepingService) runSweep(ctx context.Context) {
-	threshold := h.staleThreshold()
+	threshold := h.staleThreshold(ctx)
 	cutoff := time.Now().Add(-threshold)
 
 	// Sweep A: knowledge stuck in "pending", "processing", or "finalizing".
@@ -429,10 +434,23 @@ func parseHeartbeatTime(s string) (time.Time, bool) {
 // genuinely slow large-PDF parse cannot be killed mid-flight; the ceiling
 // scales with the operator-configured DocumentProcessTimeout plus 10 minute
 // buffer to absorb scheduling jitter.
-func (h *HousekeepingService) staleThreshold() time.Duration {
+func (h *HousekeepingService) staleThreshold(ctx context.Context) time.Duration {
 	base := 1 * time.Hour
-	if h.cfg != nil && h.cfg.KnowledgeBase != nil && h.cfg.KnowledgeBase.DocumentProcessTimeout > base {
-		base = h.cfg.KnowledgeBase.DocumentProcessTimeout
+	// 系统设置优先（DB > ENV > 默认），未配置时回落启动期解析的 config 值。
+	configured := time.Duration(0)
+	if h.settings != nil {
+		if raw := h.settings.GetString(ctx,
+			types.SettingKeyDocumentProcessTimeout, types.SettingEnvDocumentProcessTimeout, ""); raw != "" {
+			if secs, ok := parseDurationSeconds(raw); ok {
+				configured = time.Duration(secs) * time.Second
+			}
+		}
+	}
+	if configured <= 0 && h.cfg != nil && h.cfg.KnowledgeBase != nil {
+		configured = h.cfg.KnowledgeBase.DocumentProcessTimeout
+	}
+	if configured > base {
+		base = configured
 	}
 	return base + 10*time.Minute
 }

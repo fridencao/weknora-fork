@@ -239,6 +239,11 @@
                   :placeholder="placeholderFor(item)" :aria-label="keyLabel(item.key)"
                   :disabled="savingKey === item.key" theme="normal" :step="1" :min="minimumFor(item)"
                   class="setting-input" @blur="onChange(item)" />
+                <t-input-number v-else-if="item.value_type === 'float'" v-model="editValues[item.key]"
+                  :placeholder="placeholderFor(item)" :aria-label="keyLabel(item.key)"
+                  :disabled="savingKey === item.key" theme="normal" :step="floatStepFor(item)"
+                  :min="minimumFor(item)" :max="maximumFor(item)" :decimal-places="2"
+                  class="setting-input" @blur="onChange(item)" />
                 <t-popconfirm v-else-if="item.value_type === 'string_list' && item.key === 'ssrf.whitelist'"
                   v-model:visible="ssrfPopconfirm.visible" :content="ssrfPopconfirm.content"
                   :theme="ssrfPopconfirm.theme" :confirm-btn="ssrfPopconfirm.confirmBtn"
@@ -688,7 +693,22 @@ function placeholderFor(item: SystemSettingItem): string {
 
 function minimumFor(item: SystemSettingItem): number {
   if (item.key.startsWith('asynq.') && item.key.endsWith('_concurrency')) return 1
+  // ADR-005 可靠度权重下限锁定 0.25——后端 registry 也会拒绝更低的值，
+  // 这里同步约束以免用户提交后才看到报错。
+  if (item.key === 'fusion.reliability.weight') return 0.25
   return 0
+}
+
+// maximumFor 目前只用于 float 控件；t-input-number 用 undefined 表示不限。
+function maximumFor(item: SystemSettingItem): number | undefined {
+  if (item.key === 'fusion.reliability.weight') return 1
+  return undefined
+}
+
+// floatStepFor 给 float 控件一个合理步长（权重类用 0.05，其余 0.1）。
+function floatStepFor(item: SystemSettingItem): number {
+  if (item.key === 'fusion.reliability.weight') return 0.05
+  return 0.1
 }
 
 async function loadSettings() {

@@ -1834,8 +1834,8 @@ func (h *Handler) completeAssistantMessage(
 ) {
 	assistantMessage.UpdatedAt = time.Now()
 	assistantMessage.IsCompleted = true
-	// M3 G4：答案级论断审计随消息持久化（STARKB_CLAIM_GATE=true 时生效）。
-	AuditMessageClaims(ctx, assistantMessage)
+	// M3 G4：答案级论断审计随消息持久化（starkb.claim_gate 系统设置开启时生效）。
+	AuditMessageClaims(ctx, h.settings, assistantMessage)
 	_ = h.messageService.UpdateMessage(ctx, assistantMessage)
 
 	// Asynchronously index the Q&A pair into the chat history knowledge base for vector search.

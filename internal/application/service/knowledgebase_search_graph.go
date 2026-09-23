@@ -10,7 +10,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -21,11 +20,27 @@ import (
 )
 
 // graphRecallTimeout 图谱通道软超时：检索主链路不应被图谱抖动拖死。
-const graphRecallTimeout = 8 * time.Second
+// 经系统设置解析（DB > ENV > 默认），改后立即生效，无需重启。
+func (s *knowledgeBaseService) graphRecallTimeout(ctx context.Context) time.Duration {
+	if s.settings == nil {
+		return 8 * time.Second
+	}
+	n := s.settings.GetInt(ctx,
+		types.SettingKeyGraphChannelTimeoutS, types.SettingEnvGraphChannelTimeoutS, 8)
+	if n > 0 && n <= 120 {
+		return time.Duration(n) * time.Second
+	}
+	return 8 * time.Second
+}
 
-// graphChannelEnvDefault 部署级默认（GRAPH_CHANNEL_ENABLED），与 chat 通道共用。
-func graphChannelEnvDefault() bool {
-	return os.Getenv("GRAPH_CHANNEL_ENABLED") == "true"
+// graphChannelEnvDefault 部署级默认（graph.channel.enabled），与 chat 通道共用。
+// 默认 true，与 registry 条目一致（迁移前 compose 注入 GRAPH_CHANNEL_ENABLED=true）。
+func (s *knowledgeBaseService) graphChannelEnvDefault(ctx context.Context) bool {
+	if s.settings == nil {
+		return true
+	}
+	return s.settings.GetBool(ctx,
+		types.SettingKeyGraphChannelEnabled, types.SettingEnvGraphChannelEnabled, true)
 }
 
 // graphRecallForSearch 对 API 层检索执行图谱召回：
@@ -36,7 +51,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 	ctx context.Context, kbIDs []string, query string, topK int,
 	retrievalCfg *types.RetrievalConfig,
 ) []*types.IndexWithScore {
-	if !retrievalCfg.GetGraphChannelEnabled(graphChannelEnvDefault()) || query == "" || len(kbIDs) == 0 {
+	if !retrievalCfg.GetGraphChannelEnabled(s.graphChannelEnvDefault(ctx)) || query == "" || len(kbIDs) == 0 {
 		return nil
 	}
 	tenantID, ok := types.TenantIDFromContext(ctx)
@@ -66,7 +81,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 		logger.Infof(ctx, "graph recall: LIGHT_RAG_BASE_URL 未配置，跳过")
 		return nil
 	}
-	gctx, cancel := context.WithTimeout(ctx, graphRecallTimeout)
+	gctx, cancel := context.WithTimeout(ctx, s.graphRecallTimeout(ctx))
 	defer cancel()
 	data, err := s.graphQueryMerged(gctx, client, kbIDs, query, topK)
 	if err != nil {
@@ -83,7 +98,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 		return nil
 	}
 	chunks, err := chatpipeline.ResolveGraphEvidence(
-		ctx, s.chunkRepo, tenantID, refs, graphChunksPerHit(), topK)
+		ctx, s.chunkRepo, tenantID, refs, s.graphChunksPerHit(ctx), topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: chunk 回跳失败: %v", err)
 		return nil
@@ -110,12 +125,19 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 }
 
 // graphChunksPerHit 单条图谱证据最多回跳的 WeKnora 子 chunk 数。
-func graphChunksPerHit() int {
-	n := chatpipeline.DefaultGraphChunksPerHit
-	if v := os.Getenv("GRAPH_CHANNEL_CHUNKS_PER_HIT"); v != "" {
-		fmt.Sscanf(v, "%d", &n)
+// 经系统设置解析（DB > ENV > 默认），与 chat 通道的 graph.channel.chunks_per_hit
+// 共用同一个键——迁移前两处各自 os.Getenv，改一处另一处不生效。
+func (s *knowledgeBaseService) graphChunksPerHit(ctx context.Context) int {
+	def := int64(chatpipeline.DefaultGraphChunksPerHit)
+	if s.settings == nil {
+		return int(def)
 	}
-	return n
+	n := s.settings.GetInt(ctx,
+		types.SettingKeyGraphChannelChunksPerHit, types.SettingEnvGraphChannelChunksPerHit, def)
+	if n < 1 {
+		return int(def)
+	}
+	return int(n)
 }
 
 // graphQueryMerged 图谱查询（WS6.2）：shared 模式单次查询默认空间；kb 模式按

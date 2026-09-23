@@ -56,6 +56,9 @@ type knowledgeBaseService struct {
 	audit           interfaces.AuditLogService
 	resourceCatalog interfaces.ResourceCatalog
 	wikiRepo        interfaces.WikiPageRepository
+	// settings 提供图谱通道超时等系统设置（DB > ENV > 默认）。迁移前这些
+	// 值直读环境变量，改配置必须重启。
+	settings interfaces.SystemSettingService
 }
 
 // NewKnowledgeBaseService creates a new knowledge base service
@@ -81,6 +84,7 @@ func NewKnowledgeBaseService(cfg *config.Config,
 	audit interfaces.AuditLogService,
 	resourceCatalog interfaces.ResourceCatalog,
 	wikiRepo interfaces.WikiPageRepository,
+	settings interfaces.SystemSettingService,
 ) interfaces.KnowledgeBaseService {
 	return &knowledgeBaseService{
 		cfg:             cfg,
@@ -105,6 +109,7 @@ func NewKnowledgeBaseService(cfg *config.Config,
 		audit:           audit,
 		resourceCatalog: resourceCatalog,
 		wikiRepo:        wikiRepo,
+		settings:        settings,
 	}
 }
 

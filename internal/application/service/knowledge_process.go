@@ -4011,7 +4011,19 @@ func (s *knowledgeService) callDocReaderWithTimeout(
 	ctx context.Context, reader interfaces.DocReader, req *types.ReadRequest,
 ) (*types.ReadResult, error) {
 	timeout := 30 * time.Minute
-	if s.config != nil && s.config.KnowledgeBase != nil && s.config.KnowledgeBase.DocReaderCallTimeout > 0 {
+	// 系统设置优先（DB > ENV > 默认），未配置时回落启动期解析的 config 值。
+	if s.settings != nil {
+		if raw := s.settings.GetString(ctx,
+			types.SettingKeyDocreaderCallTimeout, types.SettingEnvDocreaderCallTimeout, ""); raw != "" {
+			if secs, ok := parseDurationSeconds(raw); ok {
+				timeout = time.Duration(secs) * time.Second
+			}
+		} else if s.config != nil && s.config.KnowledgeBase != nil &&
+			s.config.KnowledgeBase.DocReaderCallTimeout > 0 {
+			timeout = s.config.KnowledgeBase.DocReaderCallTimeout
+		}
+	} else if s.config != nil && s.config.KnowledgeBase != nil &&
+		s.config.KnowledgeBase.DocReaderCallTimeout > 0 {
 		timeout = s.config.KnowledgeBase.DocReaderCallTimeout
 	}
 	callCtx, cancel := context.WithTimeout(ctx, timeout)

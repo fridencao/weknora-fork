@@ -81,15 +81,15 @@ services:
       - .env
     environment:
       # ========== StarKB (WS1.3) 溯源自动对齐 ==========
-      # 入库后 post-process 把 chunk 清单发给 starkb-api 对齐契约锚点（sbk_*）写回；
-      # STARKB_ALIGN_ON_INGEST=false 或 STARKB_API_URL 留空时关闭。
+      # 入库后 post-process 把 chunk 清单发给 starkb-api 对齐契约锚点（sbk_*）写回。
+      # 开关本体已迁到系统设置 starkb.align_on_ingest（DB > 默认，界面可改、改后即生效）；
+      # STARKB_API_URL 留空时仍整体关闭（属基础设施连接，留在环境变量）。
       - STARKB_API_URL=${STARKB_API_URL:-http://starkb-api:8300}
-      - STARKB_ALIGN_ON_INGEST=${STARKB_ALIGN_ON_INGEST:-true}
       # ========== StarKB (A1) 上传自动建图 ==========
       # KB 开启 auto_graph_config.enabled 后，解析完成即向 starkb-api /graph/jobs
-      # 投喂建图（best-effort）。STARKB_GRAPH_WORKSPACE_MODE=shared 全局空间 /
-      # kb 按 KB 隔离（WS6 多图谱空间形态，切换需配合存量拆分）。
-      - STARKB_GRAPH_ON_INGEST=${STARKB_GRAPH_ON_INGEST:-true}
+      # 投喂建图（best-effort）。开关本体已迁到系统设置 starkb.graph_on_ingest。
+      # STARKB_GRAPH_WORKSPACE_MODE=shared 全局空间 / kb 按 KB 隔离
+      # （WS6 多图谱空间形态，切换需配合存量拆分）。
       - STARKB_GRAPH_WORKSPACE_MODE=${STARKB_GRAPH_WORKSPACE_MODE:-shared}
       # MinerU 自部署在宿主机（MINERU_BASE_URL=192.168.5.2:8310 属私网地址），
       # 引擎可用性探测须经 SSRF 白名单放行（.env 维护，随网络拓扑变更）。
@@ -99,10 +99,8 @@ services:
       # LIGHT_RAG_BASE_URL 留空则图谱通道降级跳过（退二通道），不影响主链路。
       - LIGHT_RAG_BASE_URL=${LIGHT_RAG_BASE_URL:-http://lightrag-server:9621}
       - LIGHT_RAG_API_KEY=${LIGHTRAG_API_KEY:-}
-      - GRAPH_CHANNEL_ENABLED=${GRAPH_CHANNEL_ENABLED:-true}
-      # A0 回跳配额：单条图谱证据最多回跳的 WeKnora 子 chunk 数（整体上限为 top_k）。
-      # 图谱 chunk 平均覆盖 ~11 个子 chunk，全量返回会淹没向量/关键词通道，故按轮转限额。
-      - GRAPH_CHANNEL_CHUNKS_PER_HIT=${GRAPH_CHANNEL_CHUNKS_PER_HIT:-2}
+      # 图谱通道的开关/回跳配额/软超时已迁到系统设置（graph.channel.*，界面可改、
+      # 改后即生效，无需重启）：graph.channel.enabled / chunks_per_hit / timeout_s。
       # ========== 日志 ==========
       # 日志级别，默认debug
       - LOG_LEVEL=${LOG_LEVEL:-debug}
@@ -154,7 +152,9 @@ services:
       - WEKNORA_AUTH_DEFAULT_TENANT_MODE=${WEKNORA_AUTH_DEFAULT_TENANT_MODE:-create_personal}
       # 是否允许普通用户登录后主动创建空间（默认 true；false 仅能邀请加入，超管不受影响）
       - WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED=${WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED:-true}
-      # 启用跨空间访问（需配合用户的 CanAccessAllTenants 权限；默认 false
+      # 启用跨空间访问（需配合用户的 CanAccessAllTenants 权限；默认 false）
+      # 注：这两项是安全门禁，值在进程启动时绑定进配置单例，暂未迁入系统设置
+      # （见批二计划：需要「DB 就绪后、开始服务前」的同步应用点）。
       - WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS=${WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS:-false}
       # 新建空间默认存储配额（GB，默认 10）
       - WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB=${WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB:-10}
@@ -348,23 +348,19 @@ services:
       - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
       # Skill zip / GitHub source download cap (in MB); the GitHub zipball is the whole repo, not the skill subtree
       - MAX_SKILL_BUNDLE_SIZE_MB=${MAX_SKILL_BUNDLE_SIZE_MB:-256}
-      # 文档处理任务总超时（Go duration，默认 2h）
-      - WEKNORA_DOCUMENT_PROCESS_TIMEOUT=${WEKNORA_DOCUMENT_PROCESS_TIMEOUT:-}
-      # 单次 DocReader RPC 超时（默认 30m，须小于上一项）
-      - WEKNORA_DOCREADER_CALL_TIMEOUT=${WEKNORA_DOCREADER_CALL_TIMEOUT:-}
+      # 文档处理总超时 / 单次 DocReader RPC 超时已迁到系统设置
+      # （document.process_timeout / docreader.call_timeout，界面可改、改后即生效）。
       # 知识库巡检回收（回收卡在 processing 的脏数据；false 禁用，不建议）
       - WEKNORA_HOUSEKEEPING_ENABLED=${WEKNORA_HOUSEKEEPING_ENABLED:-}
       - WEKNORA_CHAT_ATTACHMENT_TTL_HOURS=${WEKNORA_CHAT_ATTACHMENT_TTL_HOURS:-24}
       - WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC=${WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC:-60}
       - WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY=${WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY:-8}
       - WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES=${WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES:-8}
-      # Agent LLM call timeout
-      - WEKNORA_AGENT_LLM_TIMEOUT=${WEKNORA_AGENT_LLM_TIMEOUT:-}
-      - WEKNORA_AGENT_TOOL_APPROVAL_TIMEOUT=${WEKNORA_AGENT_TOOL_APPROVAL_TIMEOUT:-}
-      # MCP 工具人工审批失败时是否放行（true 放行 / 默认 fail-close 拒绝）
-      - WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN=${WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN:-}
+      # Agent LLM 超时与 MCP 工具审批策略已迁到系统设置
+      # （agent.llm_timeout / agent.tool_approval_timeout / agent.tool_approval_fail_open）。
       # Tenant / RBAC（详见 docs/RBAC说明.md 与 .env.example 注释）
       # - WEKNORA_TENANT_ENABLE_RBAC: 是否启用空间角色强制鉴权（true / false），默认 true
+      #   （安全门禁，启动期绑定；暂未迁入系统设置，见批二计划）
       # - WEKNORA_TENANT_MAX_OWNED_PER_USER: 单个非超管自助创建空间的上限
       #   >0 强制限额；=0 走 handler 默认；<0 关闭限额（不建议共享部署使用）
       # - WEKNORA_TENANT_AUTO_CREATE_API_KEY: 创建空间时自动生成 full_access API Key 并在响应中返回 token
@@ -562,13 +558,10 @@ services:
       # A4 后真实存储在 PG（下方 POSTGRES_*），本地目录仅兼容残留。
       - STARKB_GRAPH_WORK_DIR=${STARKB_GRAPH_WORK_DIR:-/data/processed/lightrag_a3}
       - STARKB_GRAPH_REPORT_DIR=${STARKB_GRAPH_REPORT_DIR:-/data/processed/graph_reports}
-      - STARKB_GRAPH_LLM_BASE_URL=${LIGHTRAG_LLM_BINDING_HOST:-https://api.siliconflow.cn/v1}
-      - STARKB_GRAPH_LLM_API_KEY=${LIGHTRAG_LLM_API_KEY:-}
-      - STARKB_GRAPH_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
-      - STARKB_GRAPH_EMBED_BASE_URL=${LIGHTRAG_EMBEDDING_BINDING_HOST:-https://api.siliconflow.cn/v1}
-      - STARKB_GRAPH_EMBED_API_KEY=${LIGHTRAG_EMBEDDING_API_KEY:-}
-      - STARKB_GRAPH_EMBED_MODEL=${LIGHTRAG_EMBEDDING_MODEL:-BAAI/bge-m3}
-      - STARKB_GRAPH_EMBED_DIM=${LIGHTRAG_EMBEDDING_DIM:-1024}
+      # ========== StarKB 建图模型参数：2026-09-23 起改为读 WeKnora「设置」==========
+      # LLM=租户 KnowledgeQA 模型，Embedding=发起建图 KB 的 embedding_model_id
+      # （starkb-api/model_settings.py 直读 WeKnora.models 表，热生效）。
+      # 环境变量不再是模型参数来源（SiliconFlow 默认值曾致 402 余额不足事故）。
       - STARKB_GRAPH_LLM_INTERVAL_S=${STARKB_GRAPH_LLM_INTERVAL_S:-2.0}
       - STARKB_GRAPH_MAX_ASYNC=${STARKB_GRAPH_MAX_ASYNC:-2}
       # ========== StarKB (A4) 建图存储 PostgreSQL 化：与 lightrag-server 同库 ==========

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/Tencent/WeKnora/internal/agent/approval"
 	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/models/limiter"
@@ -298,6 +299,155 @@ var registry = map[string]settingSpec{
 			"每次调用实时读取，修改后立即生效、无需重启。0 或负数表示关闭默认限制" +
 			"（各模型仍会尊重自身在模型管理里配置的上限）。仅影响后台任务，不影响交互式对话。",
 	},
+
+	// ---------------------------------------------------------------------
+	// StarKB 配置治理批一：业务可调参数从环境变量迁入系统设置。
+	//
+	// 边界：基础设施连接（DB/Redis/PG/对象存储）、密钥、路径、后端选型、
+	// 引导与测试夹具**仍留环境变量**；本段只收纳「运维应当在界面上改」的
+	// 权重、开关、策略与超时。EnvName 保留为兜底（DB > ENV > Default），
+	// docker-compose 中对应变量已删除，故正常部署走 DB 或 Default。
+	// ---------------------------------------------------------------------
+
+	// fusion.reliability.weight 与 STARKB_RELIABILITY_WEIGHT 曾是同一语义的
+	// 两个配置源，且 env 那条绕过了 ≥0.25 锁定（ADR-005 硬约束）。现统一到
+	// 本键，下限由 validateRegistryEntry 强制。
+	"fusion.reliability.weight": {
+		Type:     "float",
+		EnvName:  "STARKB_RELIABILITY_WEIGHT",
+		Default:  0.25,
+		Category: "retrieval",
+		Description: "融合排序中「可靠度因子」的权重。下限 0.25（ADR-005 硬约束，" +
+			"低于此值会被拒绝）。修改后立即生效，无需重启。",
+	},
+
+	// 图谱通道部署级默认。智能体可在其「检索策略」上做三态覆盖
+	// （未设置 → 用本值），见 ADR-008 决策 2/3.1。
+	"graph.channel.enabled": {
+		Type:     "bool",
+		EnvName:  "GRAPH_CHANNEL_ENABLED",
+		Default:  true,
+		Category: "retrieval",
+		Description: "图谱通道的部署级默认开关。智能体未显式设置时使用本值；" +
+			"智能体可各自覆盖。修改后立即生效，无需重启。",
+	},
+	"graph.channel.top_k": {
+		Type:     "int",
+		EnvName:  "GRAPH_CHANNEL_TOP_K",
+		Default:  int64(20),
+		Category: "retrieval",
+		Description: "图谱通道返回的实体/关系条数上限。修改后立即生效，无需重启。",
+	},
+	"graph.channel.chunks_per_hit": {
+		Type:     "int",
+		EnvName:  "GRAPH_CHANNEL_CHUNKS_PER_HIT",
+		Default:  int64(2),
+		Category: "retrieval",
+		Description: "图谱通道每个命中实体附带裁剪的证据 chunk 数。越大证据越全、" +
+			"但注入上下文越长。修改后立即生效，无需重启。",
+	},
+	"graph.channel.timeout_s": {
+		Type:     "int",
+		EnvName:  "GRAPH_CHANNEL_TIMEOUT_S",
+		Default:  int64(8),
+		Category: "retrieval",
+		Description: "图谱通道软超时（秒），取值 1–120。检索主链路不应被图谱抖动拖死；" +
+			"思考型 LLM 做关键词抽取时可放大。修改后立即生效，无需重启。",
+	},
+
+	// StarKB 功能开关。迁移前均为裸 os.Getenv，无法在界面上改。
+	"starkb.claim_gate": {
+		Type:     "bool",
+		EnvName:  "STARKB_CLAIM_GATE",
+		Default:  false,
+		Category: "starkb",
+		Description: "答案级论断审计（claim gate）总开关。开启后 AI 回答会随消息持久化" +
+			"逐句论断与引用绑定，供前端角标与复核使用。修改后立即生效，无需重启。",
+	},
+	"starkb.require_provenance": {
+		Type:     "bool",
+		EnvName:  "STARKB_REQUIRE_PROVENANCE",
+		Default:  false,
+		Category: "starkb",
+		Description: "强绑定溯源门禁。开启后无有效溯源的论断会被剥离，而不是仅告警。" +
+			"建议在溯源覆盖率稳定后再开。修改后立即生效，无需重启。",
+	},
+	"starkb.align_on_ingest": {
+		Type:     "bool",
+		EnvName:  "STARKB_ALIGN_ON_INGEST",
+		Default:  true,
+		Category: "starkb",
+		Description: "入库后自动做 T1 溯源对齐（把 sbk_* 写回 chunk metadata）。" +
+			"需同时配置 starkb-api 地址；对齐失败仅告警、不阻断入库。修改后立即生效。",
+	},
+	"starkb.graph_on_ingest": {
+		Type:     "bool",
+		EnvName:  "STARKB_GRAPH_ON_INGEST",
+		Default:  true,
+		Category: "starkb",
+		Description: "入库完成后自动把文档投喂图谱建图（走 starkb-api 回填队列，按配额限速）。" +
+			"关闭后只能手工触发建图。修改后立即生效，无需重启。",
+	},
+	"starkb.graph_cleanup_on_delete": {
+		Type:     "bool",
+		EnvName:  "STARKB_GRAPH_CLEANUP_ON_DELETE",
+		Default:  true,
+		Category: "starkb",
+		Description: "删除知识时同步清理其图谱数据（节点/关系/向量）。关闭时图谱会残留" +
+			"孤儿数据，需人工巡检。修改后立即生效，无需重启。",
+	},
+
+	// Agent 超时与审批策略。
+	"agent.llm_timeout": {
+		Type:     "string",
+		EnvName:  "WEKNORA_AGENT_LLM_TIMEOUT",
+		Default:  "120s",
+		Category: "agent",
+		Description: "单次 LLM 调用的默认超时。支持 Go duration 写法（如 300s、5m）或" +
+			"纯数字（按秒解释）。留空则用 agent 内置默认（120s）。修改后立即生效，无需重启。",
+	},
+	"agent.tool_approval_timeout": {
+		Type:     "string",
+		EnvName:  "WEKNORA_AGENT_TOOL_APPROVAL_TIMEOUT",
+		Default:  "600s",
+		Category: "agent",
+		Description: "MCP 高风险工具等待人工审批的时长。支持 Go duration 写法或纯数字" +
+			"（按秒解释）。超时后的行为由「审批超时放行」决定。修改后立即生效。",
+	},
+	"agent.tool_approval_fail_open": {
+		Type:     "bool",
+		EnvName:  "WEKNORA_AGENT_TOOL_APPROVAL_FAIL_OPEN",
+		Default:  false,
+		Category: "agent",
+		Description: "审批超时/审批服务不可用时是否放行高风险工具调用。默认关闭（fail-closed，" +
+			"拒绝执行）。仅在明确接受风险时才打开。修改后立即生效，无需重启。",
+	},
+
+	// 解析链路超时。
+	"docreader.call_timeout": {
+		Type:     "string",
+		EnvName:  "WEKNORA_DOCREADER_CALL_TIMEOUT",
+		Default:  "30m",
+		Category: "docreader",
+		Description: "调用 docreader 解析服务的单次超时。支持 Go duration 写法（如 30m、1h）。" +
+			"大体积扫描件需放大。修改后立即生效，无需重启。",
+	},
+	"document.process_timeout": {
+		Type:     "string",
+		EnvName:  "WEKNORA_DOCUMENT_PROCESS_TIMEOUT",
+		Default:  "2h",
+		Category: "docreader",
+		Description: "单个文档从入库到解析完成的总超时，超过则判定失败并触发降档重试。" +
+			"支持 Go duration 写法。修改后立即生效，无需重启。",
+	},
+
+	// 注：tenant.enable_rbac / tenant.enable_cross_tenant_access 暂未纳入。
+	// 它们是安全门禁，值在 LoadConfig 启动期绑定进 *config.Config 单例，由
+	// 中间件与路由直接读字段（EnableCrossTenantAccess 是裸 bool，4 处直读）。
+	// 要改成 DB 驱动，必须在「DB 初始化完成、开始对外服务之前」同步应用一次；
+	// 而 systemSettingService.preload 是异步的，写入会与请求路径上的读取构成
+	// data race。留到批二连同启动期应用点一起设计，避免出现「界面能改、实际
+	// 不生效」的空壳配置。
 }
 
 // systemSettingService wires the repository, audit log, and (P2)
@@ -405,6 +555,20 @@ func (s *systemSettingService) preload(ctx context.Context) {
 	s.applySSRFWhitelist(ctx)
 	s.applyModelMaxConcurrency(ctx)
 	s.applyDockerBackendEnabled(ctx)
+	s.applyToolApprovalSettings(ctx)
+}
+
+// applyToolApprovalSettings 把审批超时与 fail-open 策略推给 approval 包。
+// Gate 是启动期单例，不推送的话改了设置也要重启才生效。
+func (s *systemSettingService) applyToolApprovalSettings(ctx context.Context) {
+	timeoutRaw := s.GetString(ctx,
+		types.SettingKeyAgentToolApprovalTimeout, types.SettingEnvAgentToolApprovalTimeout, "600s")
+	if secs, ok := parseDurationSeconds(timeoutRaw); ok {
+		approval.SetToolApprovalTimeout(secs)
+	}
+	approval.SetToolApprovalFailOpen(s.GetBool(ctx,
+		types.SettingKeyAgentToolApprovalFailOpen, types.SettingEnvAgentToolApprovalFailOpen, false))
+	logger.Infof(ctx, "[system_settings] agent.tool_approval_* applied (timeout=%s)", timeoutRaw)
 }
 
 // encodeDefault produces the JSONB encoding for a spec's built-in
@@ -429,6 +593,22 @@ func encodeDefault(spec settingSpec) (types.JSON, error) {
 			return nil, fmt.Errorf("registry spec for int has wrong default type %T", spec.Default)
 		}
 		b, _ := json.Marshal(n)
+		return types.JSON(b), nil
+	case "float":
+		var f float64
+		switch v := spec.Default.(type) {
+		case float64:
+			f = v
+		case float32:
+			f = float64(v)
+		case int:
+			f = float64(v)
+		case int64:
+			f = float64(v)
+		default:
+			return nil, fmt.Errorf("registry spec for float has wrong default type %T", spec.Default)
+		}
+		b, _ := json.Marshal(f)
 		return types.JSON(b), nil
 	case "string":
 		v, ok := spec.Default.(string)
@@ -500,6 +680,8 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 		s.applyModelMaxConcurrency(ctx)
 	case sandbox.DockerBackendEnabledSettingKey:
 		s.applyDockerBackendEnabled(ctx)
+	case types.SettingKeyAgentToolApprovalTimeout, types.SettingKeyAgentToolApprovalFailOpen:
+		s.applyToolApprovalSettings(ctx)
 	}
 }
 
@@ -650,6 +832,34 @@ func (s *systemSettingService) GetInt(ctx context.Context, key string, envName s
 		if v := os.Getenv(envName); v != "" {
 			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 				return n
+			}
+		}
+	}
+	return def
+}
+
+// GetFloat resolves a float setting. Same priority + degradation as
+// GetInt; tolerates `"0.25"` (hand-edited row / legacy ENV) as well as
+// the canonical JSON number form.
+func (s *systemSettingService) GetFloat(ctx context.Context, key string, envName string, def float64) float64 {
+	if raw, ok := s.resolveRaw(ctx, key); ok {
+		var f float64
+		if err := json.Unmarshal(raw, &f); err == nil {
+			return f
+		}
+		// Tolerate `"0.25"` so hand-edited rows still work.
+		var quoted string
+		if err := json.Unmarshal(raw, &quoted); err == nil {
+			if v, err := strconv.ParseFloat(strings.TrimSpace(quoted), 64); err == nil {
+				return v
+			}
+		}
+		logger.Warnf(ctx, "[system_settings] %q: cannot parse %s as float, falling back", key, string(raw))
+	}
+	if envName != "" {
+		if v := os.Getenv(envName); v != "" {
+			if f, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+				return f
 			}
 		}
 	}
@@ -836,6 +1046,12 @@ func (s *systemSettingService) fallbackJSONForSpec(key string, spec settingSpec)
 			case "int":
 				if n, err := strconv.ParseInt(raw, 10, 64); err == nil {
 					if encoded, err := encodeForType(spec.Type, n); err == nil {
+						return encoded
+					}
+				}
+			case "float":
+				if f, err := strconv.ParseFloat(raw, 64); err == nil {
+					if encoded, err := encodeForType(spec.Type, f); err == nil {
 						return encoded
 					}
 				}
@@ -1236,6 +1452,33 @@ func encodeForType(declared string, rawValue any) (types.JSON, error) {
 		}
 		b, _ := json.Marshal(n)
 		return types.JSON(b), nil
+	case "float":
+		// 浮点设置项（如 fusion.reliability.weight）。JSON 解码把数字一律
+		// 送成 float64，所以这里主要防的是「字符串数字」与 bool 之类的
+		// 误传；字符串形式保留给从旧 ENV 值粘贴的场景。
+		var f float64
+		switch v := rawValue.(type) {
+		case float64:
+			f = v
+		case float32:
+			f = float64(v)
+		case int:
+			f = float64(v)
+		case int32:
+			f = float64(v)
+		case int64:
+			f = float64(v)
+		case string:
+			parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+			if err != nil {
+				return nil, fmt.Errorf("expected number, got %q", v)
+			}
+			f = parsed
+		default:
+			return nil, fmt.Errorf("expected number, got %T", rawValue)
+		}
+		b, _ := json.Marshal(f)
+		return types.JSON(b), nil
 	case "string":
 		v, ok := rawValue.(string)
 		if !ok {
@@ -1330,8 +1573,109 @@ func validateRegistryEntry(key string, rawValue any) error {
 			return err
 		}
 		return utils.ValidateSSRFWhitelistEntries(entries)
+	case "fusion.reliability.weight":
+		// ADR-005 硬约束：可靠度权重不得低于 0.25。迁移前这条约束只写在
+		// 配置中心（Python），而 Go 侧读的是 STARKB_RELIABILITY_WEIGHT
+		// 环境变量，可以绕过；现在唯一入口是本键，约束才真正生效。
+		f, err := coerceToFloat64(rawValue)
+		if err != nil {
+			return err
+		}
+		if f < 0.25 {
+			return errors.New("reliability weight must be at least 0.25 (ADR-005)")
+		}
+		if f > 1 {
+			return errors.New("reliability weight must not exceed 1")
+		}
+	case "graph.channel.top_k", "graph.channel.chunks_per_hit":
+		n, err := coerceToPositiveInt64(rawValue)
+		if err != nil {
+			return err
+		}
+		if n < 1 {
+			return errors.New("must be at least 1")
+		}
+	case "graph.channel.timeout_s":
+		n, err := coerceToPositiveInt64(rawValue)
+		if err != nil {
+			return err
+		}
+		// 上限沿用 graphRecallTimeout 的历史约束（>120 视为误配）。
+		if n < 1 || n > 120 {
+			return errors.New("timeout must be between 1 and 120 seconds")
+		}
+	case "agent.llm_timeout", "agent.tool_approval_timeout",
+		"docreader.call_timeout", "document.process_timeout":
+		s, ok := rawValue.(string)
+		if !ok {
+			return fmt.Errorf("expected string, got %T", rawValue)
+		}
+		return validateDurationValue(s)
 	}
 	return nil
+}
+
+// coerceToFloat64 accepts the same input shapes as encodeForType's
+// "float" branch (JSON delivers numbers as float64; strings are kept so
+// operators can paste a legacy ENV value).
+func coerceToFloat64(rawValue any) (float64, error) {
+	switch v := rawValue.(type) {
+	case float64:
+		return v, nil
+	case float32:
+		return float64(v), nil
+	case int:
+		return float64(v), nil
+	case int32:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		if err != nil {
+			return 0, fmt.Errorf("expected number, got %q", v)
+		}
+		return f, nil
+	default:
+		return 0, fmt.Errorf("expected number, got %T", rawValue)
+	}
+}
+
+// validateDurationValue accepts Go duration syntax ("30m", "2h") or a
+// bare positive number interpreted as seconds — matching the legacy ENV
+// parsing in applyKnowledgeBaseEnvOverrides / applyAgentEnvOverrides, so
+// a value pasted from the old environment variable keeps working.
+func validateDurationValue(raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return errors.New("duration must not be empty")
+	}
+	if d, err := time.ParseDuration(raw); err == nil {
+		if d <= 0 {
+			return errors.New("duration must be positive")
+		}
+		return nil
+	}
+	if sec, err := strconv.Atoi(raw); err == nil && sec > 0 {
+		return nil
+	}
+	return fmt.Errorf("invalid duration %q: use Go duration (e.g. 30m, 2h) or a positive number of seconds", raw)
+}
+
+// parseDurationSeconds 把 Go duration（"30m"）或裸秒数（"600"）解析为整秒。
+// 与 validateDurationValue 同一口径，供需要把时长推给别处的桥接使用。
+func parseDurationSeconds(raw string) (int, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, false
+	}
+	if d, err := time.ParseDuration(raw); err == nil && d > 0 {
+		return int(d / time.Second), true
+	}
+	if sec, err := strconv.Atoi(raw); err == nil && sec > 0 {
+		return sec, true
+	}
+	return 0, false
 }
 
 // coerceToPositiveInt64 accepts int / int64 / float64 from JSON decoding.

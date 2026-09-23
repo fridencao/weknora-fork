@@ -7,11 +7,11 @@ package chatpipeline
 // PluginProvenanceGate 完成：无 L4 指针的 chunk 不进生成上下文）。
 // 审计纯函数 AnalyzeClaims 独立于管线，消息保存层（后续接线）可直接复用。
 //
-// 开关：STARKB_CLAIM_GATE=true 启用；默认关闭不增加生成链路开销。
+// 开关：starkb.claim_gate 系统设置（DB > ENV > 默认）启用；默认关闭不增加
+// 生成链路开销。迁移前直读 STARKB_CLAIM_GATE 环境变量。
 
 import (
 	"context"
-	"os"
 	"regexp"
 	"strings"
 	"unicode"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
 // 数字与标点归一用的预编译正则（包级，避免热路径重复编译）。
@@ -150,13 +151,35 @@ func hasContentLetters(s string) bool {
 	return false
 }
 
+// claimGateEnabled 解析 starkb.claim_gate 开关（DB > ENV > 默认 false）。
+// 导出给 handler/session 的消息持久化路径复用，保证两侧口径一致。
+func claimGateEnabled(ctx context.Context, settings interfaces.SystemSettingService) bool {
+	if settings == nil {
+		return false
+	}
+	return settings.GetBool(ctx,
+		types.SettingKeyStarkbClaimGate, types.SettingEnvStarkbClaimGate, false)
+}
+
+// ClaimGateEnabled 供 handler/session 的消息持久化路径复用（同一开关、
+// 同一解析链），避免两处各读各的环境变量而漂移。
+func ClaimGateEnabled(ctx context.Context, settings interfaces.SystemSettingService) bool {
+	return claimGateEnabled(ctx, settings)
+}
+
 // PluginClaimGate 答案论断审计插件（CHAT_COMPLETION 链，next() 之后执行——
 // 依赖注册顺序位于 PluginChatCompletion 之后，container 接线保证）。
-type PluginClaimGate struct{}
+type PluginClaimGate struct {
+	// settings 提供 starkb.claim_gate 开关（DB > ENV > 默认）。
+	settings interfaces.SystemSettingService
+}
 
 // NewPluginClaimGate 创建插件（container.Invoke 接线）。
-func NewPluginClaimGate(eventManager *EventManager) *PluginClaimGate {
-	p := &PluginClaimGate{}
+func NewPluginClaimGate(
+	eventManager *EventManager,
+	settings interfaces.SystemSettingService,
+) *PluginClaimGate {
+	p := &PluginClaimGate{settings: settings}
 	eventManager.Register(p)
 	return p
 }
@@ -173,7 +196,7 @@ func (p *PluginClaimGate) OnEvent(
 	if err := next(); err != nil {
 		return err
 	}
-	if os.Getenv("STARKB_CLAIM_GATE") != "true" {
+	if !claimGateEnabled(ctx, p.settings) {
 		return nil
 	}
 	if chatManage.ChatResponse == nil || strings.TrimSpace(chatManage.ChatResponse.Content) == "" {

@@ -9,23 +9,22 @@ package session
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	chatpipeline "github.com/Tencent/WeKnora/internal/application/service/chat_pipeline"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
-
-// claimAuditEnabled 与管线侧 PluginClaimGate 共用开关。
-func claimAuditEnabled() bool {
-	return os.Getenv("STARKB_CLAIM_GATE") == "true"
-}
 
 // AuditMessageClaims 在消息落库前执行论断审计并写入 msg.ClaimReport。
 // 无答案、无引用证据或开关关闭时为 no-op（报告保持 nil）。
-func AuditMessageClaims(ctx context.Context, msg *types.Message) {
-	if !claimAuditEnabled() || msg == nil {
+//
+// 开关经 chatpipeline.ClaimGateEnabled 解析（starkb.claim_gate 系统设置，
+// DB > ENV > 默认），与生成链路上的 PluginClaimGate 共用同一口径——迁移前
+// 两处各自直读 STARKB_CLAIM_GATE 环境变量，存在漂移风险。
+func AuditMessageClaims(ctx context.Context, settings interfaces.SystemSettingService, msg *types.Message) {
+	if !chatpipeline.ClaimGateEnabled(ctx, settings) || msg == nil {
 		return
 	}
 	if strings.TrimSpace(msg.Content) == "" || len(msg.KnowledgeReferences) == 0 {

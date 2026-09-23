@@ -68,6 +68,9 @@ type Handler struct {
 	// rewindService truncates the current session at a chosen message. May
 	// be nil in deployments where rewind is not wired; RewindSession checks.
 	rewindService sessionRewinder
+	// settings 提供 starkb.claim_gate 等系统设置（DB > ENV > 默认），
+	// 供消息持久化路径与 chat_pipeline 共用同一开关口径。
+	settings interfaces.SystemSettingService
 }
 
 // NewHandler creates a new instance of Handler with all necessary dependencies
@@ -103,6 +106,7 @@ func NewHandler(
 	rdb *redis.Client,
 	forkService *service.SessionForkService,
 	rewindService *service.SessionRewindService,
+	settings interfaces.SystemSettingService,
 ) *Handler {
 	h := &Handler{
 		browserSkill:          browserSkill,
@@ -132,6 +136,7 @@ func NewHandler(
 		desktopTickets:        desktopTickets,
 		desktopLast:           desktopLast,
 		redis:                 rdb,
+		settings:              settings,
 		attachmentProcessor: NewAttachmentProcessor(
 			fileService,
 			documentReader,

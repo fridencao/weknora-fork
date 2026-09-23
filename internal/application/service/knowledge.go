@@ -82,6 +82,8 @@ type knowledgeService struct {
 	// which has a no-op fallback. See knowledge_span_tracker.go.
 	spanTracker SpanTracker
 	audit       interfaces.AuditLogService
+	// settings 提供删除清理开关（starkb.graph_cleanup_on_delete）等系统设置。
+	settings interfaces.SystemSettingService
 }
 
 const (
@@ -119,6 +121,7 @@ func NewKnowledgeService(
 	taskPendingRepo interfaces.TaskPendingOpsRepository,
 	spanTracker SpanTracker,
 	audit interfaces.AuditLogService,
+	settings interfaces.SystemSettingService,
 ) (interfaces.KnowledgeService, error) {
 	return &knowledgeService{
 		config:          config,
@@ -148,6 +151,7 @@ func NewKnowledgeService(
 		taskPendingRepo: taskPendingRepo,
 		spanTracker:     spanTracker,
 		audit:           audit,
+		settings:        settings,
 	}, nil
 }
 

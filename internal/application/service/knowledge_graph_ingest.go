@@ -39,8 +39,14 @@ type graphBackfillRequest struct {
 	FileNames map[string]string `json:"file_names,omitempty"`
 }
 
-func graphBuildOnIngestEnabled() bool {
-	return os.Getenv("STARKB_GRAPH_ON_INGEST") == "true" && os.Getenv("STARKB_API_URL") != ""
+// graphBuildOnIngestEnabled 解析自动建图开关（starkb.graph_on_ingest 系统设置，
+// DB > ENV > 默认 true）。STARKB_API_URL 仍属基础设施连接，留在环境变量。
+func (s *KnowledgePostProcessService) graphBuildOnIngestEnabled(ctx context.Context) bool {
+	if os.Getenv("STARKB_API_URL") == "" || s.settings == nil {
+		return false
+	}
+	return s.settings.GetBool(ctx,
+		types.SettingKeyStarkbGraphOnIngest, types.SettingEnvStarkbGraphOnIngest, true)
 }
 
 // graphWorkspaceForKB 决定该 KB 的图谱投喂落哪个 workspace。
@@ -54,10 +60,10 @@ func graphWorkspaceForKB(kb *types.KnowledgeBase) string {
 
 // GraphBuildOnIngest 在 post-process 完成阶段触发 KB 开启的自动建图。
 // knowledge 无契约语义（FileName 为空）或 KB 未开启时为 no-op。
-func GraphBuildOnIngest(ctx context.Context, kb *types.KnowledgeBase,
+func (s *KnowledgePostProcessService) GraphBuildOnIngest(ctx context.Context, kb *types.KnowledgeBase,
 	knowledge *types.Knowledge,
 ) {
-	if !graphBuildOnIngestEnabled() || kb == nil || knowledge == nil {
+	if !s.graphBuildOnIngestEnabled(ctx) || kb == nil || knowledge == nil {
 		return
 	}
 	if kb.GraphConfig == nil || !kb.GraphConfig.AutoBuild {

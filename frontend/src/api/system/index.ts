@@ -439,7 +439,7 @@ export interface SystemSettingItem {
   key: string
   /** Raw JSON value — narrow via value_type before rendering. */
   value: unknown
-  value_type: 'int' | 'string' | 'bool' | 'string_list'
+  value_type: 'int' | 'float' | 'string' | 'bool' | 'string_list'
   category: string
   description: string
   /** P3+ — currently always false. UI may surface a "redacted" state when true. */

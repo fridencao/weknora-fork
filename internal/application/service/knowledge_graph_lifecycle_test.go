@@ -132,12 +132,19 @@ func TestGraphBackfillOnEnableNoopWithoutKBID(t *testing.T) {
 
 // ---- 决策 3.6：删除清理 ----
 
+// graphCleanupSvc 构造挂了 ENV-only 设置服务的 knowledgeService。
+// 删除清理开关迁到 system_settings 后（DB > ENV > 默认），这些用例仍用
+// t.Setenv 驱动，需要 DB 层为空的解析器才能保持旧语义。
+func graphCleanupSvc() *knowledgeService {
+	return &knowledgeService{settings: newEnvOnlySettings()}
+}
+
 func TestGraphCleanupOnDeletePostsTombstone(t *testing.T) {
 	srv, got := graphHookServer(t)
 	t.Setenv("STARKB_API_URL", srv.URL)
 	t.Setenv("STARKB_GRAPH_WORKSPACE_MODE", "")
 
-	GraphCleanupOnDelete(tenantCtx(10011), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(tenantCtx(10011), []*types.Knowledge{
 		{ID: "doc-a", KnowledgeBaseID: "kb-1", FileName: "a.pdf"},
 		{ID: "doc-b", KnowledgeBaseID: "kb-1", FileName: "b.pdf"},
 	})
@@ -153,7 +160,7 @@ func TestGraphCleanupOnDeleteGroupsByKnowledgeBase(t *testing.T) {
 	srv, got := graphHookServer(t)
 	t.Setenv("STARKB_API_URL", srv.URL)
 
-	GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
 		{ID: "a", KnowledgeBaseID: "kb-1", FileName: "a.pdf"},
 		{ID: "b", KnowledgeBaseID: "kb-2", FileName: "b.pdf"},
 	})
@@ -170,7 +177,7 @@ func TestGraphCleanupOnDeleteSkipsDocsWithoutContractSemantics(t *testing.T) {
 	srv, got := graphHookServer(t)
 	t.Setenv("STARKB_API_URL", srv.URL)
 
-	GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
 		{ID: "pasted", KnowledgeBaseID: "kb-1", FileName: ""},
 	})
 
@@ -182,7 +189,7 @@ func TestGraphCleanupOnDeleteDisabled(t *testing.T) {
 	t.Setenv("STARKB_API_URL", srv.URL)
 	t.Setenv("STARKB_GRAPH_CLEANUP_ON_DELETE", "false")
 
-	GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
 		{ID: "a", KnowledgeBaseID: "kb-1", FileName: "a.pdf"},
 	})
 
@@ -193,7 +200,7 @@ func TestGraphCleanupOnDeleteNoopWithoutAPIURL(t *testing.T) {
 	_, got := graphHookServer(t)
 	t.Setenv("STARKB_API_URL", "")
 
-	GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(tenantCtx(1), []*types.Knowledge{
 		{ID: "a", KnowledgeBaseID: "kb-1", FileName: "a.pdf"},
 	})
 
@@ -204,7 +211,7 @@ func TestGraphCleanupOnDeleteNoopWithoutTenant(t *testing.T) {
 	srv, got := graphHookServer(t)
 	t.Setenv("STARKB_API_URL", srv.URL)
 
-	GraphCleanupOnDelete(context.Background(), []*types.Knowledge{
+	graphCleanupSvc().GraphCleanupOnDelete(context.Background(), []*types.Knowledge{
 		{ID: "a", KnowledgeBaseID: "kb-1", FileName: "a.pdf"},
 	})
 

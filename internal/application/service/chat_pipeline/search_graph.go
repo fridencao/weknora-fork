@@ -2,8 +2,6 @@ package chatpipeline
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"strings"
 	"sync"
 
@@ -21,9 +19,14 @@ type PluginSearchGraph struct {
 	lightrag      *LightragClient
 	chunkRepo     interfaces.ChunkRepository
 	knowledgeRepo interfaces.KnowledgeRepository
-	enabled       bool
-	topK          int
-	chunksPerHit  int
+	// settings 提供图谱通道的部署级参数（开关 / TopK / 证据 chunk 数）。
+	// 迁移前这三项在构造时读环境变量，改配置必须重启；现在每次请求经
+	// 系统设置解析，改后立即生效。
+	settings interfaces.SystemSettingService
+	// 以下三项保留为「无 settings 时的兜底」（单测直接构造插件时会用到）。
+	enabled      bool
+	topK         int
+	chunksPerHit int
 }
 
 // NewPluginSearchGraph 创建图谱召回通道插件（container.Invoke 接线）。
@@ -31,25 +34,44 @@ func NewPluginSearchGraph(
 	eventManager *EventManager,
 	chunkRepository interfaces.ChunkRepository,
 	knowledgeRepository interfaces.KnowledgeRepository,
+	settings interfaces.SystemSettingService,
 ) *PluginSearchGraph {
 	p := &PluginSearchGraph{
 		lightrag:      NewLightragClientFromEnv(),
 		chunkRepo:     chunkRepository,
 		knowledgeRepo: knowledgeRepository,
-		// p.enabled = 部署级默认（GRAPH_CHANNEL_ENABLED）；运行时被
-		// chatManage.GraphChannelEnabled 覆盖（部署缺省 → 智能体三态，见 OnEvent）。
-		enabled:      os.Getenv("GRAPH_CHANNEL_ENABLED") == "true",
+		settings:      settings,
+		// 兜底值：settings 可用时每次请求都会覆盖它们。
+		// 默认 true 与 registry 的 graph.channel.enabled 保持一致
+		// （迁移前 compose 注入 GRAPH_CHANNEL_ENABLED=true）。
+		enabled:      true,
 		topK:         20,
 		chunksPerHit: DefaultGraphChunksPerHit,
 	}
-	if v := os.Getenv("GRAPH_CHANNEL_TOP_K"); v != "" {
-		fmt.Sscanf(v, "%d", &p.topK)
-	}
-	if v := os.Getenv("GRAPH_CHANNEL_CHUNKS_PER_HIT"); v != "" {
-		fmt.Sscanf(v, "%d", &p.chunksPerHit)
-	}
 	eventManager.Register(p)
 	return p
+}
+
+// graphChannelTunables 解析图谱通道的部署级参数（每次请求实时读系统设置，
+// 改后立即生效，无需重启）。settings 为 nil 时回落到插件构造时的兜底值。
+func (p *PluginSearchGraph) graphChannelTunables(ctx context.Context) (bool, int, int) {
+	if p.settings == nil {
+		return p.enabled, p.topK, p.chunksPerHit
+	}
+	enabled := p.settings.GetBool(ctx,
+		types.SettingKeyGraphChannelEnabled, types.SettingEnvGraphChannelEnabled, p.enabled)
+	topK := int(p.settings.GetInt(ctx,
+		types.SettingKeyGraphChannelTopK, types.SettingEnvGraphChannelTopK, int64(p.topK)))
+	chunksPerHit := int(p.settings.GetInt(ctx,
+		types.SettingKeyGraphChannelChunksPerHit, types.SettingEnvGraphChannelChunksPerHit,
+		int64(p.chunksPerHit)))
+	if topK < 1 {
+		topK = p.topK
+	}
+	if chunksPerHit < 1 {
+		chunksPerHit = p.chunksPerHit
+	}
+	return enabled, topK, chunksPerHit
 }
 
 // ActivationEvents 图谱通道在实体检索事件后触发（复用实体抽取产物 chatManage.Entity）。
@@ -79,7 +101,9 @@ func (p *PluginSearchGraph) OnEvent(
 	// 智能体覆盖），未设置则回落插件构造时的部署默认（GRAPH_CHANNEL_ENABLED）。
 	// 改造前这里直接读租户上下文（TenantInfoFromContext.RetrievalConfig），
 	// 导致同一请求里"要不要用图谱"与"rerank 阈值"取自两个不同的源。
-	if !graphChannelEnabled(chatManage, p.enabled) {
+	// 部署级参数每次请求实时解析（系统设置，改后立即生效）。
+	deployEnabled, graphTopK, graphChunksPerHit := p.graphChannelTunables(ctx)
+	if !graphChannelEnabled(chatManage, deployEnabled) {
 		return next()
 	}
 	if len(chatManage.Entity) == 0 || len(chatManage.EntityKBIDs) == 0 {
@@ -90,7 +114,7 @@ func (p *PluginSearchGraph) OnEvent(
 	tenantID := types.MustTenantIDFromContext(ctx)
 	query := strings.Join(chatManage.Entity, " ")
 
-	data, err := p.lightrag.QueryData(ctx, query, p.topK)
+	data, err := p.lightrag.QueryData(ctx, query, graphTopK)
 	if err != nil {
 		// 图谱通道失败不阻断主检索（降级链：三通道退二通道）
 		logger.Warnf(ctx, "graph search 查询失败（降级跳过）: %v", err)
@@ -105,7 +129,7 @@ func (p *PluginSearchGraph) OnEvent(
 		logger.Infof(ctx, "graph search: 无可回跳证据（查询词域外或全部被过滤）")
 		return next()
 	}
-	chunks, err := ResolveGraphEvidence(ctx, p.chunkRepo, tenantID, refs, p.chunksPerHit, p.topK)
+	chunks, err := ResolveGraphEvidence(ctx, p.chunkRepo, tenantID, refs, graphChunksPerHit, graphTopK)
 	if err != nil {
 		logger.Errorf(ctx, "graph search: chunk 回跳失败: %v", err)
 		return next()
