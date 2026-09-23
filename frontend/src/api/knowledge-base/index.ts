@@ -706,3 +706,33 @@ export function batchReparseKnowledge(kbId: string, ids: string[], processConfig
 export function getKnowledgeBaseGraphStatus(kbId: string) {
   return get(`/api/v1/knowledge-bases/${kbId}/graph/status`);
 }
+
+/** ADR-008 决策 4：文档列表页图谱徽标的批量查询结果。 */
+export interface GraphDocStatusResult {
+  /** knowledge_id → none | pending | building | ready | failed | stale | deleting */
+  states: Record<string, string>;
+  /** 仅失败/重试过的文档才有键：失败原因与已重试次数。 */
+  details: Record<string, { error?: string; attempts?: number }>;
+  /** starkb-api 不可达时为 false —— 徽标整体隐藏，而不是误报「未建图」。 */
+  available?: boolean;
+  reason?: string;
+}
+
+/**
+ * ADR-008 决策 4：文档列表页每行的图谱状态。
+ *
+ * 一次带上当前页所有 doc id，前端本地合并 —— WeKnora 的列表接口完全不参与，
+ * 避免把跨服务调用塞进列表热路径。
+ */
+export function getKnowledgeBaseGraphDocStatus(kbId: string, knowledgeIds: string[]) {
+  return post(`/api/v1/knowledge-bases/${kbId}/graph/doc-status`, {
+    knowledge_ids: knowledgeIds,
+  });
+}
+
+/** ADR-008 决策 4：失败徽标点开后的「重试」入口（重新排队建图）。 */
+export function retryKnowledgeBaseGraphDocs(kbId: string, knowledgeIds: string[]) {
+  return post(`/api/v1/knowledge-bases/${kbId}/graph/doc-retry`, {
+    knowledge_ids: knowledgeIds,
+  });
+}

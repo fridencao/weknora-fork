@@ -217,6 +217,12 @@ func RegisterKnowledgeBaseRoutes(r *gin.RouterGroup, handler *handler.KnowledgeB
 		kbManagement.PUT("/:id", g.OwnedKBOrAdmin(), g.KBAccessWrite("id"), handler.UpdateKnowledgeBase)
 		// A3（docs/09）：KB 级图谱健康度代理 —— 读权限即可见（开关与状态都在 KB 设置页）。
 		kb.GET("/:id/graph/status", g.Viewer(), g.KBAccessRead("id"), handler.GetKnowledgeBaseGraphStatus)
+		// 决策 4（ADR-008）：文档列表页图谱徽标。批量查询走读权限；重试要写权限。
+		// 同样经 Go 代理而非浏览器直连 starkb-api（它无认证且只监听 127.0.0.1）。
+		kb.POST("/:id/graph/doc-status", g.Viewer(), g.KBAccessRead("id"),
+			handler.GetKnowledgeBaseGraphDocStatus)
+		kbManagement.POST("/:id/graph/doc-retry", g.OwnedKBOrAdmin(), g.KBAccessWrite("id"),
+			handler.RetryKnowledgeBaseGraphDocs)
 		// 立即重新生成知识库 AI 描述 — 与更新知识库同档鉴权；同步执行一次小模型调用。
 		kbManagement.POST("/:id/profile/generate", g.OwnedKBOrAdmin(), g.KBAccessWrite("id"),
 			handler.GenerateKnowledgeBaseProfile)

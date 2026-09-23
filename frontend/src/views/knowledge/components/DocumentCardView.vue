@@ -8,6 +8,8 @@ import DocumentFileIcon from './DocumentFileIcon.vue';
 import DocumentActionMenu from './DocumentActionMenu.vue';
 import FolderPickerMenu, { type FolderOption } from './FolderPickerMenu.vue';
 import KnowledgeProcessingTimeline from '@/components/knowledge-processing-timeline.vue';
+import GraphStatusBadge from './GraphStatusBadge.vue';
+import { useGraphDocStatus } from '@/composables/useGraphDocStatus';
 
 interface KnowledgeCard {
   id: string;
@@ -74,6 +76,34 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+
+// ADR-008 决策 4：卡片右上角的 LightRAG 图谱状态徽标。
+// 与列表视图同源同逻辑；两个视图互斥挂载，所以只有当前视图会去拉状态。
+const {
+  available: graphAvailable,
+  refresh: refreshGraphStatus,
+  retry: retryGraphStatus,
+  statusOf: graphStatusOf,
+  detailOf: graphDetailOf,
+} = useGraphDocStatus(computed(() => props.kbId));
+const graphRetryingId = ref<string | null>(null);
+
+watch(
+  () => props.items.map((i) => i.id).join(','),
+  () => {
+    void refreshGraphStatus(props.items.map((i) => i.id));
+  },
+  { immediate: true },
+);
+
+const onRetryGraph = async (id: string) => {
+  graphRetryingId.value = id;
+  try {
+    await retryGraphStatus(id);
+  } finally {
+    graphRetryingId.value = null;
+  }
+};
 const tagEditorId = ref<string | null>(null);
 const cardSummaries = computed(() => new Map(props.items.map(item => [item.id, formatReferenceSnippet(item.description)])));
 
@@ -338,6 +368,15 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
           </div>
           <button type="button" class="card-content-title" :title="item.file_name"
             @click.stop="onCardClick(item)">{{ item.file_name }}</button>
+          <GraphStatusBadge
+            v-if="graphAvailable"
+            :status="graphStatusOf(item.id)"
+            :error="graphDetailOf(item.id).error"
+            :attempts="graphDetailOf(item.id).attempts"
+            :interactive="canMutateKnowledge"
+            :retrying="graphRetryingId === item.id"
+            @retry="onRetryGraph(item.id)"
+          />
           <div v-if="(canEdit || canDownload) && batchMode" class="card-nav-check" @click.stop>
             <t-checkbox
               class="card-select-checkbox"

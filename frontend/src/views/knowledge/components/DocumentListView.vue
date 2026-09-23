@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatFileSize } from '@/utils/files';
 import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
 import DocumentFileIcon from './DocumentFileIcon.vue';
 import DocumentActionMenu from './DocumentActionMenu.vue';
 import FolderPickerMenu, { type FolderOption } from './FolderPickerMenu.vue';
+import GraphStatusBadge from './GraphStatusBadge.vue';
+import { useGraphDocStatus } from '@/composables/useGraphDocStatus';
 
 interface Tag {
   id: string;
@@ -76,6 +78,35 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const tagEditorId = ref<string | null>(null);
+
+// ADR-008 决策 4：每行的 LightRAG 图谱状态徽标。
+// 列表渲染出来之后再批量补一次状态 —— WeKnora 的列表接口不参与，避免把跨服务
+// 调用塞进列表热路径。代理降级（starkb-api 不可达）时整列隐藏，不误报「未建图」。
+const {
+  available: graphAvailable,
+  refresh: refreshGraphStatus,
+  retry: retryGraphStatus,
+  statusOf: graphStatusOf,
+  detailOf: graphDetailOf,
+} = useGraphDocStatus(computed(() => props.kbId));
+const graphRetryingId = ref<string | null>(null);
+
+watch(
+  () => props.items.map((i) => i.id).join(','),
+  () => {
+    void refreshGraphStatus(props.items.map((i) => i.id));
+  },
+  { immediate: true },
+);
+
+const onRetryGraph = async (id: string) => {
+  graphRetryingId.value = id;
+  try {
+    await retryGraphStatus(id);
+  } finally {
+    graphRetryingId.value = null;
+  }
+};
 
 const formatTime = (time?: string) => {
   if (!time) return '--';
@@ -271,6 +302,15 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
             <div class="row-title-line">
               <button type="button" class="row-file-name" :title="item.description ? `${item.file_name}\n${item.description}` : item.file_name"
                 @click.stop="emit('open', item)">{{ item.file_name }}</button>
+              <GraphStatusBadge
+                v-if="graphAvailable"
+                :status="graphStatusOf(item.id)"
+                :error="graphDetailOf(item.id).error"
+                :attempts="graphDetailOf(item.id).attempts"
+                :interactive="canMutateKnowledge"
+                :retrying="graphRetryingId === item.id"
+                @retry="onRetryGraph(item.id)"
+              />
             </div>
             <span class="row-file-meta">
               <span class="row-source"><t-icon :name="getSourceInfo(item).icon" />{{ getSourceInfo(item).label }}</span>
@@ -674,7 +714,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
   &.status-primary { color: var(--td-brand-color); }
   &.status-default { color: var(--td-text-color-placeholder); }
 }
-.row-title-line { display: flex; align-items: center; min-width: 0; }
+.row-title-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .row-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; width: 100%; }
 .row-tag {
   flex: 0 0 auto;

@@ -9,6 +9,7 @@ package handler
 // 代理不可达时返回 degraded 数据（graph_config 仍可用），页面不空白。
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -17,12 +18,17 @@ import (
 	"strconv"
 	"time"
 
+	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/gin-gonic/gin"
 )
 
 const graphStatusProxyTimeout = 10 * time.Second
+
+// graphDocStatusMaxIDs 是单次徽标查询的文档数上限。列表页一页最多几十行，
+// 500 留足余量，同时挡住「拿它当全量扫描接口」的用法。
+const graphDocStatusMaxIDs = 500
 
 // graphWorkspaceForKBHandler 与 service 侧 graphWorkspaceForKB 同口径：
 // shared（默认）= 全局图谱空间；kb = 按 KB 隔离（WS6 形态）。
@@ -42,8 +48,8 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphStatus(c *gin.Context) {
 	}
 
 	out := gin.H{
-		"graph_config":       kb.GraphConfig,
-		"workspace_mode":     map[string]string{"kb": "kb"}[os.Getenv("STARKB_GRAPH_WORKSPACE_MODE")],
+		"graph_config":   kb.GraphConfig,
+		"workspace_mode": map[string]string{"kb": "kb"}[os.Getenv("STARKB_GRAPH_WORKSPACE_MODE")],
 	}
 
 	starkbURL := os.Getenv("STARKB_API_URL")
@@ -86,4 +92,171 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphStatus(c *gin.Context) {
 	}
 	out["graph"] = graph
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+}
+
+// postStarkbGraph 把 JSON 载荷转发给 starkb-api 并解回 map。
+// 返回的 reason 非空表示降级（未配置/不可达/非 200/解析失败），由调用方决定呈现方式。
+func postStarkbGraph(ctx context.Context, path string, payload any) (map[string]any, string) {
+	base := os.Getenv("STARKB_API_URL")
+	if base == "" {
+		return nil, "STARKB_API_URL 未配置"
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err.Error()
+	}
+	ctx, cancel := context.WithTimeout(ctx, graphStatusProxyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+path, bytes.NewReader(raw))
+	if err != nil {
+		return nil, err.Error()
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "starkb-api 不可达"
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil, "starkb-api 返回异常"
+	}
+	var out map[string]any
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, "响应解析失败"
+	}
+	return out, ""
+}
+
+// ownedGraphDocIDs 把请求里的 id 收敛到「该 KB 且该租户」真实拥有的文档。
+//
+// 不信任客户端传来的 id 是必须的：starkb-api 的 graph_doc_state 以 knowledge_id
+// 为唯一键、查询不按租户过滤（对账 CLI 写入的行 tenant_id/kb_id 为空，数据层也
+// 没法过滤）。若原样转发，任何有 KB 读权限的人都能拿别人的 doc id 探到其图谱
+// 状态与 last_error —— 而 doc id 里存在「工商变更通知-2.27」这类可猜的中文名，
+// 并非全是 UUID。
+//
+// 用按 id 点查（GetKnowledgeByID 本身按租户过滤，跨租户返回 NotFound）而不是
+// 拉全 KB 文档列表：成本随页大小增长，不随 KB 规模增长。
+func ownedGraphDocIDs(
+	ctx context.Context, h *KnowledgeBaseHandler, kb *types.KnowledgeBase, requested []string,
+) []string {
+	if len(requested) == 0 {
+		return nil
+	}
+	if len(requested) > graphDocStatusMaxIDs {
+		requested = requested[:graphDocStatusMaxIDs]
+	}
+	seen := make(map[string]struct{}, len(requested))
+	uniq := make([]string, 0, len(requested))
+	for _, id := range requested {
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if h.knowledgeService == nil {
+		// 测试装配下可能没有 knowledgeService；此处不 fail-open 到「全放行」，
+		// 而是按调用方自己给的 id 走 —— 与旧行为一致，生产装配始终非 nil。
+		return uniq
+	}
+	out := make([]string, 0, len(uniq))
+	for _, id := range uniq {
+		k, err := h.knowledgeService.GetKnowledgeByID(ctx, id)
+		if err != nil || k == nil || k.KnowledgeBaseID != kb.ID {
+			continue
+		}
+		out = append(out, id)
+	}
+	return out
+}
+
+// GetKnowledgeBaseGraphDocStatus POST /knowledge-bases/:id/graph/doc-status
+//
+// ADR-008 决策 4：文档列表页每行的图谱状态徽标。
+//
+// 为什么经 Go 代理，而不是按 ADR 字面让浏览器直连 starkb-api：
+// starkb-api 只监听 127.0.0.1:8300 且**没有任何认证**（/graph/docs/delete 还是
+// 破坏性端点），直连要求把它绑到 0.0.0.0 并开 CORS —— 那是把控制面暴露给浏览器。
+// ADR 真正要守的是「不把跨服务调用塞进 WeKnora 的列表热路径」，本方案完全满足：
+// 列表接口一行没改，前端拿到列表后自己批量补一次状态。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphDocStatus(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	var in struct {
+		KnowledgeIDs []string `json:"knowledge_ids"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		_ = c.Error(apperrors.NewBadRequestError("Invalid request parameters").WithDetails(err.Error()))
+		return
+	}
+
+	out := gin.H{"states": gin.H{}, "details": gin.H{}, "available": true}
+	ids := ownedGraphDocIDs(c.Request.Context(), h, kb, in.KnowledgeIDs)
+	if len(ids) == 0 {
+		// 没有一个 id 属于这个 KB：直接回空，不打 starkb-api。
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+
+	graph, reason := postStarkbGraph(c.Request.Context(), "/graph/doc-status", gin.H{
+		"knowledge_ids": ids,
+	})
+	if reason != "" {
+		logger.Warnf(c.Request.Context(), "graph doc-status proxy: %s", reason)
+		out["available"] = false
+		out["reason"] = reason
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	if v, ok := graph["states"]; ok {
+		out["states"] = v
+	}
+	if v, ok := graph["details"]; ok {
+		out["details"] = v
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+}
+
+// RetryKnowledgeBaseGraphDocs POST /knowledge-bases/:id/graph/doc-retry
+//
+// ADR-008 决策 4：失败徽标点开后的「重试」入口。复用 starkb-api 的
+// /graph/backfill —— 把文档重新标成 pending，后台 worker 会捡起来重建。
+func (h *KnowledgeBaseHandler) RetryKnowledgeBaseGraphDocs(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	var in struct {
+		KnowledgeIDs []string `json:"knowledge_ids"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		_ = c.Error(apperrors.NewBadRequestError("Invalid request parameters").WithDetails(err.Error()))
+		return
+	}
+	ids := ownedGraphDocIDs(c.Request.Context(), h, kb, in.KnowledgeIDs)
+	if len(ids) == 0 {
+		_ = c.Error(apperrors.NewBadRequestError("no valid knowledge ids"))
+		return
+	}
+	res, reason := postStarkbGraph(c.Request.Context(), "/graph/backfill", gin.H{
+		"tenant_id": strconv.FormatUint(kb.TenantID, 10),
+		"kb_id":     kb.ID,
+		"doc_ids":   ids,
+		"workspace": graphWorkspaceForKBHandler(kb),
+	})
+	if reason != "" {
+		logger.Warnf(c.Request.Context(), "graph doc-retry proxy: %s", reason)
+		_ = c.Error(apperrors.NewInternalServerError(reason))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": res})
 }
