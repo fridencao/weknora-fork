@@ -731,13 +731,14 @@ func (s *systemSettingService) applyDeepPackageBridges(ctx context.Context) {
 		types.SettingKeyStorageAllowList, types.SettingEnvStorageAllowList, nil)
 	storageallowlist.SetStorageAllowList(allowList)
 
-	docparser.SetImageHostKeepURLs(s.GetStringList(ctx,
-		types.SettingKeyImageHostKeepURL, types.SettingEnvImageHostKeepURL, nil))
+	imageHosts := s.GetStringList(ctx,
+		types.SettingKeyImageHostKeepURL, types.SettingEnvImageHostKeepURL, nil)
+	docparser.SetImageHostKeepURLs(imageHosts)
 
 	logger.Infof(ctx,
 		"[system_settings] deep-package bridges applied "+
-			"(vlm_timeout=%ds, batch_embed=%d, language=%q, storage_allow=%d)",
-		vlmTimeoutS, batchEmbed, language, len(allowList))
+			"(vlm_timeout=%ds, batch_embed=%d, language=%q, storage_allow=%d, image_hosts=%d)",
+		vlmTimeoutS, batchEmbed, language, len(allowList), len(imageHosts))
 }
 
 // applyToolApprovalSettings 把审批超时与 fail-open 策略推给 approval 包。
