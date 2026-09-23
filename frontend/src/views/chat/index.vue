@@ -712,7 +712,13 @@ const hydrateMessageReferences = async (message, attempt = 0) => {
         }
         return;
     }
-    if (message.knowledge_references?.length) return;
+    // 流式 references 事件推的是薄引用（无 chunk_metadata.sbk_*，溯源面板据此渲染
+    // L4 数据）——引用存在但缺溯源字段时仍需水合，否则面板空态必须手动刷新。
+    const hasUsableProvenance = (message.knowledge_references || []).some((r) => {
+        const meta = (r?.chunk_metadata ?? r?.metadata) || null;
+        return Boolean(meta && (meta.sbk_blocks || meta.sbk_pages || meta.sbk_method));
+    });
+    if (hasUsableProvenance(message.knowledge_references)) return;
     try {
         const res = await fetchMessageList({ session_id: sid, limit: 10 });
         if (session_id.value !== sid) return;
