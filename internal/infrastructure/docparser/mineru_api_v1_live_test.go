@@ -24,6 +24,7 @@ func hostnameOf(raw string) string {
 
 // TestLiveMinerUV1Server validates the V1 client against a real
 // mineru-kit api-server. Skipped unless MINERU_V1_LIVE is set.
+//
 //	MINERU_V1_LIVE=1 MINERU_V1_ENDPOINT=http://192.168.5.2:8310 \
 //	MINERU_V1_PDF=<path> go test ./internal/infrastructure/docparser/ -run TestLiveMinerUV1 -v -timeout 20m
 func TestLiveMinerUV1Server(t *testing.T) {

@@ -132,6 +132,11 @@ const (
 	SettingKeyEmbeddingBatchSize = "embedding.batch_size"
 	SettingEnvEmbeddingBatchSize = "BATCH_EMBED_SIZE"
 
+	// SettingKeyImageHostKeepURL 图片白名单：这些主机的图片不转存对象存储，
+	// markdown 保留原始 URL（逗号分隔，如内网 MinerU 服务）。
+	SettingKeyImageHostKeepURL = "image_host.keep_url"
+	SettingEnvImageHostKeepURL = "IMAGE_HOST_KEEP_URL"
+
 	// SettingKeyAuditRetentionDays 审计日志保留天数（0 禁用清理，默认 90）。
 	SettingKeyAuditRetentionDays = "audit.retention_days"
 	SettingEnvAuditRetentionDays = "WEKNORA_AUDIT_RETENTION_DAYS"

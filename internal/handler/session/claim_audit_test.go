@@ -16,7 +16,9 @@ import (
 // 回落 ENV > 默认。开关迁到 system_settings 后（DB > ENV > 默认），这些
 // 用例仍用 t.Setenv 驱动，替身保证语义与迁移前一致。
 // 其余方法由内嵌接口满足（这些用例不会调用到）。
-type envOnlySettings struct{ interfaces.SystemSettingService }
+type envOnlySettings struct {
+	interfaces.SystemSettingService
+}
 
 func (envOnlySettings) GetBool(_ context.Context, _ string, envName string, def bool) bool {
 	if v := strings.TrimSpace(os.Getenv(envName)); v != "" {

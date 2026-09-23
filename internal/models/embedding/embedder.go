@@ -58,13 +58,13 @@ type Config struct {
 	Provider                  string            `json:"provider"`
 	// MaxConcurrency caps concurrent background calls to this model; 0 falls
 	// back to the process-wide default (see limiter.GateN).
-	MaxConcurrency int               `json:"max_concurrency"`
+	MaxConcurrency int `json:"max_concurrency"`
 	// 向量嵌入调优（来自模型行 parameters，UI 可配）：0 值=走包默认
-	BatchEmbedSize        int `json:"embed_batch_size"`
-	EmbedRetryAttempts    int `json:"embed_retry_attempts"`
-	EmbedRetryBaseDelayMS int `json:"embed_retry_base_delay_ms"`
-	EmbedRateLimitDelayMS int `json:"embed_rate_limit_delay_ms"`
-	ExtraConfig    map[string]string `json:"extra_config"`
+	BatchEmbedSize        int               `json:"embed_batch_size"`
+	EmbedRetryAttempts    int               `json:"embed_retry_attempts"`
+	EmbedRetryBaseDelayMS int               `json:"embed_retry_base_delay_ms"`
+	EmbedRateLimitDelayMS int               `json:"embed_rate_limit_delay_ms"`
+	ExtraConfig           map[string]string `json:"extra_config"`
 	// CustomHeaders 允许在调用远程 API 时附加自定义 HTTP 请求头（类似 OpenAI Python SDK 的 extra_headers）。
 	CustomHeaders map[string]string `json:"custom_headers"`
 	AppID         string
@@ -155,7 +155,7 @@ type tunedEmbedder struct {
 	tuning EmbedTuning
 }
 
-func (t *tunedEmbedder) GetBatchEmbedSize() int { return t.tuning.BatchSize }
+func (t *tunedEmbedder) GetBatchEmbedSize() int   { return t.tuning.BatchSize }
 func (t *tunedEmbedder) EmbedTuning() EmbedTuning { return t.tuning }
 
 func newEmbedder(config Config, pooler EmbedderPooler, ollamaService *ollama.OllamaService) (Embedder, error) {

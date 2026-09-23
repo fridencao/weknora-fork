@@ -252,6 +252,13 @@ func isProviderScheme(p string) bool {
 // to object storage. The markdown keeps the original URL.
 // Configure via IMAGE_HOST_KEEP_URL env var (comma-separated hosts).
 func isWhitelistedImageHost(rawURL string) bool {
+	// system_settings (pushed) > ENV.
+	if pushed := imageHostKeepURLs.Load(); pushed != nil {
+		if len(*pushed) == 0 {
+			return false
+		}
+		return hostMatchesWhitelist(rawURL, *pushed)
+	}
 	whitelist := strings.TrimSpace(os.Getenv("IMAGE_HOST_KEEP_URL"))
 	if whitelist == "" {
 		return false
@@ -268,6 +275,24 @@ func isWhitelistedImageHost(rawURL string) bool {
 			continue
 		}
 		// Exact host match (includes port) or hostname match (any port)
+		if host == h || hostname == h {
+			return true
+		}
+	}
+	return false
+}
+
+// hostMatchesWhitelist matches rawURL against a pre-normalised host list
+// (the pushed system_settings tier). Same matching rule as the env path:
+// exact host (with port) or bare hostname (any port).
+func hostMatchesWhitelist(rawURL string, whitelist []string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	host := strings.ToLower(u.Host)
+	hostname := strings.ToLower(u.Hostname())
+	for _, h := range whitelist {
 		if host == h || hostname == h {
 			return true
 		}

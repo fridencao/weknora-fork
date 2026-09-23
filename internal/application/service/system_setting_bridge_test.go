@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Tencent/WeKnora/internal/infrastructure/docparser"
 	"github.com/Tencent/WeKnora/internal/models/embedding"
 	"github.com/Tencent/WeKnora/internal/models/vlm"
 	"github.com/Tencent/WeKnora/internal/storageallowlist"
@@ -34,6 +35,7 @@ func TestApplyDeepPackageBridgesPushesResolvedValues(t *testing.T) {
 		// 造成顺序相关的假失败——实测发生过一次。
 		vlm.ClearVLMHTTPTimeoutOverride()
 		embedding.ClearBatchEmbedSizeOverride()
+		docparser.ClearImageHostKeepURLOverride()
 	})
 
 	// ENV-only settings: the DB tier is empty, so the resolver reads ENV.

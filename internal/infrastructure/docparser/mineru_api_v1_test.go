@@ -36,11 +36,11 @@ func newMinerUV1TestServer(t *testing.T, failJob bool) *httptest.Server {
 		require.NotZero(t, body["sha256sum"])
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id":          "up-1",
-			"status":      "pending",
-			"upload_url":  "/v1/uploads/up-1/content",
+			"id":             "up-1",
+			"status":         "pending",
+			"upload_url":     "/v1/uploads/up-1/content",
 			"upload_headers": map[string]string{"X-Custom": "v"},
-			"file":        map[string]any{"id": "file-up-1"},
+			"file":           map[string]any{"id": "file-up-1"},
 		})
 	})
 	mux.HandleFunc("PUT /v1/uploads/up-1/content", func(w http.ResponseWriter, r *http.Request) {

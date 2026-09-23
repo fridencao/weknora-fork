@@ -19,6 +19,7 @@ import (
 
 	"github.com/Tencent/WeKnora/internal/agent/approval"
 	"github.com/Tencent/WeKnora/internal/config"
+	"github.com/Tencent/WeKnora/internal/infrastructure/docparser"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/models/embedding"
 	"github.com/Tencent/WeKnora/internal/models/limiter"
@@ -566,6 +567,15 @@ var registry = map[string]settingSpec{
 		Description: "允许使用的存储后端白名单（local/minio/cos/tos/s3/oss/ks3/obs）。" +
 			"留空表示全部允许。用于把部署限制在合规的存储后端上。",
 	},
+	"image_host.keep_url": {
+		Type:     "string_list",
+		EnvName:  "IMAGE_HOST_KEEP_URL",
+		Default:  []string{},
+		Category: "document",
+		Description: "受信图片主机白名单。列表内主机的图片仍会下载校验/OCR，" +
+			"但不转存对象存储，markdown 保留原始 URL。典型用途是内网 MinerU " +
+			"等解析服务。留空表示无白名单（全部图片转存）。",
+	},
 	"audit.retention_days": {
 		Type:     "int",
 		EnvName:  "WEKNORA_AUDIT_RETENTION_DAYS",
@@ -721,6 +731,9 @@ func (s *systemSettingService) applyDeepPackageBridges(ctx context.Context) {
 		types.SettingKeyStorageAllowList, types.SettingEnvStorageAllowList, nil)
 	storageallowlist.SetStorageAllowList(allowList)
 
+	docparser.SetImageHostKeepURLs(s.GetStringList(ctx,
+		types.SettingKeyImageHostKeepURL, types.SettingEnvImageHostKeepURL, nil))
+
 	logger.Infof(ctx,
 		"[system_settings] deep-package bridges applied "+
 			"(vlm_timeout=%ds, batch_embed=%d, language=%q, storage_allow=%d)",
@@ -854,6 +867,7 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 	case types.SettingKeyVLMHTTPTimeoutS,
 		types.SettingKeyEmbeddingBatchSize,
 		types.SettingKeyLanguageDefault,
+		types.SettingKeyImageHostKeepURL,
 		types.SettingKeyStorageAllowList:
 		s.applyDeepPackageBridges(ctx)
 	case types.SettingKeyTaskPoolSize:
