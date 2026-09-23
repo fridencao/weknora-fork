@@ -8,6 +8,10 @@ import (
 
 // EnvLanguage returns the WEKNORA_LANGUAGE environment variable value, or empty string if unset.
 func EnvLanguage() string {
+	// system_settings (pushed) > ENV.
+	if p := languageOverride.Load(); p != nil {
+		return *p
+	}
 	return strings.TrimSpace(os.Getenv("WEKNORA_LANGUAGE"))
 }
 

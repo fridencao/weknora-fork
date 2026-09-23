@@ -27,10 +27,10 @@ const safetyMaxChars = 20000
 // 嵌入退避默认值。模型行 parameters（UI 可配）携带调优时以调优为准：
 // embed_retry_attempts / embed_retry_base_delay_ms / embed_rate_limit_delay_ms。
 const (
-	embedRetryAttempts    = 8
-	embedRetryBaseDelay   = 2 * time.Second
-	embedRateLimitDelay   = 10 * time.Second
-	embedBackoffDelayCap  = 60 * time.Second
+	embedRetryAttempts   = 8
+	embedRetryBaseDelay  = 2 * time.Second
+	embedRateLimitDelay  = 10 * time.Second
+	embedBackoffDelayCap = 60 * time.Second
 )
 
 var embeddingImagePayloadPatterns = []*regexp.Regexp{

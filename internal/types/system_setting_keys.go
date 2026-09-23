@@ -116,6 +116,30 @@ const (
 	SettingKeyChatAttachmentWaitTimeoutS = "chat_attachment.wait_timeout_s"
 	SettingEnvChatAttachmentWaitTimeoutS = "WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC"
 
+	// ---- 批二B：深包消费点，走包级 atomic 桥接 ----
+	//
+	// 这些消费点（models/vlm、models/embedding、utils、types、
+	// storageallowlist）拿不到 ctx 也没有 settings 服务，因此由
+	// systemSettingService 在 preload / dispatchSideEffects 推送到各包内的
+	// atomic 覆盖位，读取顺序为 桥接值 > 环境变量 > 内置默认。
+
+	// SettingKeyVLMHTTPTimeoutS VLM 请求的 HTTP 超时（秒，默认 180）。
+	SettingKeyVLMHTTPTimeoutS = "vlm.http_timeout_s"
+	SettingEnvVLMHTTPTimeoutS = "VLM_HTTP_TIMEOUT_SECONDS"
+
+	// SettingKeyEmbeddingBatchSize 嵌入批处理的默认批大小（默认 5）。
+	// 模型行自带的 GetBatchEmbedSize 仍优先于本键。
+	SettingKeyEmbeddingBatchSize = "embedding.batch_size"
+	SettingEnvEmbeddingBatchSize = "BATCH_EMBED_SIZE"
+
+	// SettingKeyLanguageDefault 默认语言区域（如 zh-CN / en-US，默认 zh-CN）。
+	SettingKeyLanguageDefault = "language.default"
+	SettingEnvLanguageDefault = "WEKNORA_LANGUAGE"
+
+	// SettingKeyStorageAllowList 允许的存储后端白名单（留空表示全部允许）。
+	SettingKeyStorageAllowList = "storage.allow_list"
+	SettingEnvStorageAllowList = "STORAGE_ALLOW_LIST"
+
 	// SettingDefaultReliabilityWeight 可靠度权重内置默认（ADR-005 下限）。
 	SettingDefaultReliabilityWeight = 0.25
 )

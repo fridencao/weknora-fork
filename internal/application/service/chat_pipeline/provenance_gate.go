@@ -97,4 +97,3 @@ func (p *PluginProvenanceGate) OnEvent(
 		withPointer, total, coverage, require, total-len(kept))
 	return next()
 }
-

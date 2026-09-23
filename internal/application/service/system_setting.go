@@ -20,8 +20,11 @@ import (
 	"github.com/Tencent/WeKnora/internal/agent/approval"
 	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/logger"
+	"github.com/Tencent/WeKnora/internal/models/embedding"
 	"github.com/Tencent/WeKnora/internal/models/limiter"
+	"github.com/Tencent/WeKnora/internal/models/vlm"
 	"github.com/Tencent/WeKnora/internal/sandbox"
+	"github.com/Tencent/WeKnora/internal/storageallowlist"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/Tencent/WeKnora/internal/utils"
@@ -332,10 +335,10 @@ var registry = map[string]settingSpec{
 			"智能体可各自覆盖。修改后立即生效，无需重启。",
 	},
 	"graph.channel.top_k": {
-		Type:     "int",
-		EnvName:  "GRAPH_CHANNEL_TOP_K",
-		Default:  int64(20),
-		Category: "retrieval",
+		Type:        "int",
+		EnvName:     "GRAPH_CHANNEL_TOP_K",
+		Default:     int64(20),
+		Category:    "retrieval",
 		Description: "图谱通道返回的实体/关系条数上限。修改后立即生效，无需重启。",
 	},
 	"graph.channel.chunks_per_hit": {
@@ -471,62 +474,97 @@ var registry = map[string]settingSpec{
 	// ---- 批二：service 层直读（消费点都有 ctx）----
 
 	"housekeeping.enabled": {
-		Type:        "bool",
-		EnvName:     "WEKNORA_HOUSEKEEPING_ENABLED",
-		Default:     true,
-		Category:    "maintenance",
+		Type:     "bool",
+		EnvName:  "WEKNORA_HOUSEKEEPING_ENABLED",
+		Default:  true,
+		Category: "maintenance",
 		Description: "后台管家扫描的总开关。负责回收长时间卡在解析中/建图中的文档，" +
 			"把它们翻回可重试状态。默认 true；关闭后卡住的文档需要人工重解析。" +
 			"在管家启动时读取，修改后需重启进程生效。",
 	},
 	"retrieval.multi_store_timeout_s": {
-		Type:        "int",
-		EnvName:     "MULTI_STORE_RETRIEVE_TIMEOUT_SEC",
-		Default:     int64(30),
-		Category:    "retrieval",
+		Type:     "int",
+		EnvName:  "MULTI_STORE_RETRIEVE_TIMEOUT_SEC",
+		Default:  int64(30),
+		Category: "retrieval",
 		Description: "跨多个向量库扇出检索时的软超时（秒）。单个库慢不应拖垮整轮问答：" +
 			"超时后返回已就绪库的结果并记降级。调大提高召回完整度、增加尾延迟；" +
 			"调小保护响应时间。默认 30。",
 	},
 	"tenant.invitation_ttl": {
-		Type:        "string",
-		EnvName:     "WEKNORA_INVITATION_TTL",
-		Default:     "168h",
-		Category:    "tenant",
+		Type:     "string",
+		EnvName:  "WEKNORA_INVITATION_TTL",
+		Default:  "168h",
+		Category: "tenant",
 		Description: "空间邀请链接的有效期。支持 Go duration（如 168h、7d 请写 168h）" +
 			"或纯秒数（如 604800）。过期后邀请不可用，需重新发出。默认 168h（7 天）。",
 	},
 	"chat_attachment.ttl_hours": {
-		Type:        "int",
-		EnvName:     "WEKNORA_CHAT_ATTACHMENT_TTL_HOURS",
-		Default:     int64(24),
-		Category:    "chat",
+		Type:     "int",
+		EnvName:  "WEKNORA_CHAT_ATTACHMENT_TTL_HOURS",
+		Default:  int64(24),
+		Category: "chat",
 		Description: "会话中上传的临时附件保留多少小时后自动清理。默认 24。" +
 			"调大占用更多存储，但用户回看历史会话时附件仍在。",
 	},
 	"chat_attachment.ocr_max_pages": {
-		Type:        "int",
-		EnvName:     "WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES",
-		Default:     int64(8),
-		Category:    "chat",
+		Type:     "int",
+		EnvName:  "WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES",
+		Default:  int64(8),
+		Category: "chat",
 		Description: "扫描件/纯图片文档最多送多少页去做 VLM OCR，用于约束 OCR 延迟。" +
 			"超出部分不参与识别。默认 8。",
 	},
 	"chat_attachment.ocr_concurrency": {
-		Type:        "int",
-		EnvName:     "WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY",
-		Default:     int64(8),
-		Category:    "chat",
+		Type:     "int",
+		EnvName:  "WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY",
+		Default:  int64(8),
+		Category: "chat",
 		Description: "多页扫描件同时送 VLM 做 OCR 的并发度。墙钟延迟随并发近似线性下降，" +
 			"但会加大对 VLM 后端的压力。默认 8（与页数上限一致，一屏扫完）。",
 	},
 	"chat_attachment.wait_timeout_s": {
-		Type:        "int",
-		EnvName:     "WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC",
-		Default:     int64(60),
-		Category:    "chat",
+		Type:     "int",
+		EnvName:  "WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC",
+		Default:  int64(60),
+		Category: "chat",
 		Description: "发起提问时，最多等待仍在解析中的附件多少秒；超时后只用已完成的" +
 			"附件继续回答（未完成的跳过，不报错）。默认 60。大文件或扫描件可调大。",
+	},
+
+	// ---- 批二B：深包消费点，经包级 atomic 桥接生效 ----
+
+	"vlm.http_timeout_s": {
+		Type:     "int",
+		EnvName:  "VLM_HTTP_TIMEOUT_SECONDS",
+		Default:  int64(180),
+		Category: "model",
+		Description: "调用视觉模型（VLM）时的 HTTP 超时（秒）。扫描件 OCR、图片描述" +
+			"都走这条链路；大图或慢后端可调大。默认 180。",
+	},
+	"embedding.batch_size": {
+		Type:     "int",
+		EnvName:  "BATCH_EMBED_SIZE",
+		Default:  int64(5),
+		Category: "model",
+		Description: "文本嵌入的默认批大小。模型行自带调优值时以模型行为准，本键是" +
+			"兜底默认。调大提高吞吐、增加单次请求内存与超时风险。默认 5。",
+	},
+	"language.default": {
+		Type:     "string",
+		EnvName:  "WEKNORA_LANGUAGE",
+		Default:  "",
+		Category: "general",
+		Description: "未显式指定语言时的默认区域，如 zh-CN / en-US / ja-JP。" +
+			"留空则用内置默认 zh-CN。影响提示词语言与异步任务的默认语言。",
+	},
+	"storage.allow_list": {
+		Type:     "string_list",
+		EnvName:  "STORAGE_ALLOW_LIST",
+		Default:  []string{},
+		Category: "storage",
+		Description: "允许使用的存储后端白名单（local/minio/cos/tos/s3/oss/ks3/obs）。" +
+			"留空表示全部允许。用于把部署限制在合规的存储后端上。",
 	},
 }
 
@@ -636,6 +674,40 @@ func (s *systemSettingService) preload(ctx context.Context) {
 	s.applyModelMaxConcurrency(ctx)
 	s.applyDockerBackendEnabled(ctx)
 	s.applyToolApprovalSettings(ctx)
+	s.applyDeepPackageBridges(ctx)
+}
+
+// applyDeepPackageBridges 把深包配置推送到各包内的 atomic 覆盖位。
+//
+// 这些消费点（models/vlm、models/embedding、utils、types、
+// storageallowlist）既拿不到 ctx 也没有 settings 服务——VLM 超时在客户端
+// 构造时读、批大小在嵌入循环里读、语言在提示词构造与任务载荷里读、
+// 存储白名单在 provider 构造时读。所以只能反向推送，与 sandbox /
+// approval 的桥接同一形状。
+//
+// 全量重推而非按键分发：一次推送就是几个 atomic store，为省这点开销
+// 维护一份「哪个键影响哪个包」的映射不划算，也更容易漏。
+func (s *systemSettingService) applyDeepPackageBridges(ctx context.Context) {
+	vlmTimeoutS := s.GetInt(ctx,
+		types.SettingKeyVLMHTTPTimeoutS, types.SettingEnvVLMHTTPTimeoutS, 180)
+	vlm.SetVLMHTTPTimeout(time.Duration(vlmTimeoutS) * time.Second)
+
+	batchEmbed := int(s.GetInt(ctx,
+		types.SettingKeyEmbeddingBatchSize, types.SettingEnvEmbeddingBatchSize, 5))
+	embedding.SetBatchEmbedSize(batchEmbed)
+
+	language := s.GetString(ctx,
+		types.SettingKeyLanguageDefault, types.SettingEnvLanguageDefault, "")
+	types.SetDefaultLanguage(language)
+
+	allowList := s.GetStringList(ctx,
+		types.SettingKeyStorageAllowList, types.SettingEnvStorageAllowList, nil)
+	storageallowlist.SetStorageAllowList(allowList)
+
+	logger.Infof(ctx,
+		"[system_settings] deep-package bridges applied "+
+			"(vlm_timeout=%ds, batch_embed=%d, language=%q, storage_allow=%d)",
+		vlmTimeoutS, batchEmbed, language, len(allowList))
 }
 
 // applyToolApprovalSettings 把审批超时与 fail-open 策略推给 approval 包。
@@ -762,6 +834,11 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 		s.applyDockerBackendEnabled(ctx)
 	case types.SettingKeyAgentToolApprovalTimeout, types.SettingKeyAgentToolApprovalFailOpen:
 		s.applyToolApprovalSettings(ctx)
+	case types.SettingKeyVLMHTTPTimeoutS,
+		types.SettingKeyEmbeddingBatchSize,
+		types.SettingKeyLanguageDefault,
+		types.SettingKeyStorageAllowList:
+		s.applyDeepPackageBridges(ctx)
 	case types.SettingKeyTenantEnableRBAC, types.SettingKeyTenantEnableCrossTenantAccess:
 		// 这两项已落库并审计，但刻意不推送：消费方读的是 *config.Config
 		// 单例上的裸字段，运行期写入会与请求路径上的读取构成 data race，

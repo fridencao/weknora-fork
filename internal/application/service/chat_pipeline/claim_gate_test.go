@@ -18,8 +18,8 @@ func TestAnalyzeClaims_NumericCrossCheck(t *testing.T) {
 	report := AnalyzeClaims(answer, evidence)
 
 	require.Equal(t, 3, report.Total)
-	require.Equal(t, 2, report.Grounded)             // 前两句数值均可复核
-	require.Equal(t, 1, report.NumericMismatch)      // "500" 无证据
+	require.Equal(t, 2, report.Grounded)        // 前两句数值均可复核
+	require.Equal(t, 1, report.NumericMismatch) // "500" 无证据
 	require.Len(t, report.Claims[2].Numbers, 1)
 	require.Equal(t, "500", report.Claims[2].Numbers[0])
 	require.InDelta(t, 2.0/3.0, report.GroundingCoverage, 1e-9)

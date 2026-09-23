@@ -18,9 +18,23 @@ func Supported() []string {
 
 // AllowedMap returns which providers are permitted by STORAGE_ALLOW_LIST.
 func AllowedMap() map[string]bool {
-	raw := strings.TrimSpace(os.Getenv(AllowListEnv))
 	allowed := make(map[string]bool, len(supported))
 
+	// system_settings (pushed) > ENV. A pushed list is already normalised
+	// and non-empty (SetStorageAllowList clears on empty).
+	if p := allowListOverride.Load(); p != nil {
+		for _, provider := range *p {
+			for _, name := range supported {
+				if provider == name {
+					allowed[name] = true
+					break
+				}
+			}
+		}
+		return allowed
+	}
+
+	raw := strings.TrimSpace(os.Getenv(AllowListEnv))
 	if raw == "" {
 		for _, provider := range supported {
 			allowed[provider] = true

@@ -41,6 +41,10 @@ var migratedSettingKeys = []string{
 	types.SettingKeyChatAttachmentOCRMaxPages,
 	types.SettingKeyChatAttachmentOCRConcurrency,
 	types.SettingKeyChatAttachmentWaitTimeoutS,
+	types.SettingKeyVLMHTTPTimeoutS,
+	types.SettingKeyEmbeddingBatchSize,
+	types.SettingKeyLanguageDefault,
+	types.SettingKeyStorageAllowList,
 }
 
 // TestMigratedSettingsRegistered 每个迁移键都必须在注册表里，
@@ -71,6 +75,10 @@ func TestMigratedSettingsRegistered(t *testing.T) {
 		types.SettingKeyChatAttachmentOCRMaxPages:     types.SettingEnvChatAttachmentOCRMaxPages,
 		types.SettingKeyChatAttachmentOCRConcurrency:  types.SettingEnvChatAttachmentOCRConcurrency,
 		types.SettingKeyChatAttachmentWaitTimeoutS:    types.SettingEnvChatAttachmentWaitTimeoutS,
+		types.SettingKeyVLMHTTPTimeoutS:               types.SettingEnvVLMHTTPTimeoutS,
+		types.SettingKeyEmbeddingBatchSize:            types.SettingEnvEmbeddingBatchSize,
+		types.SettingKeyLanguageDefault:               types.SettingEnvLanguageDefault,
+		types.SettingKeyStorageAllowList:              types.SettingEnvStorageAllowList,
 	}
 
 	for _, key := range migratedSettingKeys {

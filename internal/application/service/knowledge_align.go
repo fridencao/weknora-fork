@@ -26,9 +26,9 @@ import (
 const alignProvenanceTimeout = 120 * time.Second
 
 type alignProvenanceRequest struct {
-	KnowledgeID string                     `json:"knowledge_id"`
-	FileName    string                     `json:"file_name"`
-	Chunks      []alignProvenanceChunkIn   `json:"chunks"`
+	KnowledgeID string                   `json:"knowledge_id"`
+	FileName    string                   `json:"file_name"`
+	Chunks      []alignProvenanceChunkIn `json:"chunks"`
 }
 
 type alignProvenanceChunkIn struct {

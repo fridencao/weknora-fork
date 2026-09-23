@@ -133,7 +133,8 @@ func rescaleUnboundedScores(results []*types.IndexWithScore) {
 // fuseWithRRF merges vector, keyword and (optional) graph retrieval results using
 // Reciprocal Rank Fusion.
 // RRF score = vectorWeight/(k+vectorRank) + keywordWeight/(k+keywordRank)
-//           + graphWeight/(k+graphRank).
+//   - graphWeight/(k+graphRank).
+//
 // k, the weights and the graph weight are sourced from retrievalCfg (with defaults).
 // The merged results are sorted by RRF score descending.
 func fuseWithRRF(ctx context.Context, vectorResults, keywordResults, graphResults []*types.IndexWithScore, retrievalCfg *types.RetrievalConfig) []*types.IndexWithScore {

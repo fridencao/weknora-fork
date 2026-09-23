@@ -29,6 +29,10 @@ const (
 // the VLM_HTTP_TIMEOUT_SECONDS env var when set (and positive), falling back to
 // defaultTimeout otherwise. Shared by all OpenAI-compatible VLM backends.
 func vlmHTTPTimeout() time.Duration {
+	// system_settings (pushed) > ENV > default.
+	if ns := vlmHTTPTimeoutOverride.Load(); ns > 0 {
+		return time.Duration(ns)
+	}
 	if v := strings.TrimSpace(os.Getenv("VLM_HTTP_TIMEOUT_SECONDS")); v != "" {
 		if secs, err := strconv.Atoi(v); err == nil && secs > 0 {
 			return time.Duration(secs) * time.Second

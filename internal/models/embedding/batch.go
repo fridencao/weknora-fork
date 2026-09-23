@@ -24,28 +24,41 @@ type textEmbedding struct {
 	results []float32
 }
 
+// defaultBatchEmbedSize is the last-resort batch size when neither the
+// model row, the pushed setting, nor the env var supplies one.
+const defaultBatchEmbedSize = 5
+
+// resolveBatchEmbedSize applies the documented precedence:
+//
+//	model row GetBatchEmbedSize()  >  pushed setting  >  ENV  >  default
+//
+// The model row stays on top: it is a per-model tuning decision recorded
+// next to the model definition, not a deployment-wide default. The pushed
+// value is the system_settings tier; ENV is the middle tier of the 3-tier
+// resolver, kept so an emergency override still works.
+func resolveBatchEmbedSize(model Embedder) int {
+	if p, ok := model.(interface{ GetBatchEmbedSize() int }); ok {
+		if v := p.GetBatchEmbedSize(); v > 0 {
+			return v
+		}
+	}
+	if n := batchEmbedSizeOverride.Load(); n > 0 {
+		return int(n)
+	}
+	if s := os.Getenv("BATCH_EMBED_SIZE"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultBatchEmbedSize
+}
+
 func (e *batchEmbedder) BatchEmbedWithPool(ctx context.Context, model Embedder, texts []string) ([][]float32, error) {
 	// Create goroutine pool for concurrent processing of document chunks
 	var wg sync.WaitGroup
 	var mu sync.Mutex  // For synchronizing access to error
 	var firstErr error // Record the first error that occurs
-	// 批次大小优先级：模型行调优 GetBatchEmbedSize > 环境变量 BATCH_EMBED_SIZE > 默认 5
-	batchSize := 0
-	if p, ok := model.(interface{ GetBatchEmbedSize() int }); ok {
-		if v := p.GetBatchEmbedSize(); v > 0 {
-			batchSize = v
-		}
-	}
-	if batchSize <= 0 {
-		if s := os.Getenv("BATCH_EMBED_SIZE"); s != "" {
-			if n, err := strconv.Atoi(s); err == nil && n > 0 {
-				batchSize = n
-			}
-		}
-	}
-	if batchSize <= 0 {
-		batchSize = 5
-	}
+	batchSize := resolveBatchEmbedSize(model)
 	textEmbeddings := utils.MapSlice(texts, func(text string) *textEmbedding {
 		return &textEmbedding{text: text}
 	})

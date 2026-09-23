@@ -81,8 +81,8 @@ func TestCollectGraphEvidence_FiltersAndDedupes(t *testing.T) {
 	}{
 		{ChunkID: realKey, Content: "<!--sbk:p001-b001-->"},
 		{ChunkID: otherDocID + "-chunk-003", Content: "<!--sbk:p002-b001-->"}, // KB 范围外
-		{ChunkID: realKey, Content: "<!--sbk:p001-b001-->"},                  // 重复 key
-		{ChunkID: "garbage", Content: "<!--sbk:p003-b001-->"},                // 键非法
+		{ChunkID: realKey, Content: "<!--sbk:p001-b001-->"},                   // 重复 key
+		{ChunkID: "garbage", Content: "<!--sbk:p003-b001-->"},                 // 键非法
 	}
 
 	refs := CollectGraphEvidence(data, map[string]struct{}{realDocID: {}})
