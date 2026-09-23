@@ -136,8 +136,11 @@ func BuildContainer(container *dig.Container) *dig.Container {
 
 	must(container.Invoke(registerLangfuseCleanup))
 
-	// Register goroutine pool cleanup handler
-	must(container.Invoke(registerPoolCleanup))
+	// 注意：registerPoolCleanup 的 Invoke 刻意不在这里做。Invoke 会立即
+	// 解析依赖图，而本阶段只注册了核心基建 provider——initAntsPool 现在还
+	// 依赖 systemSettingService（task.pool_size，见 initAntsPool 注释），
+	// 其 Provide 在下方才注册，过早 Invoke 会 panic「missing type」。
+	// 该 Invoke 已挪到文件末尾与其它 start*/register* 同区。
 
 	// Initialize retrieval engine registry for search capabilities
 	logger.Debugf(ctx, "[Container] Registering retrieval engine registry...")
@@ -468,6 +471,11 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Invoke(startDataSourceScheduler))
 	logger.Debugf(ctx, "[Container] Data source sync framework registered")
 	must(container.Invoke(startAuditLogRetention))
+
+	// Register goroutine pool cleanup handler（从核心基建区挪来：
+	// initAntsPool 依赖 systemSettingService，必须等其 Provide 注册后再
+	// Invoke——见上方 initAntsPool 注册处的注释）。
+	must(container.Invoke(registerPoolCleanup))
 	logger.Debugf(ctx, "[Container] Audit log retention runner registered")
 	must(container.Provide(service.NewHousekeepingService))
 	must(container.Invoke(startHousekeepingService))
