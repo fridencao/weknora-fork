@@ -45,6 +45,8 @@ var migratedSettingKeys = []string{
 	types.SettingKeyEmbeddingBatchSize,
 	types.SettingKeyLanguageDefault,
 	types.SettingKeyStorageAllowList,
+	types.SettingKeyAuditRetentionDays,
+	types.SettingKeyTaskPoolSize,
 }
 
 // TestMigratedSettingsRegistered 每个迁移键都必须在注册表里，
@@ -79,6 +81,8 @@ func TestMigratedSettingsRegistered(t *testing.T) {
 		types.SettingKeyEmbeddingBatchSize:            types.SettingEnvEmbeddingBatchSize,
 		types.SettingKeyLanguageDefault:               types.SettingEnvLanguageDefault,
 		types.SettingKeyStorageAllowList:              types.SettingEnvStorageAllowList,
+		types.SettingKeyAuditRetentionDays:            types.SettingEnvAuditRetentionDays,
+		types.SettingKeyTaskPoolSize:                  types.SettingEnvTaskPoolSize,
 	}
 
 	for _, key := range migratedSettingKeys {

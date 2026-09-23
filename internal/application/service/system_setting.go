@@ -566,6 +566,23 @@ var registry = map[string]settingSpec{
 		Description: "允许使用的存储后端白名单（local/minio/cos/tos/s3/oss/ks3/obs）。" +
 			"留空表示全部允许。用于把部署限制在合规的存储后端上。",
 	},
+	"audit.retention_days": {
+		Type:     "int",
+		EnvName:  "WEKNORA_AUDIT_RETENTION_DAYS",
+		Default:  int64(90),
+		Category: "audit",
+		Description: "审计日志保留天数，超期自动清理；0 表示禁用清理（自行归档的" +
+			"合规场景）。默认 90。改动在下次巡检（每日一次）时生效，无需重启。",
+	},
+	"task.pool_size": {
+		Type:     "int",
+		EnvName:  "CONCURRENCY_POOL_SIZE",
+		Default:  int64(5),
+		Category: "task",
+		Description: "异步任务（文档解析等）的并发协程池大小。调大提高吞吐，" +
+			"但占用更多 CPU/内存与下游配额。默认 5。该值在进程启动时绑定，" +
+			"改动需重启服务进程方可生效。",
+	},
 }
 
 // systemSettingService wires the repository, audit log, and (P2)
@@ -839,15 +856,24 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 		types.SettingKeyLanguageDefault,
 		types.SettingKeyStorageAllowList:
 		s.applyDeepPackageBridges(ctx)
+	case types.SettingKeyTaskPoolSize:
+		s.logRestartRequiredSetting(ctx, changedKey)
 	case types.SettingKeyTenantEnableRBAC, types.SettingKeyTenantEnableCrossTenantAccess:
 		// 这两项已落库并审计，但刻意不推送：消费方读的是 *config.Config
 		// 单例上的裸字段，运行期写入会与请求路径上的读取构成 data race，
 		// 而它们是安全门禁。由 cmd/server/bootstrap.go 在下次启动时应用。
 		// 这里留一条日志，避免运维以为「保存了就已经生效」。
-		logger.Infof(ctx,
-			"[system_settings] %q 已保存，但该值在进程启动时绑定；"+
-				"需重启服务进程方可生效（当前运行值保持不变）", changedKey)
+		s.logRestartRequiredSetting(ctx, changedKey)
 	}
+}
+
+// logRestartRequiredSetting 输出「已保存但需重启」的提示。消费方读的是
+// 进程启动时绑定的值（config 单例字段或一次性构造的组件），运行期写入
+// 不生效；留这条日志避免运维以为「保存了就已经生效」。
+func (s *systemSettingService) logRestartRequiredSetting(ctx context.Context, key string) {
+	logger.Infof(ctx,
+		"[system_settings] %q 已保存，但该值在进程启动时绑定；"+
+			"需重启服务进程方可生效（当前运行值保持不变）", key)
 }
 
 // applySSRFWhitelist resolves the active ssrf.whitelist via the 3-tier

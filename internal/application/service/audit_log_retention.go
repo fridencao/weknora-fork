@@ -8,6 +8,7 @@ import (
 
 	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/logger"
+	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
@@ -22,7 +23,10 @@ import (
 // to disable retention entirely. Validation happens at config-load
 // time so by the time we're here a non-positive value is intentional.
 type AuditLogRetentionRunner struct {
-	svc           interfaces.AuditLogService
+	svc      interfaces.AuditLogService
+	settings interfaces.SystemSettingService
+	// retentionDays is the config.yaml tier, kept as the resolver's def;
+	// the effective value is resolved per sweep (see runOnce).
 	retentionDays int
 	interval      time.Duration
 
@@ -37,6 +41,10 @@ type AuditLogRetentionRunner struct {
 	// init failure, test setup that skips Start) would deadlock Stop()
 	// on a doneCh nobody ever closes.
 	started atomic.Bool
+
+	// retentionSource is best-effort provenance for the last resolved
+	// value, used in startup logs only.
+	retentionSource string
 }
 
 // auditLogPurgeInterval is the gap between sweeps. 24h is enough for
@@ -54,13 +62,15 @@ const auditLogPurgeInterval = 24 * time.Hour
 const auditLogPurgeStartupDelay = 10 * time.Minute
 
 // NewAuditLogRetentionRunner constructs the runner with production
-// defaults. retention_days is read from the config; passing the full
-// *config.Config (rather than just an int) keeps the dig wiring trivial
-// — it's the same shape as every other config-aware constructor in
-// the container. The constructor only validates inputs; nothing fires
-// until Start is called.
+// defaults. retention_days resolves per sweep from system_settings
+// (audit.retention_days), falling back through the env var to the
+// config.yaml value baked in at startup — so a UI edit lands on the next
+// sweep (≤24h) without a restart. Passing the full *config.Config keeps
+// the dig wiring trivial and supplies the YAML tier as the resolver's
+// def. The constructor only stores wiring; nothing fires until Start.
 func NewAuditLogRetentionRunner(
 	cfg *config.Config, svc interfaces.AuditLogService,
+	settings interfaces.SystemSettingService,
 ) *AuditLogRetentionRunner {
 	retentionDays := 0
 	if cfg != nil && cfg.Audit != nil {
@@ -68,6 +78,7 @@ func NewAuditLogRetentionRunner(
 	}
 	return &AuditLogRetentionRunner{
 		svc:           svc,
+		settings:      settings,
 		retentionDays: retentionDays,
 		interval:      auditLogPurgeInterval,
 		stopCh:        make(chan struct{}),
@@ -85,17 +96,46 @@ func (r *AuditLogRetentionRunner) Start(ctx context.Context) {
 	}
 	r.startOnce.Do(func() {
 		r.started.Store(true)
-		if r.retentionDays <= 0 {
+		// 刻意不在启动期因 retention<=0 休眠：生效值每次 sweep 动态解析，
+		// 运维中途把 0 改成 90（或反之）都应在下个 sweep 生效，而不是
+		// 被启动时那一次判断锁死。
+		days := r.effectiveRetentionDays(ctx)
+		if days <= 0 {
 			logger.Infof(ctx,
-				"[audit-retention] disabled (retention_days=%d)", r.retentionDays)
-			close(r.doneCh)
-			return
+				"[audit-retention] sweep loop started, purge currently disabled "+
+					"(retention_days=%d from %s)", days, r.retentionSource)
+		} else {
+			logger.Infof(ctx,
+				"[audit-retention] starting daily sweep: retention_days=%d (from %s) interval=%s",
+				days, r.retentionSource, r.interval)
 		}
-		logger.Infof(ctx,
-			"[audit-retention] starting daily sweep: retention_days=%d interval=%s",
-			r.retentionDays, r.interval)
 		go r.loop()
 	})
+
+}
+
+// retentionSource records where the last resolved value came from, for
+// startup logging. Not authoritative — resolved fresh each sweep.
+var _ = ""
+
+// effectiveRetentionDays resolves the effective retention window for the
+// current sweep: DB system_settings > ENV > config.yaml > 0 (disabled).
+func (r *AuditLogRetentionRunner) effectiveRetentionDays(ctx context.Context) int {
+	def := r.retentionDays
+	if r.settings == nil {
+		r.retentionSource = "config.yaml"
+		return def
+	}
+	v := r.settings.GetInt(ctx,
+		types.SettingKeyAuditRetentionDays, types.SettingEnvAuditRetentionDays, int64(def))
+	if v == int64(def) {
+		// GetInt 无法区分「DB 恰好等于 def」与「未设置回落 def」；
+		// 仅用于日志措辞，不影响行为。
+		r.retentionSource = "settings/env/config(等值)"
+	} else {
+		r.retentionSource = "settings/env"
+	}
+	return int(v)
 }
 
 // Stop signals the loop to exit and blocks until it returns. Idempotent.
@@ -152,11 +192,18 @@ func (r *AuditLogRetentionRunner) runOnce() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	deleted, err := r.svc.Purge(ctx, r.retentionDays)
+	days := r.effectiveRetentionDays(ctx)
+	if days <= 0 {
+		logger.Debugf(ctx,
+			"[audit-retention] purge disabled (retention_days=%d), sweep skipped", days)
+		return
+	}
+
+	deleted, err := r.svc.Purge(ctx, days)
 	if err != nil {
 		logger.Warnf(ctx,
 			"[audit-retention] sweep failed: retention_days=%d err=%v",
-			r.retentionDays, err)
+			days, err)
 		return
 	}
 	if deleted > 0 {
@@ -166,6 +213,6 @@ func (r *AuditLogRetentionRunner) runOnce() {
 	} else {
 		logger.Debugf(ctx,
 			"[audit-retention] sweep complete: deleted=0 retention_days=%d",
-			r.retentionDays)
+			days)
 	}
 }

@@ -132,6 +132,14 @@ const (
 	SettingKeyEmbeddingBatchSize = "embedding.batch_size"
 	SettingEnvEmbeddingBatchSize = "BATCH_EMBED_SIZE"
 
+	// SettingKeyAuditRetentionDays 审计日志保留天数（0 禁用清理，默认 90）。
+	SettingKeyAuditRetentionDays = "audit.retention_days"
+	SettingEnvAuditRetentionDays = "WEKNORA_AUDIT_RETENTION_DAYS"
+
+	// SettingKeyTaskPoolSize 异步任务协程池大小（默认 5，需重启生效）。
+	SettingKeyTaskPoolSize = "task.pool_size"
+	SettingEnvTaskPoolSize = "CONCURRENCY_POOL_SIZE"
+
 	// SettingKeyLanguageDefault 默认语言区域（如 zh-CN / en-US，默认 zh-CN）。
 	SettingKeyLanguageDefault = "language.default"
 	SettingEnvLanguageDefault = "WEKNORA_LANGUAGE"

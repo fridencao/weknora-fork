@@ -1594,15 +1594,25 @@ func loadDBStoresIntoRegistry(
 // Returns:
 //   - Configured goroutine pool
 //   - Error if initialization fails
-func initAntsPool(cfg *config.Config) (*ants.Pool, error) {
-	// Default to 5 if not specified in config
-	poolSize := os.Getenv("CONCURRENCY_POOL_SIZE")
-	if poolSize == "" {
-		poolSize = "5"
-	}
-	poolSizeInt, err := strconv.Atoi(poolSize)
-	if err != nil {
-		return nil, err
+//
+// initAntsPool resolves the pool size from system_settings (task.pool_size)
+// at construction — the 3-tier resolver's pre-warmup path reads the DB
+// directly, so the value is correct even though preload is async. The pool
+// is created once, so a later edit needs a process restart to take effect
+// (registry RequiresRestart: true).
+//
+// 行为差异说明：旧实现里环境变量是非法字符串会直接让启动失败；现在统一按
+// 三层解析的语义回落默认并告警。无效值不再阻断启动，与其它数值键一致。
+func initAntsPool(
+	cfg *config.Config, settings interfaces.SystemSettingService,
+) (*ants.Pool, error) {
+	poolSizeInt := int(settings.GetInt(context.Background(),
+		types.SettingKeyTaskPoolSize, types.SettingEnvTaskPoolSize, 5))
+	if poolSizeInt < 1 {
+		logger.Warnf(context.Background(),
+			"[container] task.pool_size resolved to %d (<1), falling back to 5",
+			poolSizeInt)
+		poolSizeInt = 5
 	}
 	// Set up the pool with pre-allocation for better performance
 	return ants.NewPool(poolSizeInt, ants.WithPreAlloc(true))
