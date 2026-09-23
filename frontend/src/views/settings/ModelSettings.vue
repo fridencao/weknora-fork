@@ -370,6 +370,10 @@ function convertToLegacyFormat(model: ModelConfig) {
     supportsVision: model.parameters.supports_vision || false,
     contextWindow: model.parameters.context_window || undefined,
     maxConcurrency: model.parameters.max_concurrency,
+    embedBatchSize: model.parameters.embed_batch_size,
+    embedRetryAttempts: model.parameters.embed_retry_attempts,
+    embedRetryBaseDelayMs: model.parameters.embed_retry_base_delay_ms,
+    embedRateLimitDelayMs: model.parameters.embed_rate_limit_delay_ms,
     maxOutputTokens: model.parameters.max_output_tokens || undefined,
     customHeaders: model.parameters.custom_headers
       ? Object.entries(model.parameters.custom_headers).map(([key, value]) => ({ key, value: String(value) }))
@@ -686,6 +690,16 @@ const handleModelSave = async (modelData: any) => {
         ...(['chat', 'embedding', 'vllm'].includes(saveType)
           && Number(modelData.maxConcurrency) > 0
           ? { max_concurrency: Number(modelData.maxConcurrency) }
+          : {}),
+        // 向量嵌入调优（仅 embedding）：批次大小/重试次数/退避基数/限流退避，
+        // 0/空=沿用后端默认。治理方舟 plan 等账号级 RPM 严格供应商的 429。
+        ...(saveType === 'embedding'
+          ? {
+              ...(Number(modelData.embedBatchSize) > 0 ? { embed_batch_size: Math.round(Number(modelData.embedBatchSize)) } : {}),
+              ...(Number(modelData.embedRetryAttempts) > 0 ? { embed_retry_attempts: Math.round(Number(modelData.embedRetryAttempts)) } : {}),
+              ...(Number(modelData.embedRetryBaseDelayMs) > 0 ? { embed_retry_base_delay_ms: Math.round(Number(modelData.embedRetryBaseDelayMs)) } : {}),
+              ...(Number(modelData.embedRateLimitDelayMs) > 0 ? { embed_rate_limit_delay_ms: Math.round(Number(modelData.embedRateLimitDelayMs)) } : {}),
+            }
           : {})
       }
     }

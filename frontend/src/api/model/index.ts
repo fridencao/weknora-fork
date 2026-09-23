@@ -63,6 +63,11 @@ export interface ModelConfig {
       truncate_prompt_tokens?: number;
       supports_dimension_override?: boolean;
     };
+    // 向量嵌入调优（治理后台向量化对限流敏感供应商的 429）：0/不填=后端默认
+    embed_batch_size?: number;
+    embed_retry_attempts?: number;
+    embed_retry_base_delay_ms?: number;
+    embed_rate_limit_delay_ms?: number;
     interface_type?: 'ollama' | 'openai'; // VLLM专用
     parameter_size?: string; // Ollama模型参数大小 (e.g., "7B", "13B", "70B")
     extra_config?: Record<string, string>; // Provider-specific configuration

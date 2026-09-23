@@ -29,13 +29,22 @@ func (e *batchEmbedder) BatchEmbedWithPool(ctx context.Context, model Embedder, 
 	var wg sync.WaitGroup
 	var mu sync.Mutex  // For synchronizing access to error
 	var firstErr error // Record the first error that occurs
-	batchSizeStr := os.Getenv("BATCH_EMBED_SIZE")
-	if batchSizeStr == "" {
-		batchSizeStr = "5"
+	// 批次大小优先级：模型行调优 GetBatchEmbedSize > 环境变量 BATCH_EMBED_SIZE > 默认 5
+	batchSize := 0
+	if p, ok := model.(interface{ GetBatchEmbedSize() int }); ok {
+		if v := p.GetBatchEmbedSize(); v > 0 {
+			batchSize = v
+		}
 	}
-	batchSize, err := strconv.Atoi(batchSizeStr)
-	if err != nil {
-		return nil, err
+	if batchSize <= 0 {
+		if s := os.Getenv("BATCH_EMBED_SIZE"); s != "" {
+			if n, err := strconv.Atoi(s); err == nil && n > 0 {
+				batchSize = n
+			}
+		}
+	}
+	if batchSize <= 0 {
+		batchSize = 5
 	}
 	textEmbeddings := utils.MapSlice(texts, func(text string) *textEmbedding {
 		return &textEmbedding{text: text}

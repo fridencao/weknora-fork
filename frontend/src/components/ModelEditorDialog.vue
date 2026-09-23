@@ -499,6 +499,34 @@
           </div>
         </div>
 
+        <!-- 向量嵌入调优：治理后台向量化对限流敏感供应商（如方舟 plan 账号级 RPM）的 429 -->
+        <div class="form-item">
+          <label class="form-label">{{ $t('model.editor.embedTuningLabel') }}</label>
+          <div class="embed-tuning-grid">
+            <div class="embed-tuning-field">
+              <label class="form-label">{{ $t('model.editor.embedBatchSize') }}</label>
+              <t-input-number v-model="formData.embedBatchSize" :min="0" :max="64" :step="1"
+                :placeholder="$t('model.editor.embedTuningDefault')" theme="normal" />
+            </div>
+            <div class="embed-tuning-field">
+              <label class="form-label">{{ $t('model.editor.embedRetryAttempts') }}</label>
+              <t-input-number v-model="formData.embedRetryAttempts" :min="0" :max="20" :step="1"
+                :placeholder="$t('model.editor.embedTuningDefault')" theme="normal" />
+            </div>
+            <div class="embed-tuning-field">
+              <label class="form-label">{{ $t('model.editor.embedRetryBaseDelayMs') }}</label>
+              <t-input-number v-model="formData.embedRetryBaseDelayMs" :min="0" :max="60000" :step="100"
+                :placeholder="$t('model.editor.embedTuningDefault')" theme="normal" />
+            </div>
+            <div class="embed-tuning-field">
+              <label class="form-label">{{ $t('model.editor.embedRateLimitDelayMs') }}</label>
+              <t-input-number v-model="formData.embedRateLimitDelayMs" :min="0" :max="120000" :step="500"
+                :placeholder="$t('model.editor.embedTuningDefault')" theme="normal" />
+            </div>
+          </div>
+          <p class="form-desc">{{ $t('model.editor.embedTuningDesc') }}</p>
+        </div>
+
         <!-- Chat / VLM: context window. Agent compaction sizes itself from this. -->
         <div v-if="activeModelType === 'chat' || activeModelType === 'vllm'" class="form-item">
           <label class="form-label">{{ $t('model.editor.contextWindowLabel') }}</label>
@@ -654,6 +682,11 @@ interface ModelFormData {
   contextWindow?: number
   /** 后台任务对该模型的并发上限；0/undefined 表示沿用全局默认。仅 chat/embedding/vllm 生效。 */
   maxConcurrency?: number
+  /** 向量嵌入调优（仅 embedding）：0/undefined 表示使用后端默认。 */
+  embedBatchSize?: number
+  embedRetryAttempts?: number
+  embedRetryBaseDelayMs?: number
+  embedRateLimitDelayMs?: number
   /** 对话/VLM 单次输出上限（token）。空/0 表示使用目录默认。 */
   maxOutputTokens?: number
   /**
@@ -1235,6 +1268,10 @@ const formData = ref<ModelFormData>({
   supportsVision: false,
   contextWindow: undefined,
   maxConcurrency: undefined,
+  embedBatchSize: undefined,
+  embedRetryAttempts: undefined,
+  embedRetryBaseDelayMs: undefined,
+  embedRateLimitDelayMs: undefined,
   maxOutputTokens: undefined,
   thinkingControl: '',
   extraConfig: {},
@@ -1521,6 +1558,10 @@ const resetForm = () => {
     supportsVision: false,
     contextWindow: undefined,
     maxConcurrency: undefined,
+    embedBatchSize: undefined,
+    embedRetryAttempts: undefined,
+    embedRetryBaseDelayMs: undefined,
+    embedRateLimitDelayMs: undefined,
     maxOutputTokens: undefined,
     thinkingControl: '',
     extraConfig: {},
@@ -2538,6 +2579,23 @@ const handleCancel = () => {
 }
 
 // 维度控制样式
+.embed-tuning-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 12px;
+
+  .embed-tuning-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .form-label {
+      font-size: var(--app-text-xs);
+      color: var(--td-text-color-secondary);
+    }
+  }
+}
+
 .dimension-control {
   display: flex;
   align-items: center;
