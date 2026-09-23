@@ -21,6 +21,10 @@ import (
 // minRetryBudget 截断重试时的最小预算基数（MaxTokens 未显式配置时按此起算）。
 const minRetryBudget = 4096
 
+// probeBudgetThreshold 显式配置的预算低于此值视为连通性探针——连接测试用
+// MaxTokens=1 探活，finish_reason=length 是探针的预期结果，不重试不报错。
+const probeBudgetThreshold = 256
+
 type lengthRetryChat struct {
 	next Chat
 }
@@ -30,6 +34,10 @@ func (c *lengthRetryChat) Chat(ctx context.Context, messages []Message,
 ) (*types.ChatResponse, error) {
 	resp, err := c.next.Chat(ctx, messages, opts)
 	if err != nil || resp == nil || resp.FinishReason != "length" {
+		return resp, err
+	}
+	// 探针预算（如连接测试的 MaxTokens=1）截断即预期，原样透传给调用方自行判定
+	if opts != nil && opts.MaxTokens > 0 && opts.MaxTokens < probeBudgetThreshold {
 		return resp, err
 	}
 

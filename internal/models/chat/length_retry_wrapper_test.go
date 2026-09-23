@@ -89,3 +89,19 @@ func TestLengthRetryNoOpOnStop(t *testing.T) {
 		t.Fatalf("expected single call, got %d", fake.calls)
 	}
 }
+
+// B2 补丁：显式小预算（连接测试 MaxTokens=1）是探针——length 原样透传，不重试不报错
+func TestLengthRetryPassesThroughProbeBudget(t *testing.T) {
+	fake := &fakeLengthChat{finishSeq: []string{"length"}}
+	c := &lengthRetryChat{next: fake}
+	resp, err := c.Chat(context.Background(), nil, &ChatOptions{MaxTokens: 1})
+	if err != nil {
+		t.Fatalf("probe budget should not error: %v", err)
+	}
+	if resp == nil || resp.FinishReason != "length" {
+		t.Fatalf("probe response should pass through, got %+v", resp)
+	}
+	if fake.calls != 1 {
+		t.Fatalf("probe must not retry, got %d calls", fake.calls)
+	}
+}
