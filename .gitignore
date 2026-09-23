@@ -63,3 +63,6 @@ miniprogram/project.private.config.json
 
 # Locally built BrowserSkill runtime and extension bundles
 /artifacts/browserskill/
+
+# 本地嵌入模型权重（embed_local 服务用，~4GB，经 ModelScope 下载）
+/models/
