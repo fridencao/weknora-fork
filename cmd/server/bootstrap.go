@@ -13,7 +13,9 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/logger"
+	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
@@ -52,6 +54,16 @@ func runStartupBootstrap(c *dig.Container) {
 		logger.Warnf(ctx, "[bootstrap] failed to resolve TenantAPIKeyService: %v", err)
 	}
 
+	// Tenant security gates: system_settings > env > config.yaml. Runs
+	// unconditionally and BEFORE the email early-return below, so a
+	// deployment that never sets the bootstrap admin var still gets the
+	// DB-backed values applied.
+	if err := c.Invoke(func(cfg *config.Config, svc interfaces.SystemSettingService) {
+		applyTenantSettingOverrides(ctx, cfg, svc)
+	}); err != nil {
+		logger.Warnf(ctx, "[bootstrap] failed to apply tenant setting overrides: %v", err)
+	}
+
 	email := strings.TrimSpace(os.Getenv(bootstrapEnvVar))
 	if email == "" {
 		return
@@ -64,6 +76,70 @@ func runStartupBootstrap(c *dig.Container) {
 	}); err != nil {
 		logger.Warnf(ctx, "[bootstrap] failed to resolve UserService: %v", err)
 	}
+}
+
+// applyTenantSettingOverrides pushes the two tenant security gates from
+// system_settings onto the live *config.Config singleton.
+//
+// Why this runs here rather than in systemSettingService:
+//
+//	The consumers of these two flags are the RBAC middleware and the
+//	router guards, and they read plain struct fields off the shared
+//	*config.Config (rbacGuards{cfg} holds the dig singleton pointer).
+//	There is no call site that could resolve the setting itself, and
+//	LoadConfig runs long before the DB is reachable.
+//
+// Why not in systemSettingService.preload (which already pushes several
+// settings into package-level overrides):
+//
+//	preload runs in its own goroutine and can land *after* the listener
+//	binds, so writing these fields there would race with the request
+//	path's reads. These are security gates, so "bool reads are atomic in
+//	practice" is not good enough. runStartupBootstrap is called after
+//	BuildContainer (which migrates the DB) but before the HTTP listener
+//	binds, so at this point there are no concurrent readers.
+//
+// The `def` passed to GetBool is the value already resolved from
+// config.yaml + env, which makes the effective chain:
+//
+//	system_settings  >  env  >  config.yaml / built-in default
+//
+// so deployments that configure these via config.yaml keep working, and
+// the env override documented in .env.example still wins over the file.
+//
+// Because the write happens only here, changing either key in the UI
+// takes effect on the next restart — matching RequiresRestart: true on
+// the registry entries (systemSettingService.dispatchSideEffects logs a
+// reminder instead of pushing).
+func applyTenantSettingOverrides(
+	ctx context.Context,
+	cfg *config.Config,
+	svc interfaces.SystemSettingService,
+) {
+	if cfg == nil || cfg.Tenant == nil {
+		return
+	}
+
+	// IsRBACEnforced() folds "nil pointer" into the built-in default
+	// (true), so an unset config.yaml field behaves as before.
+	rbac := svc.GetBool(
+		ctx,
+		types.SettingKeyTenantEnableRBAC,
+		types.SettingEnvTenantEnableRBAC,
+		cfg.Tenant.IsRBACEnforced(),
+	)
+	cfg.Tenant.EnableRBAC = &rbac
+
+	cfg.Tenant.EnableCrossTenantAccess = svc.GetBool(
+		ctx,
+		types.SettingKeyTenantEnableCrossTenantAccess,
+		types.SettingEnvTenantEnableCrossTenantAccess,
+		cfg.Tenant.EnableCrossTenantAccess,
+	)
+
+	logger.Infof(ctx,
+		"[bootstrap] tenant gates: enable_rbac=%t enable_cross_tenant_access=%t "+
+			"(source: system_settings > env > config.yaml)", rbac, cfg.Tenant.EnableCrossTenantAccess)
 }
 
 // bootstrapSystemAdmin promotes the user identified by `email` to system

@@ -69,9 +69,22 @@ const (
 	SettingKeyDocumentProcessTimeout = "document.process_timeout"
 	SettingEnvDocumentProcessTimeout = "WEKNORA_DOCUMENT_PROCESS_TIMEOUT"
 
-	// 注：tenant.enable_rbac / tenant.enable_cross_tenant_access 未纳入批一。
-	// 它们由 LoadConfig 在启动期绑定进 *config.Config 单例，中间件直接读字段；
-	// 改成 DB 驱动需要「DB 就绪后、开始服务前」的同步应用点，留待批二。
+	// SettingKeyTenantEnableRBAC 空间级 RBAC 鉴权开关。
+	//
+	// 与批一其余键的差别：它的消费方（中间件 / 路由）读的是
+	// *config.Config 单例上的字段，而不是在调用点解析。LoadConfig 阶段 DB
+	// 尚不可达，因此由 cmd/server/bootstrap.go 的启动钩子在「迁移完成、
+	// 监听端口之前」同步写入 cfg。改动需重启进程方可生效。
+	//
+	// 内置默认 true：TenantConfig.IsRBACEnforced() 对 nil 指针返回 true，
+	// applyAuthAndTenantDefaults 亦落 true（仅建议单机私有化部署时关掉）。
+	SettingKeyTenantEnableRBAC = "tenant.enable_rbac"
+	SettingEnvTenantEnableRBAC = "WEKNORA_TENANT_ENABLE_RBAC"
+
+	// SettingKeyTenantEnableCrossTenantAccess 跨空间访问开关（默认 false）。
+	// 生效路径同 SettingKeyTenantEnableRBAC。
+	SettingKeyTenantEnableCrossTenantAccess = "tenant.enable_cross_tenant_access"
+	SettingEnvTenantEnableCrossTenantAccess = "WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS"
 
 	// SettingDefaultReliabilityWeight 可靠度权重内置默认（ADR-005 下限）。
 	SettingDefaultReliabilityWeight = 0.25

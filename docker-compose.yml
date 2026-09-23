@@ -153,9 +153,9 @@ services:
       # 是否允许普通用户登录后主动创建空间（默认 true；false 仅能邀请加入，超管不受影响）
       - WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED=${WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED:-true}
       # 启用跨空间访问（需配合用户的 CanAccessAllTenants 权限；默认 false）
-      # 注：这两项是安全门禁，值在进程启动时绑定进配置单例，暂未迁入系统设置
-      # （见批二计划：需要「DB 就绪后、开始服务前」的同步应用点）。
-      - WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS=${WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS:-false}
+      # 已迁到系统设置 tenant.enable_cross_tenant_access。
+      # 生效时机：进程启动时由 bootstrap 钩子写入配置单例，故改动需重启；
+      # 应急仍可用本环境变量覆盖（优先级：系统设置 > 环境变量 > config.yaml）。
       # 新建空间默认存储配额（GB，默认 10）
       - WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB=${WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB:-10}
       # 空间邀请链接 TTL（Go duration，默认 168h=7 天）
@@ -359,13 +359,13 @@ services:
       # Agent LLM 超时与 MCP 工具审批策略已迁到系统设置
       # （agent.llm_timeout / agent.tool_approval_timeout / agent.tool_approval_fail_open）。
       # Tenant / RBAC（详见 docs/RBAC说明.md 与 .env.example 注释）
-      # - WEKNORA_TENANT_ENABLE_RBAC: 是否启用空间角色强制鉴权（true / false），默认 true
-      #   （安全门禁，启动期绑定；暂未迁入系统设置，见批二计划）
+      # - WEKNORA_TENANT_ENABLE_RBAC: 已迁到系统设置 tenant.enable_rbac（默认 true）。
+      #   生效时机：进程启动时由 bootstrap 钩子写入配置单例，故改动需重启；
+      #   应急仍可用本环境变量覆盖（优先级：系统设置 > 环境变量 > config.yaml）。
       # - WEKNORA_TENANT_MAX_OWNED_PER_USER: 单个非超管自助创建空间的上限
       #   >0 强制限额；=0 走 handler 默认；<0 关闭限额（不建议共享部署使用）
       # - WEKNORA_TENANT_AUTO_CREATE_API_KEY: 创建空间时自动生成 full_access API Key 并在响应中返回 token
       #   （兼容旧版默认下发 API Key 行为，破坏性变更回退开关；true / false，默认 false）
-      - WEKNORA_TENANT_ENABLE_RBAC=${WEKNORA_TENANT_ENABLE_RBAC:-}
       - WEKNORA_TENANT_MAX_OWNED_PER_USER=${WEKNORA_TENANT_MAX_OWNED_PER_USER:-}
       - WEKNORA_TENANT_AUTO_CREATE_API_KEY=${WEKNORA_TENANT_AUTO_CREATE_API_KEY:-}
       - WEKNORA_ASYNQ_CORE_CONCURRENCY=${WEKNORA_ASYNQ_CORE_CONCURRENCY:-8}

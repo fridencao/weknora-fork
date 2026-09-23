@@ -441,13 +441,32 @@ var registry = map[string]settingSpec{
 			"支持 Go duration 写法。修改后立即生效，无需重启。",
 	},
 
-	// 注：tenant.enable_rbac / tenant.enable_cross_tenant_access 暂未纳入。
-	// 它们是安全门禁，值在 LoadConfig 启动期绑定进 *config.Config 单例，由
-	// 中间件与路由直接读字段（EnableCrossTenantAccess 是裸 bool，4 处直读）。
-	// 要改成 DB 驱动，必须在「DB 初始化完成、开始对外服务之前」同步应用一次；
-	// 而 systemSettingService.preload 是异步的，写入会与请求路径上的读取构成
-	// data race。留到批二连同启动期应用点一起设计，避免出现「界面能改、实际
-	// 不生效」的空壳配置。
+	// 租户安全门禁。与其余 RequiresRestart 键的区别：asynq.* 那批由消费方在
+	// 构造时调用 GetInt 读取（resolveRaw 的 pre-warmup 路径保证 DB 可达），
+	// 而这两项的消费方是中间件与路由，读的是 *config.Config 单例上的字段，
+	// 无法在调用点解析。因此由 cmd/server/bootstrap.go 的启动钩子在
+	// 「迁移完成、监听端口之前」同步写入 cfg —— 那个时点没有并发读者，写入
+	// 是安全的；这也是它们必须 RequiresRestart 的原因（运行期改不会推送）。
+	"tenant.enable_rbac": {
+		Type:            "bool",
+		EnvName:         "WEKNORA_TENANT_ENABLE_RBAC",
+		Default:         true,
+		Category:        "tenant",
+		RequiresRestart: true,
+		Description: "是否启用空间级角色强制鉴权。关闭时空间内的角色检查只记录不拦截" +
+			"（跨空间访问始终拦截），仅建议单机私有化部署使用。默认 true。" +
+			"该值在进程启动时绑定，修改后需重启服务方可生效。",
+	},
+	"tenant.enable_cross_tenant_access": {
+		Type:            "bool",
+		EnvName:         "WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS",
+		Default:         false,
+		Category:        "tenant",
+		RequiresRestart: true,
+		Description: "是否允许跨空间访问（需同时具备 CanAccessAllTenants 权限，" +
+			"两者都为真才放行）。默认 false。该值在进程启动时绑定，修改后需重启" +
+			"服务方可生效。",
+	},
 }
 
 // systemSettingService wires the repository, audit log, and (P2)
@@ -682,6 +701,14 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 		s.applyDockerBackendEnabled(ctx)
 	case types.SettingKeyAgentToolApprovalTimeout, types.SettingKeyAgentToolApprovalFailOpen:
 		s.applyToolApprovalSettings(ctx)
+	case types.SettingKeyTenantEnableRBAC, types.SettingKeyTenantEnableCrossTenantAccess:
+		// 这两项已落库并审计，但刻意不推送：消费方读的是 *config.Config
+		// 单例上的裸字段，运行期写入会与请求路径上的读取构成 data race，
+		// 而它们是安全门禁。由 cmd/server/bootstrap.go 在下次启动时应用。
+		// 这里留一条日志，避免运维以为「保存了就已经生效」。
+		logger.Infof(ctx,
+			"[system_settings] %q 已保存，但该值在进程启动时绑定；"+
+				"需重启服务进程方可生效（当前运行值保持不变）", changedKey)
 	}
 }
 

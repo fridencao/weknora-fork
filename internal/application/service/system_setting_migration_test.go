@@ -32,6 +32,8 @@ var migratedSettingKeys = []string{
 	types.SettingKeyAgentToolApprovalFailOpen,
 	types.SettingKeyDocreaderCallTimeout,
 	types.SettingKeyDocumentProcessTimeout,
+	types.SettingKeyTenantEnableRBAC,
+	types.SettingKeyTenantEnableCrossTenantAccess,
 }
 
 // TestMigratedSettingsRegistered 每个迁移键都必须在注册表里，
@@ -53,6 +55,8 @@ func TestMigratedSettingsRegistered(t *testing.T) {
 		types.SettingKeyAgentToolApprovalFailOpen:     types.SettingEnvAgentToolApprovalFailOpen,
 		types.SettingKeyDocreaderCallTimeout:          types.SettingEnvDocreaderCallTimeout,
 		types.SettingKeyDocumentProcessTimeout:        types.SettingEnvDocumentProcessTimeout,
+		types.SettingKeyTenantEnableRBAC:              types.SettingEnvTenantEnableRBAC,
+		types.SettingKeyTenantEnableCrossTenantAccess: types.SettingEnvTenantEnableCrossTenantAccess,
 	}
 
 	for _, key := range migratedSettingKeys {
