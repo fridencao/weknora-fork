@@ -13,6 +13,11 @@ type ReadRequest struct {
 	ParserEngine          string
 	RequestID             string
 	ParserEngineOverrides map[string]string
+	// DocID is the caller's stable document identity (the WeKnora knowledge ID).
+	// StarKB's parse engine keys its contract package directory by it, and the
+	// graph backfill worker resolves the package as <contract_root>/<doc_id>.
+	// Engines that need no caller-supplied identity ignore it.
+	DocID string
 }
 
 // ReadResult is the transport-agnostic result of document reading.

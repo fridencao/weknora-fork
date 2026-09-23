@@ -183,6 +183,7 @@ class DocReaderServicer(docreader_pb2_grpc.DocReaderServicer):
             request.file_content,
             parser_engine=parser_engine,
             engine_overrides=engine_overrides,
+            doc_id=request.doc_id,
         )
         return result, request.file_name
 

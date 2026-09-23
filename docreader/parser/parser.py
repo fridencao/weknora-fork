@@ -51,8 +51,14 @@ class Parser:
         content: bytes,
         parser_engine: Optional[str] = None,
         engine_overrides: Optional[dict[str, Any]] = None,
+        doc_id: Optional[str] = None,
     ) -> Document:
-        """Parse file content to markdown."""
+        """Parse file content to markdown.
+
+        doc_id is the caller's stable document identity (the WeKnora knowledge
+        ID). It is forwarded to parsers that key their output directory by it
+        (StarKB's contract package); parsers that ignore it are unaffected.
+        """
         engine = parser_engine or ""
         overrides = engine_overrides or {}
         logger.info(
@@ -69,11 +75,13 @@ class Parser:
             cls.__name__,
             effective_file_type,
         )
-        parser = cls(
-            file_name=file_name,
-            file_type=effective_file_type,
-            **overrides,
-        )
+        parser_kwargs: dict[str, Any] = dict(overrides)
+        parser_kwargs["file_name"] = file_name
+        parser_kwargs["file_type"] = effective_file_type
+        if doc_id:
+            # The caller's explicit identity wins over any same-named override.
+            parser_kwargs["doc_id"] = doc_id
+        parser = cls(**parser_kwargs)
 
         logger.info("Starting to parse file content, size: %d bytes", len(content))
         result = parser.parse(content)

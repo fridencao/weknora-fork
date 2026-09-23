@@ -33,6 +33,11 @@ message ReadRequest {
   string title = 5;
   ReadConfig config = 6;
   string request_id = 7;
+  // doc_id is the caller's stable document identity (WeKnora knowledge ID).
+  // StarKB's parse engine keys the contract package directory by it, and the
+  // graph backfill worker resolves the package as <contract_root>/<doc_id>.
+  // Engines that do not need a caller-supplied identity ignore it.
+  string doc_id = 8;
 }
 
 message ImageRef {

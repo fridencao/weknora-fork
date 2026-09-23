@@ -30,10 +30,13 @@ import (
 const graphBuildOnIngestTimeout = 30 * time.Second
 
 type graphBackfillRequest struct {
-	TenantID  string   `json:"tenant_id"`
-	KBID      string   `json:"kb_id"`
-	DocIDs    []string `json:"doc_ids"`
-	Workspace string   `json:"workspace,omitempty"`
+	TenantID  string            `json:"tenant_id"`
+	KBID      string            `json:"kb_id"`
+	DocIDs    []string          `json:"doc_ids"`
+	Workspace string            `json:"workspace,omitempty"`
+	// FileNames: knowledge_id → 原始文件名。starkb 链的契约目录名是
+	// 「文件名主干-8hex」≠ knowledge_id——starkb-api 据此反查 jobs 表定位契约包。
+	FileNames map[string]string `json:"file_names,omitempty"`
 }
 
 func graphBuildOnIngestEnabled() bool {
@@ -69,9 +72,10 @@ func GraphBuildOnIngest(ctx context.Context, kb *types.KnowledgeBase,
 	}
 
 	req := graphBackfillRequest{
-		TenantID: strconv.FormatUint(kb.TenantID, 10),
-		KBID:     kb.ID,
-		DocIDs:   []string{knowledge.ID},
+		TenantID:  strconv.FormatUint(kb.TenantID, 10),
+		KBID:      kb.ID,
+		DocIDs:    []string{knowledge.ID},
+		FileNames: map[string]string{knowledge.ID: knowledge.FileName},
 	}
 	if ws := graphWorkspaceForKB(kb); ws != "" {
 		req.Workspace = ws

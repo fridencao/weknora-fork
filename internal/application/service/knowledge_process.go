@@ -3936,6 +3936,9 @@ func (s *knowledgeService) convert(
 		ParserEngine:          parserEngine,
 		RequestID:             payload.RequestId,
 		ParserEngineOverrides: mergedOverrides,
+		// StarKB 契约目录以知识 ID 命名（/data/processed/<doc_id>/document.md），
+		// 图谱回填据此定位契约包；不传则回填必失败「契约包缺失」。
+		DocID: knowledge.ID,
 	}
 
 	if !isURL {

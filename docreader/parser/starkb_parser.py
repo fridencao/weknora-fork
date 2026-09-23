@@ -41,9 +41,12 @@ class StarkbParser(BaseParser):
     经 parser 构造参数传入）> 环境变量 STARKB_API_URL > 默认 compose 服务名。
     """
 
-    def __init__(self, *args, starkb_api_url: str = "", **kwargs):
+    def __init__(self, *args, starkb_api_url: str = "", doc_id: str = "", **kwargs):
         super().__init__(*args, **kwargs)
         self.starkb_api_url = (starkb_api_url or "").strip().rstrip("/") or STARKB_API_URL_DEFAULT
+        # 调用方的稳定文档标识（WeKnora 知识 ID）。starkb-api 用它命名契约目录，
+        # 图谱回填按 /data/processed/<doc_id> 定位契约包；缺省时服务端自行生成。
+        self.doc_id = (doc_id or "").strip()
 
     def _api(self, path: str, method: str = "GET", body: dict | None = None, timeout: float = 120.0):
         data = json.dumps(body).encode() if body is not None else None
@@ -62,11 +65,20 @@ class StarkbParser(BaseParser):
             tmp.close()
             boundary = "----starkbdocreader"
             fname = os.path.basename(self.file_name) or "upload.bin"
-            body = (
+            parts = []
+            if self.doc_id:
+                # 先发 doc_id 表单字段，服务端据此命名契约目录。
+                parts.append(
+                    f"--{boundary}\r\n"
+                    f'Content-Disposition: form-data; name="doc_id"\r\n\r\n'
+                    f"{self.doc_id}\r\n"
+                )
+            parts.append(
                 f"--{boundary}\r\n"
                 f'Content-Disposition: form-data; name="file"; filename="{fname}"\r\n'
                 f"Content-Type: application/octet-stream\r\n\r\n"
-            ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
+            )
+            body = "".join(parts).encode() + content + f"\r\n--{boundary}--\r\n".encode()
             req = urllib.request.Request(
                 self.starkb_api_url + "/parse/jobs/upload",
                 data=body, method="POST",

@@ -22,7 +22,7 @@ class ReadConfig(_message.Message):
     def __init__(self, parser_engine: _Optional[str] = ..., parser_engine_overrides: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class ReadRequest(_message.Message):
-    __slots__ = ("file_content", "file_name", "file_type", "url", "title", "config", "request_id")
+    __slots__ = ("file_content", "file_name", "file_type", "url", "title", "config", "request_id", "doc_id")
     FILE_CONTENT_FIELD_NUMBER: _ClassVar[int]
     FILE_NAME_FIELD_NUMBER: _ClassVar[int]
     FILE_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -30,6 +30,7 @@ class ReadRequest(_message.Message):
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    DOC_ID_FIELD_NUMBER: _ClassVar[int]
     file_content: bytes
     file_name: str
     file_type: str
@@ -37,7 +38,8 @@ class ReadRequest(_message.Message):
     title: str
     config: ReadConfig
     request_id: str
-    def __init__(self, file_content: _Optional[bytes] = ..., file_name: _Optional[str] = ..., file_type: _Optional[str] = ..., url: _Optional[str] = ..., title: _Optional[str] = ..., config: _Optional[_Union[ReadConfig, _Mapping]] = ..., request_id: _Optional[str] = ...) -> None: ...
+    doc_id: str
+    def __init__(self, file_content: _Optional[bytes] = ..., file_name: _Optional[str] = ..., file_type: _Optional[str] = ..., url: _Optional[str] = ..., title: _Optional[str] = ..., config: _Optional[_Union[ReadConfig, _Mapping]] = ..., request_id: _Optional[str] = ..., doc_id: _Optional[str] = ...) -> None: ...
 
 class ImageRef(_message.Message):
     __slots__ = ("filename", "original_ref", "mime_type", "storage_key", "image_data")
@@ -128,7 +130,7 @@ class ParserEngineInfo(_message.Message):
     file_types: _containers.RepeatedScalarFieldContainer[str]
     available: bool
     unavailable_reason: str
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., file_types: _Optional[_Iterable[str]] = ..., available: bool = ..., unavailable_reason: _Optional[str] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., file_types: _Optional[_Iterable[str]] = ..., available: _Optional[bool] = ..., unavailable_reason: _Optional[str] = ...) -> None: ...
 
 class ListEnginesResponse(_message.Message):
     __slots__ = ("engines",)
