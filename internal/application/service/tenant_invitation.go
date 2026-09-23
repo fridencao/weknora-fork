@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -67,8 +66,15 @@ const defaultInvitationTTL = 7 * 24 * time.Hour
 // can hot-reload the override without restarting. The env var is parsed
 // once per call; cost is negligible and beats a goroutine watching the
 // environment.
-func invitationTTL() time.Duration {
-	raw := os.Getenv("WEKNORA_INVITATION_TTL")
+// invitationTTL resolves the invitation lifetime per call:
+// system_settings > env > defaultInvitationTTL. Accepts Go duration
+// syntax ("168h") or a plain second count ("604800").
+func (s *tenantInvitationService) invitationTTL(ctx context.Context) time.Duration {
+	if s.settings == nil {
+		return defaultInvitationTTL
+	}
+	raw := strings.TrimSpace(s.settings.GetString(
+		ctx, types.SettingKeyTenantInvitationTTL, types.SettingEnvTenantInvitationTTL, ""))
 	if raw == "" {
 		return defaultInvitationTTL
 	}
@@ -89,6 +95,9 @@ type tenantInvitationService struct {
 	memberSvc interfaces.TenantMemberService
 	audit     interfaces.AuditLogService // optional; nil ⇒ no audit, business ops still succeed
 	now       func() time.Time           // injection seam for tests
+	// settings resolves tenant.invitation_ttl (DB > ENV > default).
+	// Optional: nil falls back to the built-in default.
+	settings interfaces.SystemSettingService
 }
 
 // NewTenantInvitationService wires the dependencies. memberSvc is
@@ -99,12 +108,14 @@ func NewTenantInvitationService(
 	repo interfaces.TenantInvitationRepository,
 	memberSvc interfaces.TenantMemberService,
 	audit interfaces.AuditLogService,
+	settings interfaces.SystemSettingService,
 ) interfaces.TenantInvitationService {
 	return &tenantInvitationService{
 		repo:      repo,
 		memberSvc: memberSvc,
 		audit:     audit,
 		now:       time.Now,
+		settings:  settings,
 	}
 }
 
@@ -173,7 +184,7 @@ func (s *tenantInvitationService) Create(
 		Role:          role,
 		Status:        types.TenantInvitationStatusPending,
 		Message:       message,
-		ExpiresAt:     now.Add(invitationTTL()),
+		ExpiresAt:     now.Add(s.invitationTTL(ctx)),
 	}
 	if err := s.repo.Create(ctx, inv); err != nil {
 		if errors.Is(err, apprepo.ErrPendingInvitationExists) {
@@ -527,7 +538,7 @@ func (s *tenantInvitationService) CreateShareLink(
 		Role:          role,
 		Status:        types.TenantInvitationStatusPending,
 		Message:       message,
-		ExpiresAt:     now.Add(invitationTTL()),
+		ExpiresAt:     now.Add(s.invitationTTL(ctx)),
 	}
 	if err := s.repo.Create(ctx, inv); err != nil {
 		return nil, "", err

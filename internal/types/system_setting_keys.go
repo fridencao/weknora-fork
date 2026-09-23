@@ -86,6 +86,36 @@ const (
 	SettingKeyTenantEnableCrossTenantAccess = "tenant.enable_cross_tenant_access"
 	SettingEnvTenantEnableCrossTenantAccess = "WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS"
 
+	// ---- 批二：service 层直读（消费点都有 ctx，无需桥接）----
+
+	// SettingKeyHousekeepingEnabled 后台管家扫描总开关（默认 true）。
+	SettingKeyHousekeepingEnabled = "housekeeping.enabled"
+	SettingEnvHousekeepingEnabled = "WEKNORA_HOUSEKEEPING_ENABLED"
+
+	// SettingKeyRetrievalMultiStoreTimeoutS 多向量库扇出检索的软超时（秒，默认 30）。
+	SettingKeyRetrievalMultiStoreTimeoutS = "retrieval.multi_store_timeout_s"
+	SettingEnvRetrievalMultiStoreTimeoutS = "MULTI_STORE_RETRIEVE_TIMEOUT_SEC"
+
+	// SettingKeyTenantInvitationTTL 空间邀请链接有效期（Go duration 或秒数，默认 168h）。
+	SettingKeyTenantInvitationTTL = "tenant.invitation_ttl"
+	SettingEnvTenantInvitationTTL = "WEKNORA_INVITATION_TTL"
+
+	// SettingKeyChatAttachmentTTLHours 会话临时附件的保留小时数（默认 24）。
+	SettingKeyChatAttachmentTTLHours = "chat_attachment.ttl_hours"
+	SettingEnvChatAttachmentTTLHours = "WEKNORA_CHAT_ATTACHMENT_TTL_HOURS"
+
+	// SettingKeyChatAttachmentOCRMaxPages 单个扫描件送 VLM OCR 的页数上限（默认 8）。
+	SettingKeyChatAttachmentOCRMaxPages = "chat_attachment.ocr_max_pages"
+	SettingEnvChatAttachmentOCRMaxPages = "WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES"
+
+	// SettingKeyChatAttachmentOCRConcurrency 扫描件多页 OCR 的并发度（默认 8）。
+	SettingKeyChatAttachmentOCRConcurrency = "chat_attachment.ocr_concurrency"
+	SettingEnvChatAttachmentOCRConcurrency = "WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY"
+
+	// SettingKeyChatAttachmentWaitTimeoutS QA 轮次等待附件解析完成的秒数（默认 60）。
+	SettingKeyChatAttachmentWaitTimeoutS = "chat_attachment.wait_timeout_s"
+	SettingEnvChatAttachmentWaitTimeoutS = "WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC"
+
 	// SettingDefaultReliabilityWeight 可靠度权重内置默认（ADR-005 下限）。
 	SettingDefaultReliabilityWeight = 0.25
 )

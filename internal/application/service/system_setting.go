@@ -467,6 +467,67 @@ var registry = map[string]settingSpec{
 			"两者都为真才放行）。默认 false。该值在进程启动时绑定，修改后需重启" +
 			"服务方可生效。",
 	},
+
+	// ---- 批二：service 层直读（消费点都有 ctx）----
+
+	"housekeeping.enabled": {
+		Type:        "bool",
+		EnvName:     "WEKNORA_HOUSEKEEPING_ENABLED",
+		Default:     true,
+		Category:    "maintenance",
+		Description: "后台管家扫描的总开关。负责回收长时间卡在解析中/建图中的文档，" +
+			"把它们翻回可重试状态。默认 true；关闭后卡住的文档需要人工重解析。" +
+			"在管家启动时读取，修改后需重启进程生效。",
+	},
+	"retrieval.multi_store_timeout_s": {
+		Type:        "int",
+		EnvName:     "MULTI_STORE_RETRIEVE_TIMEOUT_SEC",
+		Default:     int64(30),
+		Category:    "retrieval",
+		Description: "跨多个向量库扇出检索时的软超时（秒）。单个库慢不应拖垮整轮问答：" +
+			"超时后返回已就绪库的结果并记降级。调大提高召回完整度、增加尾延迟；" +
+			"调小保护响应时间。默认 30。",
+	},
+	"tenant.invitation_ttl": {
+		Type:        "string",
+		EnvName:     "WEKNORA_INVITATION_TTL",
+		Default:     "168h",
+		Category:    "tenant",
+		Description: "空间邀请链接的有效期。支持 Go duration（如 168h、7d 请写 168h）" +
+			"或纯秒数（如 604800）。过期后邀请不可用，需重新发出。默认 168h（7 天）。",
+	},
+	"chat_attachment.ttl_hours": {
+		Type:        "int",
+		EnvName:     "WEKNORA_CHAT_ATTACHMENT_TTL_HOURS",
+		Default:     int64(24),
+		Category:    "chat",
+		Description: "会话中上传的临时附件保留多少小时后自动清理。默认 24。" +
+			"调大占用更多存储，但用户回看历史会话时附件仍在。",
+	},
+	"chat_attachment.ocr_max_pages": {
+		Type:        "int",
+		EnvName:     "WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES",
+		Default:     int64(8),
+		Category:    "chat",
+		Description: "扫描件/纯图片文档最多送多少页去做 VLM OCR，用于约束 OCR 延迟。" +
+			"超出部分不参与识别。默认 8。",
+	},
+	"chat_attachment.ocr_concurrency": {
+		Type:        "int",
+		EnvName:     "WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY",
+		Default:     int64(8),
+		Category:    "chat",
+		Description: "多页扫描件同时送 VLM 做 OCR 的并发度。墙钟延迟随并发近似线性下降，" +
+			"但会加大对 VLM 后端的压力。默认 8（与页数上限一致，一屏扫完）。",
+	},
+	"chat_attachment.wait_timeout_s": {
+		Type:        "int",
+		EnvName:     "WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC",
+		Default:     int64(60),
+		Category:    "chat",
+		Description: "发起提问时，最多等待仍在解析中的附件多少秒；超时后只用已完成的" +
+			"附件继续回答（未完成的跳过，不报错）。默认 60。大文件或扫描件可调大。",
+	},
 }
 
 // systemSettingService wires the repository, audit log, and (P2)
@@ -910,8 +971,15 @@ func (s *systemSettingService) GetString(ctx context.Context, key string, envNam
 	return def
 }
 
-// GetBool resolves a bool setting. Tolerates legacy ENV values like
-// "1", "0", "yes", "no" via strconv.ParseBool. Same priority + degradation.
+// GetBool resolves a bool setting. Same priority + degradation as
+// GetInt: DB > ENV > def.
+//
+// ENV parsing is deliberately looser than strconv.ParseBool: operators
+// have historically written "yes"/"no"/"on"/"off" for these knobs (e.g.
+// WEKNORA_HOUSEKEEPING_ENABLED=off), and strconv.ParseBool rejects all
+// four. Before parseBoolLoose existed those values fell through to the
+// default, which silently REVERSED the operator's intent — an "off" that
+// turned the feature back on. Anything strconv accepts is still accepted.
 func (s *systemSettingService) GetBool(ctx context.Context, key string, envName string, def bool) bool {
 	if raw, ok := s.resolveRaw(ctx, key); ok {
 		var v bool
@@ -922,12 +990,29 @@ func (s *systemSettingService) GetBool(ctx context.Context, key string, envName 
 	}
 	if envName != "" {
 		if v := os.Getenv(envName); v != "" {
-			if b, err := strconv.ParseBool(v); err == nil {
+			if b, ok := parseBoolLoose(v); ok {
 				return b
 			}
 		}
 	}
 	return def
+}
+
+// parseBoolLoose accepts everything strconv.ParseBool does plus the
+// word forms operators actually type: yes/no/on/off (case-insensitive,
+// surrounding whitespace ignored). Reports false when the value is
+// unrecognised so callers fall through to their default.
+func parseBoolLoose(raw string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "yes", "on":
+		return true, true
+	case "no", "off":
+		return false, true
+	}
+	if b, err := strconv.ParseBool(strings.TrimSpace(raw)); err == nil {
+		return b, true
+	}
+	return false, false
 }
 
 // GetStringList resolves a []string setting. Priority: DB > ENV > def.

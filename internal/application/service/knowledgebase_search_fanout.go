@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -57,7 +55,7 @@ func (s *knowledgeBaseService) retrieveFromStores(
 		return groups[0].Engine.Retrieve(ctx, paramsWithTopK(groups[0]))
 	}
 
-	timeout := multiStoreRetrieveTimeout()
+	timeout := s.multiStoreRetrieveTimeout(ctx)
 
 	var (
 		mu  sync.Mutex
@@ -190,19 +188,23 @@ func isKnownEngineType(t types.RetrieverEngineType) bool {
 	return false
 }
 
-// multiStoreRetrieveTimeout reads MULTI_STORE_RETRIEVE_TIMEOUT_SEC; falls
-// back to defaultMultiStoreRetrieveTimeout (30s) on absence, parse error,
-// or non-positive values.
-func multiStoreRetrieveTimeout() time.Duration {
-	raw := os.Getenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC")
-	if raw == "" {
+// multiStoreRetrieveTimeout resolves the fan-out soft timeout per call:
+// system_settings > env > defaultMultiStoreRetrieveTimeout. Non-positive
+// values fall back to the default, matching the old env-only behaviour.
+func (s *knowledgeBaseService) multiStoreRetrieveTimeout(ctx context.Context) time.Duration {
+	if s.settings == nil {
 		return defaultMultiStoreRetrieveTimeout
 	}
-	n, err := strconv.Atoi(raw)
-	if err != nil || n <= 0 {
+	secs := s.settings.GetInt(
+		ctx,
+		types.SettingKeyRetrievalMultiStoreTimeoutS,
+		types.SettingEnvRetrievalMultiStoreTimeoutS,
+		int64(defaultMultiStoreRetrieveTimeout/time.Second),
+	)
+	if secs < 1 {
 		return defaultMultiStoreRetrieveTimeout
 	}
-	return time.Duration(n) * time.Second
+	return time.Duration(secs) * time.Second
 }
 
 // storeKindLabel returns "env" or "bound" for log fields. Never echoes the

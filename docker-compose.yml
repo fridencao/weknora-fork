@@ -158,8 +158,7 @@ services:
       # 应急仍可用本环境变量覆盖（优先级：系统设置 > 环境变量 > config.yaml）。
       # 新建空间默认存储配额（GB，默认 10）
       - WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB=${WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB:-10}
-      # 空间邀请链接 TTL（Go duration，默认 168h=7 天）
-      - WEKNORA_INVITATION_TTL=${WEKNORA_INVITATION_TTL:-168h}
+      # 空间邀请链接 TTL 已迁到系统设置 tenant.invitation_ttl（默认 168h）。
       # 审计日志保留天数（0 禁用清理，默认 90）
       - WEKNORA_AUDIT_RETENTION_DAYS=${WEKNORA_AUDIT_RETENTION_DAYS:-90}
       # 数据库设置
@@ -203,8 +202,7 @@ services:
       - MILVUS_USERNAME=${MILVUS_USERNAME:-}
       - MILVUS_PASSWORD=${MILVUS_PASSWORD:-}
       - MILVUS_DB_NAME=${MILVUS_DB_NAME:-}
-      # 多向量库并行检索超时（秒，RETRIEVE_DRIVER 含多个驱动时生效）
-      - MULTI_STORE_RETRIEVE_TIMEOUT_SEC=${MULTI_STORE_RETRIEVE_TIMEOUT_SEC:-}
+      # 多向量库并行检索超时已迁到系统设置 retrieval.multi_store_timeout_s（默认 30 秒）。
       # ========== OpenSearch（RETRIEVE_DRIVER=opensearch）==========
       - OPENSEARCH_ADDR=${OPENSEARCH_ADDR:-}
       - OPENSEARCH_USERNAME=${OPENSEARCH_USERNAME:-}
@@ -350,12 +348,10 @@ services:
       - MAX_SKILL_BUNDLE_SIZE_MB=${MAX_SKILL_BUNDLE_SIZE_MB:-256}
       # 文档处理总超时 / 单次 DocReader RPC 超时已迁到系统设置
       # （document.process_timeout / docreader.call_timeout，界面可改、改后即生效）。
-      # 知识库巡检回收（回收卡在 processing 的脏数据；false 禁用，不建议）
-      - WEKNORA_HOUSEKEEPING_ENABLED=${WEKNORA_HOUSEKEEPING_ENABLED:-}
-      - WEKNORA_CHAT_ATTACHMENT_TTL_HOURS=${WEKNORA_CHAT_ATTACHMENT_TTL_HOURS:-24}
-      - WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC=${WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC:-60}
-      - WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY=${WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY:-8}
-      - WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES=${WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES:-8}
+      # 知识库巡检回收已迁到系统设置 housekeeping.enabled（默认 true；false 禁用，不建议）。
+      # 会话临时附件四项已迁到系统设置（界面可改、改后即生效）：
+      #   chat_attachment.ttl_hours（默认 24）/ chat_attachment.wait_timeout_s（默认 60）
+      #   chat_attachment.ocr_concurrency（默认 8）/ chat_attachment.ocr_max_pages（默认 8）
       # Agent LLM 超时与 MCP 工具审批策略已迁到系统设置
       # （agent.llm_timeout / agent.tool_approval_timeout / agent.tool_approval_fail_open）。
       # Tenant / RBAC（详见 docs/RBAC说明.md 与 .env.example 注释）

@@ -20,8 +20,6 @@ package service
 
 import (
 	"context"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -81,8 +79,8 @@ func (h *HousekeepingService) Start(ctx context.Context) error {
 	if h.started {
 		return nil
 	}
-	if !housekeepingEnabled() {
-		logger.Infof(ctx, "[Housekeeping] disabled via WEKNORA_HOUSEKEEPING_ENABLED=false")
+	if !h.housekeepingEnabled(ctx) {
+		logger.Infof(ctx, "[Housekeeping] disabled via housekeeping.enabled / WEKNORA_HOUSEKEEPING_ENABLED=false")
 		return nil
 	}
 	// Every 5 minutes — frequent enough that user-visible recovery latency
@@ -455,17 +453,18 @@ func (h *HousekeepingService) staleThreshold(ctx context.Context) time.Duration 
 	return base + 10*time.Minute
 }
 
-func housekeepingEnabled() bool {
-	// Default-on: missing/empty env enables the sweep. Operators must
-	// explicitly set "false" to opt out, matching the plan's commitment
-	// that no env change is required for the safety net to engage.
-	v := strings.TrimSpace(os.Getenv("WEKNORA_HOUSEKEEPING_ENABLED"))
-	if v == "" {
+// housekeepingEnabled resolves the sweep master switch per call:
+// system_settings > env > default(true). GetBool accepts the same word
+// forms (0/false/off/no) the env-only version did, so an operator who
+// wrote =off keeps getting the sweep disabled.
+func (h *HousekeepingService) housekeepingEnabled(ctx context.Context) bool {
+	if h.settings == nil {
 		return true
 	}
-	switch strings.ToLower(v) {
-	case "0", "false", "off", "no":
-		return false
-	}
-	return true
+	return h.settings.GetBool(
+		ctx,
+		types.SettingKeyHousekeepingEnabled,
+		types.SettingEnvHousekeepingEnabled,
+		true,
+	)
 }

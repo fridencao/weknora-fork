@@ -4,7 +4,6 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -117,24 +116,30 @@ func TestStoreKindLabel(t *testing.T) {
 
 func TestMultiStoreRetrieveTimeout(t *testing.T) {
 	// Not Parallel — mutates a process-global env var.
+	//
+	// settings is ENV-only (no DB rows), so this still exercises exactly
+	// what the old env-only helper did, plus the ENV tier of the 3-tier
+	// resolver. An empty value counts as unset for the ENV tier.
+	svc := &knowledgeBaseService{settings: newEnvOnlySettings()}
+	ctx := context.Background()
+
 	t.Setenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC", "")
-	os.Unsetenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC")
-	if got := multiStoreRetrieveTimeout(); got != defaultMultiStoreRetrieveTimeout {
+	if got := svc.multiStoreRetrieveTimeout(ctx); got != defaultMultiStoreRetrieveTimeout {
 		t.Errorf("default: want %v, got %v", defaultMultiStoreRetrieveTimeout, got)
 	}
 
 	t.Setenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC", "7")
-	if got := multiStoreRetrieveTimeout(); got != 7*time.Second {
+	if got := svc.multiStoreRetrieveTimeout(ctx); got != 7*time.Second {
 		t.Errorf("env=7: want 7s, got %v", got)
 	}
 
 	t.Setenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC", "garbage")
-	if got := multiStoreRetrieveTimeout(); got != defaultMultiStoreRetrieveTimeout {
+	if got := svc.multiStoreRetrieveTimeout(ctx); got != defaultMultiStoreRetrieveTimeout {
 		t.Errorf("parse-fail fallback: want default, got %v", got)
 	}
 
 	t.Setenv("MULTI_STORE_RETRIEVE_TIMEOUT_SEC", "-3")
-	if got := multiStoreRetrieveTimeout(); got != defaultMultiStoreRetrieveTimeout {
+	if got := svc.multiStoreRetrieveTimeout(ctx); got != defaultMultiStoreRetrieveTimeout {
 		t.Errorf("negative fallback: want default, got %v", got)
 	}
 }
@@ -770,7 +775,9 @@ func TestRetrieveFromStores_PerGroupTimeout(t *testing.T) {
 		{Engine: buildBoundComposite(t, fakeFast), BaseParams: vectorParams("q"), TopK: 50, KBIDs: []string{"kb-fast"}},
 	}
 
-	s := &knowledgeBaseService{}
+	// ENV-only settings so the 1s override above is honoured; a nil
+	// settings service short-circuits to the 30s built-in default.
+	s := &knowledgeBaseService{settings: newEnvOnlySettings()}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := s.retrieveFromStores(ctx, groups, retriever.EngineAwareNormalizer{})

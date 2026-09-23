@@ -49,7 +49,9 @@ var versionedSQLiteColumns = map[string][]string{
 	"message_artifacts":  {"deleted_at"},                                                       // 000107
 }
 
-const expectedSQLiteMigrationVersion = 27
+// Bump this whenever a new migrations/sqlite/ pair is added.
+// 000028 = system_settings_migrated_env_defaults (配置治理).
+const expectedSQLiteMigrationVersion = 28
 
 func TestSQLiteMigrationsCreateVersionedSchema(t *testing.T) {
 	repoRoot := sqliteRepoRoot(t)

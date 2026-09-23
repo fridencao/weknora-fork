@@ -34,6 +34,13 @@ var migratedSettingKeys = []string{
 	types.SettingKeyDocumentProcessTimeout,
 	types.SettingKeyTenantEnableRBAC,
 	types.SettingKeyTenantEnableCrossTenantAccess,
+	types.SettingKeyHousekeepingEnabled,
+	types.SettingKeyRetrievalMultiStoreTimeoutS,
+	types.SettingKeyTenantInvitationTTL,
+	types.SettingKeyChatAttachmentTTLHours,
+	types.SettingKeyChatAttachmentOCRMaxPages,
+	types.SettingKeyChatAttachmentOCRConcurrency,
+	types.SettingKeyChatAttachmentWaitTimeoutS,
 }
 
 // TestMigratedSettingsRegistered 每个迁移键都必须在注册表里，
@@ -57,6 +64,13 @@ func TestMigratedSettingsRegistered(t *testing.T) {
 		types.SettingKeyDocumentProcessTimeout:        types.SettingEnvDocumentProcessTimeout,
 		types.SettingKeyTenantEnableRBAC:              types.SettingEnvTenantEnableRBAC,
 		types.SettingKeyTenantEnableCrossTenantAccess: types.SettingEnvTenantEnableCrossTenantAccess,
+		types.SettingKeyHousekeepingEnabled:           types.SettingEnvHousekeepingEnabled,
+		types.SettingKeyRetrievalMultiStoreTimeoutS:   types.SettingEnvRetrievalMultiStoreTimeoutS,
+		types.SettingKeyTenantInvitationTTL:           types.SettingEnvTenantInvitationTTL,
+		types.SettingKeyChatAttachmentTTLHours:        types.SettingEnvChatAttachmentTTLHours,
+		types.SettingKeyChatAttachmentOCRMaxPages:     types.SettingEnvChatAttachmentOCRMaxPages,
+		types.SettingKeyChatAttachmentOCRConcurrency:  types.SettingEnvChatAttachmentOCRConcurrency,
+		types.SettingKeyChatAttachmentWaitTimeoutS:    types.SettingEnvChatAttachmentWaitTimeoutS,
 	}
 
 	for _, key := range migratedSettingKeys {

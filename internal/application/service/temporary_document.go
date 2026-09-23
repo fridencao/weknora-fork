@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -55,24 +53,38 @@ const (
 )
 
 // temporaryDocumentImageOCRMaxPages returns the max page count OCR'd per
-// scanned document, honoring WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES.
-func temporaryDocumentImageOCRMaxPages() int {
-	return envPositiveInt("WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES", defaultTemporaryDocumentImageOCRMaxPages)
+// scanned document: system_settings > env > default.
+func (s *temporaryDocumentService) temporaryDocumentImageOCRMaxPages(ctx context.Context) int {
+	return s.positiveSetting(
+		ctx,
+		types.SettingKeyChatAttachmentOCRMaxPages,
+		types.SettingEnvChatAttachmentOCRMaxPages,
+		defaultTemporaryDocumentImageOCRMaxPages,
+	)
 }
 
-// temporaryDocumentOCRConcurrency returns the VLM OCR concurrency, honoring
-// WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY.
-func temporaryDocumentOCRConcurrency() int {
-	return envPositiveInt("WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY", defaultTemporaryDocumentOCRConcurrency)
+// temporaryDocumentOCRConcurrency returns the VLM OCR concurrency:
+// system_settings > env > default.
+func (s *temporaryDocumentService) temporaryDocumentOCRConcurrency(ctx context.Context) int {
+	return s.positiveSetting(
+		ctx,
+		types.SettingKeyChatAttachmentOCRConcurrency,
+		types.SettingEnvChatAttachmentOCRConcurrency,
+		defaultTemporaryDocumentOCRConcurrency,
+	)
 }
 
-// envPositiveInt reads a positive integer from the environment, falling back to
-// def when the variable is unset, non-numeric, or non-positive.
-func envPositiveInt(key string, def int) int {
-	if raw := strings.TrimSpace(os.Getenv(key)); raw != "" {
-		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
-			return v
-		}
+// positiveSetting resolves an int setting and clamps non-positive values
+// (and a nil settings service) back to def — matching the old
+// env-only helper, which ignored 0 and negatives.
+func (s *temporaryDocumentService) positiveSetting(
+	ctx context.Context, key, envName string, def int,
+) int {
+	if s.settings == nil {
+		return def
+	}
+	if v := int(s.settings.GetInt(ctx, key, envName, int64(def))); v > 0 {
+		return v
 	}
 	return def
 }
@@ -111,6 +123,9 @@ type temporaryDocumentService struct {
 	tenantService      interfaces.TenantService
 	taskEnqueuer       interfaces.TaskEnqueuer
 	sessionAttachments sessionAttachmentLookup
+	// settings resolves the chat_attachment.* tunables
+	// (DB > ENV > default). Optional: nil falls back to built-ins.
+	settings interfaces.SystemSettingService
 }
 
 func NewTemporaryDocumentService(
@@ -123,22 +138,26 @@ func NewTemporaryDocumentService(
 	tenantService interfaces.TenantService,
 	taskEnqueuer interfaces.TaskEnqueuer,
 	messages interfaces.MessageRepository,
+	settings interfaces.SystemSettingService,
 ) interfaces.TemporaryDocumentService {
 	return &temporaryDocumentService{
 		repo: repo, fileService: fileService, resourceCatalog: resourceCatalog,
 		documentReader: documentReader, imageResolver: imageResolver,
 		modelService: modelService, tenantService: tenantService, taskEnqueuer: taskEnqueuer,
-		sessionAttachments: messages,
+		sessionAttachments: messages, settings: settings,
 	}
 }
 
-func temporaryDocumentTTL() time.Duration {
-	if raw := strings.TrimSpace(os.Getenv("WEKNORA_CHAT_ATTACHMENT_TTL_HOURS")); raw != "" {
-		if hours, err := strconv.Atoi(raw); err == nil && hours > 0 {
-			return time.Duration(hours) * time.Hour
-		}
-	}
-	return temporaryDocumentDefaultTTL
+// temporaryDocumentTTL resolves the attachment retention window:
+// system_settings > env > default. Non-positive values fall back.
+func (s *temporaryDocumentService) temporaryDocumentTTL(ctx context.Context) time.Duration {
+	hours := s.positiveSetting(
+		ctx,
+		types.SettingKeyChatAttachmentTTLHours,
+		types.SettingEnvChatAttachmentTTLHours,
+		int(temporaryDocumentDefaultTTL/time.Hour),
+	)
+	return time.Duration(hours) * time.Hour
 }
 
 func (s *temporaryDocumentService) Create(
@@ -192,7 +211,7 @@ func (s *temporaryDocumentService) Create(
 	document := &types.TemporaryDocument{
 		TenantID: tenantID, SessionID: sessionID, ResourceRef: resourceRef,
 		FileName: baseName, FileType: ext, MimeType: strings.TrimSpace(mimeType), FileSize: fileSize,
-		Status: types.TemporaryDocumentStatusUploaded, ExpiresAt: time.Now().Add(temporaryDocumentTTL()),
+		Status: types.TemporaryDocumentStatusUploaded, ExpiresAt: time.Now().Add(s.temporaryDocumentTTL(ctx)),
 		ProcessingOptions: types.JSON(optionsJSON),
 	}
 	if err := s.repo.Create(ctx, document); err != nil {
@@ -468,7 +487,7 @@ func (s *temporaryDocumentService) parse(ctx context.Context, document *types.Te
 	}
 	// Capture raw page-image bytes before ResolveAndStore stores/rewrites them,
 	// so the VLM OCR fallback for scanned documents has bytes to work with.
-	maxOCRPages := temporaryDocumentImageOCRMaxPages()
+	maxOCRPages := s.temporaryDocumentImageOCRMaxPages(ctx)
 	if options.OCRMaxPages > 0 {
 		maxOCRPages = options.OCRMaxPages
 	}
@@ -580,7 +599,7 @@ func (s *temporaryDocumentService) understandImagesWithVLM(
 	// collected per index and re-assembled in page order afterwards.
 	ocrResults := make([]string, len(images))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, temporaryDocumentOCRConcurrency())
+	sem := make(chan struct{}, s.temporaryDocumentOCRConcurrency(ctx))
 	acquire := func() { sem <- struct{}{} }
 	release := func() { <-sem }
 

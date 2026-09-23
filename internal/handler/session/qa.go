@@ -7,10 +7,8 @@ import (
 	stderrors "errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1502,16 +1500,22 @@ func (h *Handler) runVLMAnalysisIfNeeded(streamCtx *sseStreamContext, reqCtx *qa
 // WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC when needed.
 const defaultAttachmentParseWaitTimeout = 60 * time.Second
 
-// attachmentParseWaitTimeout returns the configured wait timeout, honoring the
-// WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC override (in seconds) and falling
-// back to the default when unset or invalid.
-func attachmentParseWaitTimeout() time.Duration {
-	if raw := strings.TrimSpace(os.Getenv("WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC")); raw != "" {
-		if secs, err := strconv.Atoi(raw); err == nil && secs > 0 {
-			return time.Duration(secs) * time.Second
-		}
+// attachmentParseWaitTimeout returns the configured wait timeout:
+// system_settings > env > default. Non-positive values fall back.
+func (h *Handler) attachmentParseWaitTimeout(ctx context.Context) time.Duration {
+	if h.settings == nil {
+		return defaultAttachmentParseWaitTimeout
 	}
-	return defaultAttachmentParseWaitTimeout
+	secs := h.settings.GetInt(
+		ctx,
+		types.SettingKeyChatAttachmentWaitTimeoutS,
+		types.SettingEnvChatAttachmentWaitTimeoutS,
+		int64(defaultAttachmentParseWaitTimeout/time.Second),
+	)
+	if secs < 1 {
+		return defaultAttachmentParseWaitTimeout
+	}
+	return time.Duration(secs) * time.Second
 }
 
 // resolveTemporaryAttachments selects prompt content for pre-uploaded documents
@@ -1541,7 +1545,7 @@ func (h *Handler) resolveTemporaryAttachments(streamCtx *sseStreamContext, reqCt
 				Iteration:  0,
 			},
 		})
-		waitTimeout := attachmentParseWaitTimeout()
+		waitTimeout := h.attachmentParseWaitTimeout(ctx)
 		if reqCtx.customAgent != nil && reqCtx.customAgent.Config.AttachmentParseWaitTimeoutSec > 0 {
 			waitTimeout = time.Duration(reqCtx.customAgent.Config.AttachmentParseWaitTimeoutSec) * time.Second
 		}
