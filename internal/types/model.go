@@ -150,6 +150,12 @@ type ModelParameters struct {
 	// process-wide model.max_concurrency". Interactive user-facing calls are
 	// never gated. Only chat / vlm / embedding honour this (see limiter.Gate).
 	MaxConcurrency int `yaml:"max_concurrency,omitempty" json:"max_concurrency,omitempty"`
+	// 向量嵌入调优（2026-09-23）：0 值=走代码默认。供 UI/模型行按模型设置，
+	// 治理后台向量化对限流敏感的供应商（如火山方舟 plan 端点账号级 RPM）。
+	EmbedBatchSize        int `yaml:"embed_batch_size,omitempty" json:"embed_batch_size,omitempty"`
+	EmbedRetryAttempts    int `yaml:"embed_retry_attempts,omitempty" json:"embed_retry_attempts,omitempty"`
+	EmbedRetryBaseDelayMS int `yaml:"embed_retry_base_delay_ms,omitempty" json:"embed_retry_base_delay_ms,omitempty"`
+	EmbedRateLimitDelayMS int `yaml:"embed_rate_limit_delay_ms,omitempty" json:"embed_rate_limit_delay_ms,omitempty"`
 	// 厂商专用凭证（部分厂商需要第二段密钥，如 LKEAP / Volcengine Rerank）
 	AppID     string `yaml:"app_id,omitempty"     json:"app_id,omitempty"`
 	AppSecret string `yaml:"app_secret,omitempty" json:"app_secret,omitempty"` // AES-256 加密存储

@@ -59,6 +59,11 @@ type Config struct {
 	// MaxConcurrency caps concurrent background calls to this model; 0 falls
 	// back to the process-wide default (see limiter.GateN).
 	MaxConcurrency int               `json:"max_concurrency"`
+	// 向量嵌入调优（来自模型行 parameters，UI 可配）：0 值=走包默认
+	BatchEmbedSize        int `json:"embed_batch_size"`
+	EmbedRetryAttempts    int `json:"embed_retry_attempts"`
+	EmbedRetryBaseDelayMS int `json:"embed_retry_base_delay_ms"`
+	EmbedRateLimitDelayMS int `json:"embed_rate_limit_delay_ms"`
 	ExtraConfig    map[string]string `json:"extra_config"`
 	// CustomHeaders 允许在调用远程 API 时附加自定义 HTTP 请求头（类似 OpenAI Python SDK 的 extra_headers）。
 	CustomHeaders map[string]string `json:"custom_headers"`
@@ -104,6 +109,15 @@ func NewEmbedder(config Config, pooler EmbedderPooler, ollamaService *ollama.Oll
 	// pool callbacks) before debug/langfuse wrap for logging/tracing. See
 	// concurrencyEmbedder for why this sits below the observability decorators.
 	e = wrapEmbeddingConcurrency(e, config.MaxConcurrency)
+	// Outermost：把模型行的嵌入调优（批次/重试/限流退避）暴露给
+	// batchEmbedder（批次大小）与 retriever 的退避循环（重试参数）。
+	tuning := EmbedTuning{
+		BatchSize:        config.BatchEmbedSize,
+		RetryAttempts:    config.EmbedRetryAttempts,
+		BaseDelayMS:      config.EmbedRetryBaseDelayMS,
+		RateLimitDelayMS: config.EmbedRateLimitDelayMS,
+	}
+	e = &tunedEmbedder{Embedder: e, tuning: tuning}
 	if logger.LLMDebugEnabled() {
 		e = &debugEmbedder{inner: e}
 	}
@@ -112,6 +126,37 @@ func NewEmbedder(config Config, pooler EmbedderPooler, ollamaService *ollama.Oll
 	}
 	return e, nil
 }
+
+// EmbedTuning 汇总向量嵌入的后台调优参数；0 值=调用方使用自身默认。
+type EmbedTuning struct {
+	BatchSize        int
+	RetryAttempts    int
+	BaseDelayMS      int
+	RateLimitDelayMS int
+}
+
+// EmbedTuningProvider 由 tunedEmbedder 实现；retriever 的退避循环用类型断言
+// 读取调优参数，避免强迫所有 Embedder 实现都声明这组方法。
+type EmbedTuningProvider interface {
+	EmbedTuning() EmbedTuning
+}
+
+// TuningFrom 读取嵌入器的调优参数；未包装时返回零值（调用方自行落默认）。
+func TuningFrom(e Embedder) EmbedTuning {
+	if p, ok := e.(EmbedTuningProvider); ok {
+		return p.EmbedTuning()
+	}
+	return EmbedTuning{}
+}
+
+// tunedEmbedder 把模型行上的调优参数随嵌入器一起传到池化批处理与退避循环。
+type tunedEmbedder struct {
+	Embedder
+	tuning EmbedTuning
+}
+
+func (t *tunedEmbedder) GetBatchEmbedSize() int { return t.tuning.BatchSize }
+func (t *tunedEmbedder) EmbedTuning() EmbedTuning { return t.tuning }
 
 func newEmbedder(config Config, pooler EmbedderPooler, ollamaService *ollama.OllamaService) (Embedder, error) {
 	var embedder Embedder

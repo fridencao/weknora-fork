@@ -24,11 +24,13 @@ import (
 // kicks in for genuinely pathological inputs.
 const safetyMaxChars = 20000
 
-// embedRetryAttempts and embedRetryBaseDelay control the exponential backoff
-// applied to BatchEmbedWithPool calls.
+// 嵌入退避默认值。模型行 parameters（UI 可配）携带调优时以调优为准：
+// embed_retry_attempts / embed_retry_base_delay_ms / embed_rate_limit_delay_ms。
 const (
-	embedRetryAttempts  = 5
-	embedRetryBaseDelay = 200 * time.Millisecond
+	embedRetryAttempts    = 8
+	embedRetryBaseDelay   = 2 * time.Second
+	embedRateLimitDelay   = 10 * time.Second
+	embedBackoffDelayCap  = 60 * time.Second
 )
 
 var embeddingImagePayloadPatterns = []*regexp.Regexp{
@@ -142,15 +144,34 @@ func batchEmbedWithBackoff(ctx context.Context, embedder embedding.Embedder, con
 		}
 		logger.Errorf(ctx, "BatchEmbedWithPool attempt %d/%d failed: %v", attempt+1, embedRetryAttempts, err)
 		if attempt+1 < embedRetryAttempts {
+			wait := delay << attempt
+			// 账号级限流（429/RateLimit）用更长的起步退避，避免短窗口内重试互相放大
+			if isEmbedRateLimitError(err) && wait < embedRateLimitDelay {
+				wait = embedRateLimitDelay
+			}
+			if wait > embedBackoffDelayCap {
+				wait = embedBackoffDelayCap
+			}
 			select {
-			case <-time.After(delay):
+			case <-time.After(wait):
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			}
-			delay *= 2
 		}
 	}
 	return embeddings, err
+}
+
+// isEmbedRateLimitError 判断嵌入供应商返回的错误是否为限流类（429/RateLimit）。
+func isEmbedRateLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "429") ||
+		strings.Contains(s, "RateLimit") ||
+		strings.Contains(s, "TooManyRequests") ||
+		strings.Contains(s, "too many requests")
 }
 
 // sanitizeForEmbedding caps content length at safetyMaxChars characters so
