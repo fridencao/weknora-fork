@@ -33,6 +33,7 @@ type RetrieverType string
 const (
 	KeywordsRetrieverType  RetrieverType = "keywords"  // Keywords retriever
 	VectorRetrieverType    RetrieverType = "vector"    // Vector retriever
+	GraphRetrieverType     RetrieverType = "graph"     // Graph (LightRAG) retriever
 	WebSearchRetrieverType RetrieverType = "websearch" // Web search retriever
 )
 
@@ -96,6 +97,9 @@ type IndexWithScore struct {
 	MatchType MatchType
 	// IsEnabled
 	IsEnabled bool
+	// Channels 记录该 chunk 实际参与过的召回通道（RRF 融合时填充，按参与顺序）。
+	// nil/空 = 单通道结果（未过融合），消费方可据此展示多通道来源。
+	Channels []RetrieverType `json:"channels,omitempty"`
 }
 
 // GetScore returns the score for ScoreComparable interface

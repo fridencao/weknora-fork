@@ -117,6 +117,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 			Score:       1.0,
 			MatchType:   types.MatchTypeGraph,
 			IsEnabled:   true,
+			Channels:    []types.RetrieverType{types.GraphRetrieverType},
 		})
 	}
 	logger.Infof(ctx, "graph recall: 命中 %d chunk（图谱证据 %d 条，KB 范围 %d 文档）",

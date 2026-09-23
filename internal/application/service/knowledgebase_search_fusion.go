@@ -193,6 +193,20 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults, graphResult
 		if rank, ok := graphRanks[chunkID]; ok {
 			rrfScore += graphWeight / float64(rrfK+rank)
 		}
+		// M5-3：多通道来源标签——按 vector → keyword → graph 顺序去重合并，
+		// 消费方（引用角标/验证 runner）可据此真实识别图谱参与，不再被
+		// 首通道标签（embedding=0）遮蔽。
+		if len(info.Channels) == 0 {
+			if _, v := vectorRanks[chunkID]; v {
+				info.Channels = append(info.Channels, types.VectorRetrieverType)
+			}
+			if _, k := keywordRanks[chunkID]; k {
+				info.Channels = append(info.Channels, types.KeywordsRetrieverType)
+			}
+			if _, g := graphRanks[chunkID]; g {
+				info.Channels = append(info.Channels, types.GraphRetrieverType)
+			}
+		}
 		info.Score = rrfScore
 		result = append(result, info)
 	}
