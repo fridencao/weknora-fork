@@ -516,6 +516,8 @@ func (s *knowledgeBaseService) UpdateKnowledgeBase(ctx context.Context,
 
 	changedFields := make([]string, 0, 3)
 	profileWasEnabled := kb.ProfileConfig.IsEnabled()
+	// ADR-008 决策 3.4：图谱自动建图开关的 off→on 边沿（见文件末尾的补齐触发）
+	graphAutoBuildWasOn := kb.GraphConfig != nil && kb.GraphConfig.AutoBuild
 	if kb.Name != name {
 		changedFields = append(changedFields, "name")
 	}
@@ -587,6 +589,14 @@ func (s *knowledgeBaseService) UpdateKnowledgeBase(ctx context.Context,
 	// description now, not after the next upload.
 	if !profileWasEnabled && kb.ProfileConfig.IsEnabled() {
 		_ = requestKnowledgeBaseProfileRefresh(ctx, s.asynqClient, kb, false)
+	}
+
+	// ADR-008 决策 3.4：开关从关到开时，为**既有**文档补齐图谱。
+	// M4 的 GraphBuildOnIngest 只在解析完成时触发，覆盖不到"存量 KB 后来才打开
+	// 开关"——那正是 ADR 要补的场景（否则开关看起来生效、图谱始终是空的）。
+	// 只置 pending，由 starkb-api 的补齐 worker 按限速消费。
+	if graphAutoBuildTurnedOn(graphAutoBuildWasOn, kb) {
+		GraphBackfillOnEnable(ctx, s.kgRepo, kb.TenantID, kb.ID)
 	}
 
 	logger.Infof(ctx, "Knowledge base updated successfully, ID: %s, name: %s", kb.ID, kb.Name)

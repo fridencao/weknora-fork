@@ -85,7 +85,8 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
     generated_profile TEXT,
     id          VARCHAR(64) PRIMARY KEY,
     tenant_id   INTEGER NOT NULL DEFAULT 0,
-    deleted_at  DATETIME
+    deleted_at  DATETIME,
+    graph_config TEXT
 );
 `
 
