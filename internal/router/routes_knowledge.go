@@ -219,6 +219,9 @@ func RegisterKnowledgeBaseRoutes(r *gin.RouterGroup, handler *handler.KnowledgeB
 		kb.GET("/:id/graph/status", g.Viewer(), g.KBAccessRead("id"), handler.GetKnowledgeBaseGraphStatus)
 		// M5-1：图谱可视化数据（力导图渲染用），读权限即可
 		kb.GET("/:id/graph/view", g.Viewer(), g.KBAccessRead("id"), handler.GetKnowledgeBaseGraphView)
+		// M6-1 WS1.2：图谱浏览器下钻（实体 + 邻居 + 回跳为 WeKnora 子 chunk 的证据）
+		kb.GET("/:id/graph/entity", g.Viewer(), g.KBAccessRead("id"),
+			handler.GetKnowledgeBaseGraphEntity)
 		// 决策 4（ADR-008）：文档列表页图谱徽标。批量查询走读权限；重试要写权限。
 		// 同样经 Go 代理而非浏览器直连 starkb-api（它无认证且只监听 127.0.0.1）。
 		kb.POST("/:id/graph/doc-status", g.Viewer(), g.KBAccessRead("id"),

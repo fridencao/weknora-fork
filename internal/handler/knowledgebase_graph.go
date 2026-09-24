@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
@@ -300,4 +301,40 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphView(c *gin.Context) {
 		return
 	}
 	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
+}
+
+// graphEntityNameMaxRunes 实体名长度上限。实体名是 LLM 抽取的自由文本，但它是
+// 查询条件而非常量级载荷；512 个字符足够容纳真实实体（最长实测为机构全称）。
+const graphEntityNameMaxRunes = 512
+
+// GetKnowledgeBaseGraphEntity GET /knowledge-bases/:id/graph/entity?name=
+//
+// M6-1 WS1.2：图谱浏览器点节点后的下钻数据（实体 + 邻居 + 可点开的证据）。
+//
+// 为什么不像 /graph/view 那样在 handler 里直连 starkb-api：证据必须**回跳**成
+// WeKnora 子 chunk（图谱 chunk key → 契约锚点 → 子 chunk），这需要 ChunkRepository
+// 与租户上下文，属于 service 层职责；handler 只做参数收口与权限（路由层
+// KBAccessRead）。回跳同时是权限边界：共享图谱空间下会返回别的 KB 的实体，
+// service 按本 KB 文档范围过滤后才可能出现在证据列表里。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntity(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	name := strings.TrimSpace(c.Query("name"))
+	if name == "" {
+		_ = c.Error(apperrors.NewBadRequestError("name is required"))
+		return
+	}
+	if len([]rune(name)) > graphEntityNameMaxRunes {
+		_ = c.Error(apperrors.NewBadRequestError("name too long"))
+		return
+	}
+	data, err := h.service.GraphEntityDetail(c.Request.Context(), kb.ID, name)
+	if err != nil {
+		_ = c.Error(apperrors.NewInternalServerError(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 }

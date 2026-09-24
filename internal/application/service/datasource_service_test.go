@@ -124,6 +124,9 @@ func (s *processSyncKBService) GetRepository() interfaces.KnowledgeBaseRepositor
 func (s *processSyncKBService) ProcessKBDelete(context.Context, *asynq.Task) error {
 	return nil
 }
+func (s *processSyncKBService) GraphEntityDetail(context.Context, string, string) (map[string]any, error) {
+	return nil, nil
+}
 
 var _ interfaces.KnowledgeBaseService = (*processSyncKBService)(nil)
 

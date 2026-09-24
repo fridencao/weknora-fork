@@ -136,6 +136,16 @@ type KnowledgeBaseService interface {
 	// Returns:
 	//   - Possible errors during deletion
 	ProcessKBDelete(ctx context.Context, t *asynq.Task) error
+
+	// GraphEntityDetail returns drill-down data for one graph entity
+	// (M6-1 WS1.2): the entity itself, its neighbours, and evidence resolved
+	// back to WeKnora sub-chunks so the UI can open the provenance panel.
+	//
+	// Never returns an error: the graph is an optional enhancement channel, so
+	// a missing data plane degrades to {"available": false, "reason": ...}
+	// rather than failing the page. Evidence is restricted to documents of the
+	// given knowledge base (a shared graph space would otherwise leak others).
+	GraphEntityDetail(ctx context.Context, kbID string, name string) (map[string]any, error)
 }
 
 // KnowledgeBaseRepository defines the knowledge base repository interface
