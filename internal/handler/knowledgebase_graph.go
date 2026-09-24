@@ -260,3 +260,44 @@ func (h *KnowledgeBaseHandler) RetryKnowledgeBaseGraphDocs(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": res})
 }
+
+// GetKnowledgeBaseGraphView GET /knowledge-bases/:id/graph/view
+// M5-1：返回 KB 图谱可视化数据（节点+边），Go 代理 starkb-api /graph/view。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphView(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	starkbURL := os.Getenv("STARKB_API_URL")
+	if starkbURL == "" {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "STARKB_API_URL 未配置"}})
+		return
+	}
+	ws := graphWorkspaceForKBHandler(kb)
+	url := starkbURL + "/graph/view?workspace=" + ws + "&limit=300"
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": err.Error()}})
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "starkb-api 不可达"}})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "starkb-api 返回异常"}})
+		return
+	}
+	var graph map[string]any
+	if err := json.Unmarshal(body, &graph); err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "响应解析失败"}})
+		return
+	}
+	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
+}

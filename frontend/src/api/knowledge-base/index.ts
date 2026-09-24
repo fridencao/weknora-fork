@@ -736,3 +736,8 @@ export function retryKnowledgeBaseGraphDocs(kbId: string, knowledgeIds: string[]
     knowledge_ids: knowledgeIds,
   });
 }
+
+/** M5-1：KB 图谱可视化数据（Go 代理 starkb-api /graph/view） */
+export function getKnowledgeBaseGraphView(kbId: string) {
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/view`);
+}
