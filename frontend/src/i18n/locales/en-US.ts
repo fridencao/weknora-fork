@@ -2335,6 +2335,7 @@ export default {
     autoBuildLabel: 'Automatic graph building',
     autoBuildDescription: 'When enabled, finished documents in this knowledge base are automatically fed into graph building; failures are listed below and can be retried.',
     graphViewLabel: 'Graph visualization',
+    graphViewEmpty: 'No graph data for this knowledge base yet',
     statusTitle: 'Graph status',
     statusDescription: 'Graph scale and recent build jobs (from the graph service health endpoint)',
     statDocs: 'Docs in graph',

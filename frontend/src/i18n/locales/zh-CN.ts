@@ -5182,6 +5182,7 @@ export default {
     autoBuildLabel: '自动建图',
     autoBuildDescription: '开启后，本知识库内文档解析完成将自动投喂图谱构建（无需手工触发）；构建失败会在下方状态中列出并支持重试。',
     graphViewLabel: '图谱可视化',
+    graphViewEmpty: '该知识库暂无图谱数据',
     statusTitle: '图谱状态',
     statusDescription: '图谱规模与最近建图任务（数据来自图谱服务健康度接口）',
     statDocs: '已建图文档',

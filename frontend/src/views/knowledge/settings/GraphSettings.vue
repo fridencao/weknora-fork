@@ -25,7 +25,8 @@
         <label>{{ t('graphSettings.graphViewLabel') }}</label>
       </div>
       <div class="setting-control full-width">
-        <div ref="chartEl" class="graph-chart"></div>
+        <GraphForceChart :nodes="graphData.nodes" :edges="graphData.edges" height="400px"
+          :empty-text="t('graphSettings.graphViewEmpty')" />
       </div>
     </div>
 
@@ -89,15 +90,10 @@
 // 控件移除；props 保留 graphExtract 以兼容父组件的保存载荷。
 // 自动建图开关写 KB 的 auto_graph_config（A1 钩子消费）；健康度来自
 // GET /knowledge-bases/:id/graph/status（Go 代理 starkb-api /graph/status）。
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getKnowledgeBaseGraphStatus, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
-
-const TYPE_COLORS: Record<string, string> = {
-  公司: '#4f7cf0', 人物: '#e0666c', 产品: '#48b884', 行业: '#f0a04f',
-  概念: '#9b6ff0', 事件: '#f0cf4f', 政策: '#5fc9e0', 指标: '#e0919b',
-}
+import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 
 const { t } = useI18n()
 
@@ -144,61 +140,13 @@ const statusLoading = ref(false)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const graphData = ref<any>(null)
-const chartEl = ref<HTMLElement>()
-let chart: echarts.ECharts | null = null
-
-// echarts 实例不随 v-if 自动回收：KB 切换（graphData 置空使容器卸载）与页面离开
-// 都必须显式 dispose，否则残留实例持有已移除的 DOM。
-// 尺寸变化用 ResizeObserver 而非 window.resize：容器在 UploadConfirmDialog 里靠
-// v-show 切换，隐藏期 init 得到 0×0，只有容器自身尺寸变化才能触发重排。
-let resizeObserver: ResizeObserver | null = null
-
-const disposeChart = () => {
-  resizeObserver?.disconnect()
-  resizeObserver = null
-  if (chart) { chart.dispose(); chart = null }
-}
-
-const observeContainer = () => {
-  if (resizeObserver || !chartEl.value || typeof ResizeObserver === 'undefined') return
-  resizeObserver = new ResizeObserver(() => chart?.resize())
-  resizeObserver.observe(chartEl.value)
-}
-
-const renderGraph = () => {
-  if (!chartEl.value || !graphData.value?.nodes?.length) return
-  if (!chart) chart = echarts.init(chartEl.value)
-  const nodes = graphData.value.nodes.map((n: any) => ({
-    id: n.id,
-    name: n.id,
-    symbolSize: Math.min(10 + (n.degree || 0) * 1.5, 40),
-    category: n.entity_type || '其他',
-    itemStyle: { color: TYPE_COLORS[n.entity_type] || '#8ca3b8' },
-  }))
-  const edges = graphData.value.edges.map((e: any) => ({
-    source: e.source, target: e.target,
-    lineStyle: { width: 1, color: 'source', opacity: 0.3 },
-  }))
-  chart.setOption({
-    series: [{
-      type: 'graph', layout: 'force', roam: true, draggable: true,
-      data: nodes, links: edges,
-      force: { repulsion: 120, edgeLength: [40, 120], gravity: 0.1 },
-      label: { show: true, fontSize: 10, position: 'right' },
-      emphasis: { focus: 'adjacency', lineStyle: { width: 3 } },
-      lineStyle: { curveness: 0.1 },
-    }],
-  })
-  observeContainer()
-  chart.resize()
-}
 
 const loadGraphData = async () => {
   if (!props.kbId) return
   try {
     const res = await getKnowledgeBaseGraphView(props.kbId)
     const d = res?.data || res
-    if (d?.available) { graphData.value = d; await nextTick(); renderGraph() }
+    if (d?.available) graphData.value = d
   } catch { /* 静默 */ }
 }
 
@@ -248,7 +196,6 @@ onMounted(() => {
 // 同一实例内切换 KB（KnowledgeBaseEditorModal 传 activeKbId，无 :key 重挂载）时
 // 必须重载，否则展示上一个 KB 的图与健康度。
 watch(() => props.kbId, () => {
-  disposeChart()
   graphData.value = null
   loadStatus()
   loadGraphData()
@@ -256,7 +203,6 @@ watch(() => props.kbId, () => {
 
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer)
-  disposeChart()
 })
 </script>
 
@@ -430,11 +376,5 @@ onBeforeUnmount(() => {
   .setting-row:not(.vertical) .setting-control {
     align-self: flex-start;
   }
-}
-
-.graph-chart {
-  width: 100%;
-  height: 400px;
-  min-height: 300px;
 }
 </style>
