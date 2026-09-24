@@ -107,10 +107,10 @@ func runStartupBootstrap(c *dig.Container) {
 // so deployments that configure these via config.yaml keep working, and
 // the env override documented in .env.example still wins over the file.
 //
-// Because the write happens only here, changing either key in the UI
-// takes effect on the next restart — matching RequiresRestart: true on
-// the registry entries (systemSettingService.dispatchSideEffects logs a
-// reminder instead of pushing).
+// 除写回 config 单例外，还把解析结果推送到 config 包的 atomic 覆盖位
+// （tenant_gate_bridge.go），封住 preload 异步完成前的请求窗口——那是
+// listen 前唯一的同步应用点。此后 UI 改动由 dispatchSideEffects 热推送，
+// 不再需要重启。
 func applyTenantSettingOverrides(
 	ctx context.Context,
 	cfg *config.Config,
@@ -136,6 +136,10 @@ func applyTenantSettingOverrides(
 		types.SettingEnvTenantEnableCrossTenantAccess,
 		cfg.Tenant.EnableCrossTenantAccess,
 	)
+
+	// 同步推送覆盖位：这是 listen 前唯一能封住 preload 窗口的点。
+	config.SetTenantRBACEnforcedOverride(rbac)
+	config.SetTenantCrossTenantAccessOverride(cfg.Tenant.EnableCrossTenantAccess)
 
 	logger.Infof(ctx,
 		"[bootstrap] tenant gates: enable_rbac=%t enable_cross_tenant_access=%t "+

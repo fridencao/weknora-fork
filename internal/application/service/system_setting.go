@@ -456,7 +456,7 @@ var registry = map[string]settingSpec{
 		EnvName:         "WEKNORA_TENANT_ENABLE_RBAC",
 		Default:         true,
 		Category:        "tenant",
-		RequiresRestart: true,
+		RequiresRestart: false,
 		Description: "是否启用空间级角色强制鉴权。关闭时空间内的角色检查只记录不拦截" +
 			"（跨空间访问始终拦截），仅建议单机私有化部署使用。默认 true。" +
 			"该值在进程启动时绑定，修改后需重启服务方可生效。",
@@ -466,7 +466,7 @@ var registry = map[string]settingSpec{
 		EnvName:         "WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS",
 		Default:         false,
 		Category:        "tenant",
-		RequiresRestart: true,
+		RequiresRestart: false,
 		Description: "是否允许跨空间访问（需同时具备 CanAccessAllTenants 权限，" +
 			"两者都为真才放行）。默认 false。该值在进程启动时绑定，修改后需重启" +
 			"服务方可生效。",
@@ -585,10 +585,11 @@ var registry = map[string]settingSpec{
 			"合规场景）。默认 90。改动在下次巡检（每日一次）时生效，无需重启。",
 	},
 	"task.pool_size": {
-		Type:     "int",
-		EnvName:  "CONCURRENCY_POOL_SIZE",
-		Default:  int64(5),
-		Category: "task",
+		Type:            "int",
+		EnvName:         "CONCURRENCY_POOL_SIZE",
+		Default:         int64(5),
+		Category:        "task",
+		RequiresRestart: true,
 		Description: "异步任务（文档解析等）的并发协程池大小。调大提高吞吐，" +
 			"但占用更多 CPU/内存与下游配额。默认 5。该值在进程启动时绑定，" +
 			"改动需重启服务进程方可生效。",
@@ -616,6 +617,10 @@ var registry = map[string]settingSpec{
 // edits still take effect (since Update does write the local cache
 // inline). This is the right behaviour for single-replica deployments.
 type systemSettingService struct {
+	// 租户门禁的 YAML 层缺省，由 bootstrap 在构造后注入（SetTenantGateDefaults）。
+	tenantRBACDef  bool
+	tenantCrossDef bool
+
 	repo  interfaces.SystemSettingRepository
 	audit interfaces.AuditLogService
 	rdb   *redis.Client // may be nil in lite mode
@@ -662,6 +667,13 @@ func NewSystemSettingService(
 		instanceID: uuid.NewString(),
 		cache:      make(map[string]*types.SystemSetting),
 	}
+	// 租户门禁的 YAML 层缺省在此定格：此刻任何覆盖位都还没被推送，
+	// IsRBACEnforced() 走 YAML/内置默认分支，正是我们要的 def。
+	// 之后 dispatch/preload 的推送以 DB/ENV 层为准，def 只在两层都缺时兜底。
+	if cfg != nil && cfg.Tenant != nil {
+		s.tenantRBACDef = cfg.Tenant.IsRBACEnforced()
+		s.tenantCrossDef = cfg.Tenant.EnableCrossTenantAccess
+	}
 	// Async preload — don't block container build / handler readiness
 	// on a slow DB. The first few requests may miss cache and hit the
 	// DB directly via the resolver fallback; that's a few ms each and
@@ -702,6 +714,7 @@ func (s *systemSettingService) preload(ctx context.Context) {
 	s.applyDockerBackendEnabled(ctx)
 	s.applyToolApprovalSettings(ctx)
 	s.applyDeepPackageBridges(ctx)
+	s.applyTenantGateBridges(ctx)
 }
 
 // applyDeepPackageBridges 把深包配置推送到各包内的 atomic 覆盖位。
@@ -874,12 +887,26 @@ func (s *systemSettingService) dispatchSideEffects(ctx context.Context, changedK
 	case types.SettingKeyTaskPoolSize:
 		s.logRestartRequiredSetting(ctx, changedKey)
 	case types.SettingKeyTenantEnableRBAC, types.SettingKeyTenantEnableCrossTenantAccess:
-		// 这两项已落库并审计，但刻意不推送：消费方读的是 *config.Config
-		// 单例上的裸字段，运行期写入会与请求路径上的读取构成 data race，
-		// 而它们是安全门禁。由 cmd/server/bootstrap.go 在下次启动时应用。
-		// 这里留一条日志，避免运维以为「保存了就已经生效」。
-		s.logRestartRequiredSetting(ctx, changedKey)
+		// 两个安全门禁经 config 包的 atomic 覆盖位热更新（见
+		// config/tenant_gate_bridge.go）。读取点改走 Effective 方法后不再
+		// 与请求路径构成 data race；bootstrap 启动钩子仍在 listen 前同步
+		// 应用一次，封住 preload 完成前的窗口。
+		s.applyTenantGateBridges(ctx)
 	}
+}
+
+// applyTenantGateBridges 把两个租户安全门禁推送到 config 包的覆盖位。
+// 独立于 applyDeepPackageBridges：门禁推送失败必须显眼，不能混在一批
+// 调优参数的日志里。
+func (s *systemSettingService) applyTenantGateBridges(ctx context.Context) {
+	rbac := s.GetBool(ctx,
+		types.SettingKeyTenantEnableRBAC, types.SettingEnvTenantEnableRBAC, s.tenantRBACDef)
+	cross := s.GetBool(ctx,
+		types.SettingKeyTenantEnableCrossTenantAccess, types.SettingEnvTenantEnableCrossTenantAccess, s.tenantCrossDef)
+	config.SetTenantRBACEnforcedOverride(rbac)
+	config.SetTenantCrossTenantAccessOverride(cross)
+	logger.Infof(ctx,
+		"[system_settings] tenant gates applied (enable_rbac=%t enable_cross_tenant_access=%t)", rbac, cross)
 }
 
 // logRestartRequiredSetting 输出「已保存但需重启」的提示。消费方读的是

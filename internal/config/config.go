@@ -264,13 +264,6 @@ type TenantConfig struct {
 // default (true). Callers that need to treat a nil *Config as
 // fail-open (legacy behaviour) should keep their own `cfg != nil`
 // short-circuit before invoking this helper.
-func (t *TenantConfig) IsRBACEnforced() bool {
-	if t == nil || t.EnableRBAC == nil {
-		return true
-	}
-	return *t.EnableRBAC
-}
-
 // IsSelfServiceCreationEnabled reports whether ordinary users may create
 // tenants. Nil keeps the historical behaviour enabled.
 func (t *TenantConfig) IsSelfServiceCreationEnabled() bool {
@@ -626,7 +619,7 @@ func LoadConfig() (*Config, error) {
 	// from the first console line. Printf rather than logger because
 	// LoadConfig runs before the logger sink is wired in the dig graph.
 	rbacOn := cfg.Tenant.IsRBACEnforced()
-	xtAccess := cfg.Tenant != nil && cfg.Tenant.EnableCrossTenantAccess
+	xtAccess := cfg.Tenant != nil && cfg.Tenant.EffectiveEnableCrossTenantAccess()
 	fmt.Printf(
 		"[config] tenant RBAC enforcement: enable_rbac=%v cross_tenant_access=%v "+
 			"(env: WEKNORA_TENANT_ENABLE_RBAC=%q WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS=%q)\n",

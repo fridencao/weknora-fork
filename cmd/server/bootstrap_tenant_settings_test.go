@@ -49,6 +49,10 @@ func TestTenantOverrideDBBeatsConfigYAML(t *testing.T) {
 		types.SettingKeyTenantEnableCrossTenantAccess: true,
 	}}
 
+	t.Cleanup(func() {
+		config.ClearTenantRBACEnforcedOverride()
+		config.ClearTenantCrossTenantAccessOverride()
+	})
 	applyTenantSettingOverrides(context.Background(), cfg, svc)
 
 	if !cfg.Tenant.IsRBACEnforced() {
@@ -67,6 +71,10 @@ func TestTenantOverrideFallsBackToConfigYAML(t *testing.T) {
 	cfg := cfgWithTenant(boolPtr(false), true)
 	svc := &boolOnlySettings{bools: map[string]bool{}}
 
+	t.Cleanup(func() {
+		config.ClearTenantRBACEnforcedOverride()
+		config.ClearTenantCrossTenantAccessOverride()
+	})
 	applyTenantSettingOverrides(context.Background(), cfg, svc)
 
 	if cfg.Tenant.IsRBACEnforced() {
@@ -84,6 +92,10 @@ func TestTenantOverrideUnsetRBACDefaultsTrue(t *testing.T) {
 	cfg := cfgWithTenant(nil, false)
 	svc := &boolOnlySettings{bools: map[string]bool{}}
 
+	t.Cleanup(func() {
+		config.ClearTenantRBACEnforcedOverride()
+		config.ClearTenantCrossTenantAccessOverride()
+	})
 	applyTenantSettingOverrides(context.Background(), cfg, svc)
 
 	if !cfg.Tenant.IsRBACEnforced() {
@@ -101,6 +113,10 @@ func TestTenantOverrideDBFalseBeatsConfigYAMLTrue(t *testing.T) {
 		types.SettingKeyTenantEnableCrossTenantAccess: false,
 	}}
 
+	t.Cleanup(func() {
+		config.ClearTenantRBACEnforcedOverride()
+		config.ClearTenantCrossTenantAccessOverride()
+	})
 	applyTenantSettingOverrides(context.Background(), cfg, svc)
 
 	if cfg.Tenant.EnableCrossTenantAccess {

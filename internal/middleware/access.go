@@ -53,7 +53,7 @@ import (
 // attribute and the cluster-wide flag must be true; either alone is
 // not enough.
 func IsCrossTenantSuperuser(ctx context.Context, cfg *config.Config) bool {
-	if cfg == nil || cfg.Tenant == nil || !cfg.Tenant.EnableCrossTenantAccess {
+	if cfg == nil || cfg.Tenant == nil || !cfg.Tenant.EffectiveEnableCrossTenantAccess() {
 		return false
 	}
 	u, ok := ctx.Value(types.UserContextKey).(*types.User)
@@ -87,7 +87,7 @@ func IsTenantAccessible(
 	if user.TenantID == targetTenantID {
 		return true
 	}
-	if cfg != nil && cfg.Tenant != nil && cfg.Tenant.EnableCrossTenantAccess && user.CanAccessAllTenants {
+	if cfg != nil && cfg.Tenant != nil && cfg.Tenant.EffectiveEnableCrossTenantAccess() && user.CanAccessAllTenants {
 		return true
 	}
 	if memberService == nil {
@@ -118,7 +118,7 @@ func RequireCrossTenantAccess(cfg *config.Config) gin.HandlerFunc {
 		// First the cluster-wide flag — if it's off, nobody gets through,
 		// not even users with CanAccessAllTenants=true. This mirrors the
 		// "must require BOTH" rule that previously lived in tenant.go.
-		if cfg == nil || cfg.Tenant == nil || !cfg.Tenant.EnableCrossTenantAccess {
+		if cfg == nil || cfg.Tenant == nil || !cfg.Tenant.EffectiveEnableCrossTenantAccess() {
 			uid, _ := types.UserIDFromContext(ctx)
 			logger.Warnf(ctx,
 				"[rbac] cross-tenant route blocked (EnableCrossTenantAccess=false): user=%s path=%s",
