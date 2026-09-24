@@ -478,6 +478,14 @@ func (s *knowledgeService) executeKnowledgeDelete(plan *knowledgeDeletePlan, sin
 	}
 
 	wg := errgroup.Group{}
+	// ADR-008 §3.6：文档删除→图谱清理联动（best-effort，不阻塞删除链）
+	for _, k := range knowledgeList {
+		k := k
+		wg.Go(func() error {
+			GraphCleanupOnDelete(ctx, k)
+			return nil
+		})
+	}
 	// 2. Delete knowledge embeddings from vector store
 	wg.Go(func() error {
 		tenantID := types.MustTenantIDFromContext(ctx)

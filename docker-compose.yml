@@ -91,6 +91,8 @@ services:
       # STARKB_GRAPH_WORKSPACE_MODE=shared 全局空间 / kb 按 KB 隔离
       # （WS6 多图谱空间形态，切换需配合存量拆分）。
       - STARKB_GRAPH_WORKSPACE_MODE=${STARKB_GRAPH_WORKSPACE_MODE:-shared}
+      # ADR-008 §3.6：文档删除→图谱数据清理联动
+      - STARKB_GRAPH_CLEANUP_ON_DELETE=${STARKB_GRAPH_CLEANUP_ON_DELETE:-true}
       # MinerU 自部署在宿主机（MINERU_BASE_URL=192.168.5.2:8310 属私网地址），
       # 引擎可用性探测须经 SSRF 白名单放行（.env 维护，随网络拓扑变更）。
       - SSRF_WHITELIST_EXTRA=${SSRF_WHITELIST_EXTRA:-}
