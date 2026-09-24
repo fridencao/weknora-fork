@@ -105,6 +105,14 @@
                   <span class="job-time">{{ formatTime(job.updated_at) }}</span>
                 </div>
               </div>
+              <!-- M6-1 WS1.4：孤儿巡检（source_id 悬空 = 指向已删除文档的证据） -->
+              <div v-if="(status.graph.orphans?.dangling_keys ?? 0) > 0" class="status-unavailable">
+                <t-icon name="link-broken" />
+                <span>{{ t('graphSettings.orphansLine', {
+                  n: status.graph.orphans.dangling_keys,
+                  docs: (status.graph.orphans.dangling_docs || []).length,
+                }) }}</span>
+              </div>
             </template>
             <div v-else-if="status && status.graph && !status.graph.available" class="status-unavailable">
               <t-icon name="info-circle" />

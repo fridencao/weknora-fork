@@ -5234,6 +5234,7 @@ export default {
     coverageFailed: '{n}편 실패 — 문서 목록 배지에서 원인 확인 및 재시도할 수 있습니다',
     coverageExempt: '붙여넣기 문서 {n}편은 그래프 구축 대상이 아닙니다',
     coverageEmpty: '커버리지 데이터가 아직 없습니다',
+    orphansLine: '끊어진 근거 {n}건 발견(삭제된 문서 참조, {docs}편). 연쇄 정리 또는 그래프 재구축으로 해제할 수 있습니다',
     statusTitle: '그래프 상태',
     statusDescription: '그래프 규모와 최근 구축 작업(그래프 서비스 헬스 엔드포인트 제공)',
     statDocs: '구축된 문서',

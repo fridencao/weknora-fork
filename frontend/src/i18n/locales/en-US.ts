@@ -2375,6 +2375,7 @@ export default {
     coverageFailed: '{n} failed — inspect the document list badge for details and retry',
     coverageExempt: '{n} paste-type documents are exempt from graph building',
     coverageEmpty: 'No coverage data yet',
+    orphansLine: '{n} dangling evidence entries found (pointing to deleted documents, {docs} affected); clear them via cascade cleanup or a graph rebuild',
     statusTitle: 'Graph status',
     statusDescription: 'Graph scale and recent build jobs (from the graph service health endpoint)',
     statDocs: 'Docs in graph',

@@ -5236,6 +5236,7 @@ export default {
     coverageFailed: '{n} 篇失败，可在文档列表徽标中查看原因并重试',
     coverageExempt: '另有 {n} 篇粘贴类文档不参与建图',
     coverageEmpty: '暂无覆盖数据',
+    orphansLine: '发现 {n} 条悬空证据（指向已删除文档，涉及 {docs} 篇）；可用「文档删除级联清理」或重刷图谱消除',
     statusTitle: '图谱状态',
     statusDescription: '图谱规模与最近建图任务（数据来自图谱服务健康度接口）',
     statDocs: '已建图文档',

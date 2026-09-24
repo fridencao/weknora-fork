@@ -2375,6 +2375,7 @@ export default {
     coverageFailed: '{n} 件が失敗 — ドキュメント一覧のバッジから詳細確認と再試行ができます',
     coverageExempt: '貼り付けドキュメント {n} 件はグラフ構築対象外です',
     coverageEmpty: 'カバレッジデータはまだありません',
+    orphansLine: '壊れた証拠 {n} 件（削除済みドキュメントへの参照、{docs} 件分）。カスケードクリーンアップかグラフ再構築で解消できます',
     statusTitle: 'グラフステータス',
     statusDescription: 'グラフ規模と最近の構築ジョブ（グラフサービスのヘルスエンドポイントより）',
     statDocs: '構築済みドキュメント',
