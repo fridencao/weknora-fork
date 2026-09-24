@@ -81,10 +81,42 @@ const kbLoading = ref(false);
 const docListLoading = ref(true);
 const isFAQ = computed(() => (kbInfo.value?.type || '') === 'faq');
 const isWiki = computed(() => !!kbInfo.value?.indexing_strategy?.wiki_enabled);
-const validTabs = ['documents', 'wiki', 'graph'] as const
+// M6-1 WS1.1b + 用户决策：把 LLM 实体-关系图谱（独立路由 /graph）放到顶栏 tabs，
+// 紧挨 Wiki 页面链接图谱 tab；用 hasGraphData 控制是否显示——无图谱数据时整 tab 隐藏。
+const validTabs = ['documents', 'wiki', 'graph', 'entity-graph'] as const
 type KbTab = typeof validTabs[number]
 const initTab = validTabs.includes(route.query.tab as any) ? (route.query.tab as KbTab) : 'documents'
 const activeKbTab = ref<KbTab>(initTab);
+
+// hasGraphData 通过 /graph/status 的 docs_processed 判断；轮询沿用 wiki status 节奏（5s）。
+// 进入 KB 后异步拉一次，结果在 wikiIsIndexing 后台打补；KB 内仅 >=1 文档建过图才显示 tab。
+const hasGraphData = ref(false)
+let graphStatusTimer: ReturnType<typeof setInterval> | null = null
+const fetchGraphStatusOnce = async () => {
+  if (!kbId.value) return
+  try {
+    const res = await getKnowledgeBaseGraphStatus(kbId.value)
+    const data = (res as { data?: any })?.data ?? res
+    const processed = Number(data?.docs_processed ?? data?.graph?.docs_processed ?? 0)
+    const nodes = Number(data?.graph_nodes ?? data?.graph?.graph_nodes ?? 0)
+    hasGraphData.value = processed > 0 || nodes > 0
+  } catch {
+    /* 静默失败：图谱状态端点不可达不应影响 Wiki 视图 */
+  }
+}
+const stopGraphStatusPolling = () => {
+  if (graphStatusTimer) { clearInterval(graphStatusTimer); graphStatusTimer = null }
+}
+const startGraphStatusPolling = () => {
+  stopGraphStatusPolling()
+  if (!kbId.value) return
+  fetchGraphStatusOnce()
+  graphStatusTimer = setInterval(fetchGraphStatusOnce, 8000)
+}
+const openEntityGraph = () => {
+  if (!kbId.value) return
+  router.push({ name: 'knowledgeBaseGraph', params: { kbId: kbId.value } })
+}
 
 // Wiki 状态用于面包屑上的索引中指示。父组件自行拉取，避免依赖 WikiBrowser 挂载状态
 // （用户切到"文档" tab 时 WikiBrowser 会卸载，这里仍需持续反映后台索引进度）。
@@ -162,9 +194,19 @@ watch([kbId, isWiki], ([newKbId, newIsWiki]) => {
     fetchWikiStatusOnce()
   }
 }, { immediate: true })
+// M6-1 WS1.1b：LLM 实体-关系图谱 tab 的 hasGraphData 轮询；与 wiki status 并行追踪，
+// 不阻塞 Wiki 视图。每 KB 切换都重起一次轮询保证 tab 反映最新建图状态。
+watch([kbId], ([newKbId]) => {
+  stopGraphStatusPolling()
+  hasGraphData.value = false
+  if (newKbId) {
+    startGraphStatusPolling()
+  }
+}, { immediate: true })
 onUnmounted(() => {
   stopWikiStatusPolling()
   clearWikiStatusProbes()
+  stopGraphStatusPolling()
 })
 const missingStorageEngine = computed(() => {
   if (!kbInfo.value || isFAQ.value) return false
@@ -2176,6 +2218,17 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
                     </t-tooltip>
                   </span>
                 </t-tooltip>
+                <!-- M6-1 WS1.1b + 用户决策：LLM 实体-关系图谱浏览器 tab；仅在 KB 已建图时显示。
+                     点击跳独立路由 /platform/knowledge-bases/:kbId/graph（KnowledgeGraphExplorer.vue）。 -->
+                <template v-if="hasGraphData">
+                  <span class="breadcrumb-tab-sep">/</span>
+                  <t-tooltip :content="$t('knowledgeEditor.entityGraphTabTip')" placement="bottom">
+                    <span :class="['breadcrumb-tab', 'breadcrumb-tab--entity']"
+                      @click="openEntityGraph">
+                      {{ $t('knowledgeEditor.entityGraphTab') }}
+                    </span>
+                  </t-tooltip>
+                </template>
               </template>
               <span v-else class="breadcrumb-current">{{ $t('knowledgeEditor.document.title') }}</span>
             </h2>

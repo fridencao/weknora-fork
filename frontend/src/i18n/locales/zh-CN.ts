@@ -4310,6 +4310,8 @@ export default {
       tabDocuments: '文档',
       tabGraph: '图谱',
       tabGraphTip: 'Wiki 页面之间的引用关系图（即页面链接图谱），与知识库图谱浏览器（知识库设置 → 打开图谱浏览器）中基于 LLM 抽取的实体-关系图谱不是同一个概念',
+      entityGraphTab: '实体图谱',
+      entityGraphTabTip: '基于 LLM 抽取的实体-关系图谱（独立路由页）；仅在 KB 已建图时显示',
       searchPlaceholder: '搜索 Wiki 页面...',
       searchNoResults: '没有找到匹配的页面',
       viewModeToggle: '切换目录视图',
