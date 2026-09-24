@@ -702,6 +702,17 @@ const handleAnswerRenderComplete = (message, ready) => {
 // 流式回答完成后再拉一次本会话最新消息，把服务端读取时组装的
 // knowledge_references 补到本地消息对象上——否则刚生成的回答点引用时
 // 溯源面板拿到空数据，必须手动刷新页面才能显示。
+const HYDRATE_MAX_ATTEMPTS = 3;
+const hasUsableProvenance = (refs) => (refs || []).some((r) => {
+    const meta = (r?.chunk_metadata ?? r?.metadata) || null;
+    return Boolean(meta && (meta.sbk_blocks || meta.sbk_pages || meta.sbk_method));
+});
+const scheduleHydrateRetry = (message, sid, attempt) => {
+    if (attempt >= HYDRATE_MAX_ATTEMPTS) return;
+    setTimeout(() => {
+        if (session_id.value === sid) void hydrateMessageReferences(message, attempt + 1);
+    }, 1200 * (attempt + 1));
+};
 const hydrateMessageReferences = async (message, attempt = 0) => {
     const sid = session_id.value;
     const mid = resolveAssistantMessageId(message);
@@ -714,21 +725,26 @@ const hydrateMessageReferences = async (message, attempt = 0) => {
     }
     // 流式 references 事件推的是薄引用（无 chunk_metadata.sbk_*，溯源面板据此渲染
     // L4 数据）——引用存在但缺溯源字段时仍需水合，否则面板空态必须手动刷新。
-    const hasUsableProvenance = (message.knowledge_references || []).some((r) => {
-        const meta = (r?.chunk_metadata ?? r?.metadata) || null;
-        return Boolean(meta && (meta.sbk_blocks || meta.sbk_pages || meta.sbk_method));
-    });
     if (hasUsableProvenance(message.knowledge_references)) return;
     try {
         const res = await fetchMessageList({ session_id: sid, limit: 10 });
         if (session_id.value !== sid) return;
         const batch = res?.data || [];
-        const match = batch.find((m) => m.id === mid);
-        if (match?.knowledge_references?.length) {
-            message.knowledge_references = match.knowledge_references;
+        // 本地 assistant 行的 id 可能是 request_id（agent_query 尚未绑定落库 id），
+        // 三个键都试一遍，避免匹配不到而静默放弃。
+        const match = batch.find((m) => m.id === mid || m.request_id === mid || m.assistant_message_id === mid);
+        const refs = match?.knowledge_references || [];
+        if (refs.length) {
+            message.knowledge_references = refs;
+        }
+        // 服务端权威引用可能晚于 complete 事件落库：本轮拿不到溯源字段就退避重试，
+        // 而不是留下一个必须手动刷新才能恢复的空态。
+        if (!hasUsableProvenance(refs)) {
+            scheduleHydrateRetry(message, sid, attempt);
         }
     } catch (err) {
         console.warn('[chat] hydrate knowledge_references failed:', err);
+        scheduleHydrateRetry(message, sid, attempt);
     }
 };
 
