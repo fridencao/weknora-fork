@@ -400,6 +400,23 @@ var registry = map[string]settingSpec{
 		Description: "删除知识时同步清理其图谱数据（节点/关系/向量）。关闭时图谱会残留" +
 			"孤儿数据，需人工巡检。修改后立即生效，无需重启。",
 	},
+	"starkb.graph_build_max_async": {
+		Type:     "int",
+		EnvName:  "STARKB_GRAPH_MAX_ASYNC",
+		Default:  int64(2),
+		Category: "starkb",
+		Description: "图谱抽取的 LLM 并发数（1–8）。由 starkb-api 建图热读取；" +
+			"受模型服务商账号并发上限约束，超限会触发 429 退避重试。" +
+			"修改后下一轮建图生效。",
+	},
+	"starkb.graph_build_llm_interval_ms": {
+		Type:     "int",
+		EnvName:  "STARKB_GRAPH_LLM_INTERVAL_MS",
+		Default:  int64(2000),
+		Category: "starkb",
+		Description: "图谱抽取相邻 LLM 调用的平滑间隔（毫秒，0–10000）。调小可提速，" +
+			"但会增加触发服务商限流的概率。由 starkb-api 建图热读取；修改后下一轮建图生效。",
+	},
 
 	// Agent 超时与审批策略。
 	"agent.llm_timeout": {
@@ -1860,6 +1877,24 @@ func validateRegistryEntry(key string, rawValue any) error {
 		// 上限沿用 graphRecallTimeout 的历史约束（>120 视为误配）。
 		if n < 1 || n > 120 {
 			return errors.New("timeout must be between 1 and 120 seconds")
+		}
+	case types.SettingKeyStarkbGraphBuildMaxAsync:
+		n, err := coerceToPositiveInt64(rawValue)
+		if err != nil {
+			return err
+		}
+		// >8 极易触发服务商并发限流（429 风暴），视为误配。
+		if n < 1 || n > 8 {
+			return errors.New("max_async must be between 1 and 8")
+		}
+	case types.SettingKeyStarkbGraphBuildLLMIntervalMS:
+		n, err := coerceToPositiveInt64(rawValue)
+		if err != nil {
+			return err
+		}
+		// 0 = 无间隔（不推荐）；上限防误配成秒级。
+		if n < 0 || n > 10000 {
+			return errors.New("llm_interval_ms must be between 0 and 10000")
 		}
 	case "agent.llm_timeout", "agent.tool_approval_timeout",
 		"docreader.call_timeout", "document.process_timeout":

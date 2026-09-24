@@ -49,6 +49,14 @@ const (
 	SettingKeyStarkbGraphCleanupOnDelete = "starkb.graph_cleanup_on_delete"
 	SettingEnvStarkbGraphCleanupOnDelete = "STARKB_GRAPH_CLEANUP_ON_DELETE"
 
+	// SettingKeyStarkbGraphBuildMaxAsync 图谱抽取的 LLM 并发数（starkb-api 热读取）。
+	SettingKeyStarkbGraphBuildMaxAsync = "starkb.graph_build_max_async"
+	SettingEnvStarkbGraphBuildMaxAsync = "STARKB_GRAPH_MAX_ASYNC"
+
+	// SettingKeyStarkbGraphBuildLLMIntervalMS 图谱抽取相邻 LLM 调用的平滑间隔（毫秒）。
+	SettingKeyStarkbGraphBuildLLMIntervalMS = "starkb.graph_build_llm_interval_ms"
+	SettingEnvStarkbGraphBuildLLMIntervalMS = "STARKB_GRAPH_LLM_INTERVAL_MS"
+
 	// SettingKeyAgentLLMTimeout 单次 LLM 调用默认超时（Go duration 或秒数）。
 	SettingKeyAgentLLMTimeout = "agent.llm_timeout"
 	SettingEnvAgentLLMTimeout = "WEKNORA_AGENT_LLM_TIMEOUT"
