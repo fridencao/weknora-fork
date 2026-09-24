@@ -564,6 +564,8 @@ services:
       # （starkb-api/model_settings.py 直读 WeKnora.models 表，热生效）。
       # 环境变量不再是模型参数来源（SiliconFlow 默认值曾致 402 余额不足事故）。
       - STARKB_GRAPH_LLM_INTERVAL_S=${STARKB_GRAPH_LLM_INTERVAL_S:-2.0}
+      # 补齐限速：2026-09-24 存量图谱重建期临时提到 12 篇/小时，稳态可调回 3
+      - STARKB_GRAPH_BACKFILL_PER_HOUR=${STARKB_GRAPH_BACKFILL_PER_HOUR:-12}
       - STARKB_GRAPH_MAX_ASYNC=${STARKB_GRAPH_MAX_ASYNC:-2}
       # ========== StarKB (A4) 建图存储 PostgreSQL 化：与 lightrag-server 同库 ==========
       - STARKB_GRAPH_STORAGE_BACKEND=${STARKB_GRAPH_STORAGE_BACKEND:-pg}
@@ -615,17 +617,12 @@ services:
       - PORT=9621
       # 服务鉴权：设置后 app 侧 LIGHT_RAG_API_KEY 需一致；留空=关闭（与 M2 形态一致）
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-}
-      # LLM 绑定（默认硅基流动 Qwen2.5-72B，与既有图谱数据一致）
+      # 协议绑定类型固定 openai 兼容。模型参数（host/key/model/dim）一律由
+      # entrypoint_settings.py 启动时从 WeKnora「设置」解析注入——与 starkb-api
+      # 建图同源，保证查询与建图落在同一组按模型+维度命名的向量表上。
+      # 环境变量不再人工配置模型（SiliconFlow 默认值曾致 402 事故，2026-09-24 移除）。
       - LLM_BINDING=${LIGHTRAG_LLM_BINDING:-openai}
-      - LLM_BINDING_HOST=${LIGHTRAG_LLM_BINDING_HOST:-https://api.siliconflow.cn/v1}
-      - LLM_BINDING_API_KEY=${LIGHTRAG_LLM_API_KEY:-}
-      - LLM_MODEL=${LIGHTRAG_LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
-      # Embedding 绑定（bge-m3 / 1024 维，与 workspace 既有向量维度一致）
       - EMBEDDING_BINDING=${LIGHTRAG_EMBEDDING_BINDING:-openai}
-      - EMBEDDING_BINDING_HOST=${LIGHTRAG_EMBEDDING_BINDING_HOST:-https://api.siliconflow.cn/v1}
-      - EMBEDDING_BINDING_API_KEY=${LIGHTRAG_EMBEDDING_API_KEY:-}
-      - EMBEDDING_MODEL=${LIGHTRAG_EMBEDDING_MODEL:-BAAI/bge-m3}
-      - EMBEDDING_DIM=${LIGHTRAG_EMBEDDING_DIM:-1024}
       # ========== A4：存储后端 PostgreSQL 化（docs/09 WS1.1）==========
       # 全量四类存储落 starkb_graph 独立库（迁移工具 tools/migrate_graph_json_to_pg.py
       # 已验收：PG 与源侧逐项计数一致）。PG 存储带 workspace 列，server 常驻查询与
@@ -647,6 +644,16 @@ services:
       - LIGHTRAG_WORKSPACES=${LIGHTRAG_WORKSPACES:-}
     volumes:
       - ../../data/processed/lightrag_a3:/data/lightrag
+      # 模型设置解析入口（挂载免重建镜像；脚本在主仓 services/lightrag/ 入库管理）
+      - ../../services/lightrag/entrypoint_settings.py:/app/entrypoint_settings.py:ro
+    # WS6：LIGHTRAG_WORKSPACES 非空时经 multi_workspace_server 按 X-Workspace 头
+    # 路由到 per-workspace 子 app（缺省落首个空间）；为空时此 command 仍可运行
+    # 但列表空 = 只注册默认空间，与单空间直通等价。
+    # entrypoint 先从「设置」解析模型参数再 exec 本 command。
+    entrypoint: ["python", "/app/entrypoint_settings.py"]
+    command: ["python", "/app/multi_workspace_server.py",
+              "--host", "0.0.0.0", "--port", "9621",
+              "--working-dir", "/data/lightrag", "--log-level", "INFO"]
     ports:
       - "127.0.0.1:${LIGHTRAG_PORT:-9621}:9621"
     networks:
