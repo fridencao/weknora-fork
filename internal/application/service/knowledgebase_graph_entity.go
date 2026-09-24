@@ -69,10 +69,15 @@ func (s *knowledgeBaseService) GraphEntityDetail(
 		logger.Infof(ctx, "graph entity: KB %s 范围内无可回跳文档", kbID)
 	}
 
-	payload := fetchStarkbGraph[graphEntityPayload](ctx, "/graph/entity", url.Values{
+	// WS4.4：shared 模式把归属清单带给数据面，实体与邻居先在源头过滤
+	query := url.Values{
 		"workspace": {graphWorkspaceForKBID(kbID)},
 		"name":      {name},
-	})
+	}
+	if ids := graphDocIdsForFilter(graphWorkspaceForKBID(kbID), allowed); ids != "" {
+		query.Set("doc_ids", ids)
+	}
+	payload := fetchStarkbGraph[graphEntityPayload](ctx, "/graph/entity", query)
 	if payload == nil {
 		return graphUnavailable("图谱数据面不可用（starkb-api 未配置或不可达）"), nil
 	}

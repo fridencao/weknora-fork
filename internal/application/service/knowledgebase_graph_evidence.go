@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	chatpipeline "github.com/Tencent/WeKnora/internal/application/service/chat_pipeline"
@@ -29,6 +31,29 @@ const (
 	graphDrillEvidencePerHit = 3
 	graphDrillEvidenceTotal  = 15
 )
+
+// graphDrillMaxDocIds shared 模式传给数据面的归属过滤文档数上限（与 Python 侧
+// MAX_FILTER_DOC_IDS 对齐，双方都挡「当全量扫描接口用」）。
+const graphDrillMaxDocIds = 500
+
+// graphDocIdsForFilter shared 模式下把 KB 文档清单交给数据面做归属过滤
+// （WS4.4：workspace="" 是全局图，路由只校验了单 KB 读权限）。kb 模式返回空——
+// workspace 隔离已生效，过滤是多余的。
+// allowed 已按 KB 文档范围收口（graphAllowedDocs），这里只是转成逗号串。
+func graphDocIdsForFilter(workspace string, allowed map[string]struct{}) string {
+	if workspace != "" || len(allowed) == 0 {
+		return ""
+	}
+	ids := make([]string, 0, len(allowed))
+	for id := range allowed {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	if len(ids) > graphDrillMaxDocIds {
+		ids = ids[:graphDrillMaxDocIds]
+	}
+	return strings.Join(ids, ",")
+}
 
 // graphEvidenceChunk 图谱侧的一条证据 chunk（key + 正文）。
 //

@@ -32,6 +32,30 @@ const graphStatusProxyTimeout = 10 * time.Second
 // 500 留足余量，同时挡住「拿它当全量扫描接口」的用法。
 const graphDocStatusMaxIDs = 500
 
+// ownedKBDocIDsForGraph 列出 KB 内**参与建图**的文档 id（粘贴类 FileName==""
+// 从不进图谱，带上只会白占参数）。WS4.4 的 shared 模式视图过滤用。
+// 与 Python 侧 MAX_FILTER_DOC_IDS(=500) 对齐。
+func (h *KnowledgeBaseHandler) ownedKBDocIDsForGraph(ctx context.Context, kbID string) []string {
+	if h.knowledgeService == nil || kbID == "" {
+		return nil
+	}
+	docs, err := h.knowledgeService.ListKnowledgeByKnowledgeBaseID(ctx, kbID)
+	if err != nil {
+		logger.Warnf(ctx, "graph view: 列 KB %s 文档失败（跳过归属过滤）: %v", kbID, err)
+		return nil
+	}
+	out := make([]string, 0, len(docs))
+	for _, d := range docs {
+		if d != nil && d.ID != "" && d.FileName != "" {
+			out = append(out, d.ID)
+		}
+	}
+	if len(out) > graphDocStatusMaxIDs {
+		out = out[:graphDocStatusMaxIDs]
+	}
+	return out
+}
+
 // graphWorkspaceForKBHandler 与 service 侧 graphWorkspaceForKB 同口径：
 // shared（默认）= 全局图谱空间；kb = 按 KB 隔离（WS6 形态）。
 func graphWorkspaceForKBHandler(kb *types.KnowledgeBase) string {
@@ -265,6 +289,11 @@ func (h *KnowledgeBaseHandler) RetryKnowledgeBaseGraphDocs(c *gin.Context) {
 
 // GetKnowledgeBaseGraphView GET /knowledge-bases/:id/graph/view
 // M5-1：返回 KB 图谱可视化数据（节点+边），Go 代理 starkb-api /graph/view。
+//
+// M6-4 WS4.4：shared 模式（workspace=""）下数据面是**全局图**，而本路由只要求
+// 该 KB 的读权限——不过滤就是越权泄漏（他 KB 的实体、描述、证据来源全可见）。
+// 处置选「过滤」而非拒绝服务：把 KB 文档清单带给数据面（doc_ids 参数），
+// kb 模式下 workspace 隔离已生效，不带该参数、行为不变。
 func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphView(c *gin.Context) {
 	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
 	if err != nil {
@@ -277,10 +306,15 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphView(c *gin.Context) {
 		return
 	}
 	ws := graphWorkspaceForKBHandler(kb)
-	url := starkbURL + "/graph/view?workspace=" + ws + "&limit=300"
+	viewURL := starkbURL + "/graph/view?workspace=" + ws + "&limit=300"
+	if ws == "" {
+		if ids := h.ownedKBDocIDsForGraph(c.Request.Context(), kb.ID); len(ids) > 0 {
+			viewURL += "&doc_ids=" + url.QueryEscape(strings.Join(ids, ","))
+		}
+	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, viewURL, nil)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": err.Error()}})
 		return

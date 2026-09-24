@@ -58,11 +58,16 @@ func (s *knowledgeBaseService) GraphEdgeDetail(
 
 	allowed, titleByDoc := s.graphAllowedDocs(ctx, tenantID, kbID)
 
-	payload := fetchStarkbGraph[graphEdgePayload](ctx, "/graph/edge", url.Values{
+	// WS4.4：shared 模式把归属清单带给数据面（与实体端点同口径）
+	query := url.Values{
 		"workspace": {graphWorkspaceForKBID(kbID)},
 		"source":    {source},
 		"target":    {target},
-	})
+	}
+	if ids := graphDocIdsForFilter(graphWorkspaceForKBID(kbID), allowed); ids != "" {
+		query.Set("doc_ids", ids)
+	}
+	payload := fetchStarkbGraph[graphEdgePayload](ctx, "/graph/edge", query)
 	if payload == nil {
 		return graphUnavailable("图谱数据面不可用（starkb-api 未配置或不可达）"), nil
 	}
