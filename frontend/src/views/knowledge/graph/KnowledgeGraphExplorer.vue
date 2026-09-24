@@ -9,6 +9,10 @@
       <t-tag v-if="scale.truncated" theme="warning" variant="light" size="small">
         {{ t('knowledgeGraph.truncatedNodes', { shown: scale.shownNodes, total: scale.totalNodes }) }}
       </t-tag>
+      <!-- M6-1 D3 口径：有未覆盖文档时明示，避免用户把子集当全集 -->
+      <t-tag v-if="uncovered > 0" theme="warning" variant="outline" size="small">
+        {{ t('knowledgeGraph.uncoveredDocs', { ready: coverageInfo.ready, eligible: coverageInfo.eligible }) }}
+      </t-tag>
       <span class="graph-explorer__spacer" />
       <t-button variant="outline" size="small" :loading="loading" @click="reload">
         <template #icon><t-icon name="refresh" /></template>
@@ -184,8 +188,9 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 import ProvenancePanel from '@/components/ProvenancePanel.vue'
+import { coverageSummary, type GraphCoveragePayload } from '@/utils/graphCoverage'
 import { provideProvenancePanel } from '@/composables/useProvenancePanel'
-import { getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
+import { getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
 import type { GraphEdgeDatum, GraphNodeDatum } from '@/components/knowledge/graphForceChart'
 import {
   descriptionsOf,
@@ -243,6 +248,20 @@ function clearDocFilter() {
   const query = { ...route.query }
   delete query.doc
   void router.replace({ query })
+}
+
+// M6-1 D3 口径：覆盖率标注（失败静默——它是补充信息，不是面板的主体）
+const coverage = ref<GraphCoveragePayload | null>(null)
+const coverageInfo = computed(() => coverageSummary(coverage.value))
+const uncovered = computed(() => coverageInfo.value.uncovered)
+
+const loadCoverage = async () => {
+  try {
+    const res = await getKnowledgeBaseGraphCoverage(kbId.value)
+    coverage.value = unwrapGraphPayload<GraphCoveragePayload>(res)
+  } catch {
+    coverage.value = null
+  }
 }
 
 async function loadGraph() {
@@ -369,6 +388,7 @@ function goBack() {
 }
 
 onMounted(async () => {
+  void loadCoverage()
   await loadGraph()
   // 深链：?node= 或 ?edge=（二选一，node 优先）
   const deepLink = String(route.query.node || '')

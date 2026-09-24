@@ -119,6 +119,45 @@
         </div>
       </div>
     </div>
+
+    <!-- M6-1 WS1.5：覆盖进度（分母剔除粘贴类豁免，D3 口径） -->
+    <div v-if="kbId" class="setting-row vertical">
+      <div class="setting-info">
+        <label>{{ t('graphSettings.coverageTitle') }}</label>
+        <p class="desc">{{ t('graphSettings.coverageDescription') }}</p>
+      </div>
+      <div class="setting-control full-width">
+        <div class="status-card">
+          <t-loading :loading="coverageLoading" size="small">
+            <template v-if="coverageSummaryState && coverageSummaryState.percent !== null">
+              <div class="coverage-line">
+                <t-progress theme="plump" :percentage="coverageSummaryState.percent" />
+              </div>
+              <p class="coverage-note">
+                {{ t('graphSettings.coverageReady', {
+                  ready: coverageSummaryState.ready,
+                  eligible: coverageSummaryState.eligible,
+                }) }}
+              </p>
+              <p v-if="coverageSummaryState.pending + coverageSummaryState.building > 0" class="coverage-note">
+                {{ t('graphSettings.coveragePending',
+                  { n: coverageSummaryState.pending + coverageSummaryState.building }) }}
+              </p>
+              <p v-if="coverageSummaryState.failed > 0" class="coverage-note coverage-note--warn">
+                {{ t('graphSettings.coverageFailed', { n: coverageSummaryState.failed }) }}
+              </p>
+            </template>
+            <p v-else-if="!coverageLoading" class="status-unavailable">
+              <t-icon name="info-circle" />
+              <span>{{ t('graphSettings.coverageEmpty') }}</span>
+            </p>
+            <p v-if="exemptManual > 0" class="coverage-note coverage-note--muted">
+              {{ t('graphSettings.coverageExempt', { n: exemptManual }) }}
+            </p>
+          </t-loading>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -131,9 +170,10 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { getKnowledgeBaseGraphStatus, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
+import { getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphStatus, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
 import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 import { useUIStore } from '@/stores/ui'
+import { coverageSummary } from '@/utils/graphCoverage'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -212,6 +252,27 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const graphData = ref<any>(null)
 
+// ---- M6-1 WS1.5：覆盖进度 ----
+const coverage = ref<any>(null)
+const coverageLoading = ref(false)
+const coverageSummaryState = computed(() => coverageSummary(coverage.value))
+const exemptManual = computed(() =>
+  typeof coverage.value?.exempt_manual === 'number' ? coverage.value.exempt_manual : 0)
+
+const loadCoverage = async () => {
+  if (!props.kbId) return
+  coverageLoading.value = true
+  try {
+    const res = await getKnowledgeBaseGraphCoverage(props.kbId)
+    const d = res?.data || res
+    coverage.value = d && typeof d === 'object' ? d : null
+  } catch {
+    coverage.value = null
+  } finally {
+    coverageLoading.value = false
+  }
+}
+
 const loadGraphData = async () => {
   if (!props.kbId) return
   try {
@@ -262,14 +323,17 @@ const formatTime = (ts: number | string) => {
 onMounted(() => {
   loadStatus()
   loadGraphData()
+  loadCoverage()
 })
 
 // 同一实例内切换 KB（KnowledgeBaseEditorModal 传 activeKbId，无 :key 重挂载）时
 // 必须重载，否则展示上一个 KB 的图与健康度。
 watch(() => props.kbId, () => {
   graphData.value = null
+  coverage.value = null
   loadStatus()
   loadGraphData()
+  loadCoverage()
 })
 
 onBeforeUnmount(() => {
@@ -422,6 +486,20 @@ onBeforeUnmount(() => {
   gap: 6px;
   color: var(--td-text-color-secondary);
   font-size: var(--app-text-md);
+}
+
+/* M6-1 WS1.5：覆盖进度 */
+.coverage-line {
+  margin-bottom: 4px;
+}
+
+.coverage-note {
+  margin: 4px 0 0;
+  color: var(--td-text-color-secondary);
+  font-size: var(--app-text-sm);
+
+  &--warn { color: var(--td-warning-color); }
+  &--muted { color: var(--td-text-color-placeholder); }
 }
 
 .status-actions {

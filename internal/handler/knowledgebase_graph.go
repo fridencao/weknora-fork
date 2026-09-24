@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -365,4 +366,87 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEdge(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
+}
+
+// graphExemptDoc 无文件语义的知识（粘贴文本等）没有契约目录，从不进图谱。
+// 这是入队侧的豁免口径（knowledge_graph_ingest.go 的 FileName == "" 跳过分支），
+// 覆盖率的分母必须用同一把尺子，否则粘贴类文档会被算成「未覆盖」。
+func graphExemptDoc(k *types.Knowledge) bool {
+	return k == nil || k.ID == "" || k.FileName == ""
+}
+
+// countGraphEligibleDocs 统计 KB 内参与建图的文档数与豁免数。
+func countGraphEligibleDocs(docs []*types.Knowledge) (total, exempt int) {
+	for _, d := range docs {
+		if graphExemptDoc(d) {
+			exempt++
+		}
+	}
+	return len(docs), exempt
+}
+
+// GetKnowledgeBaseGraphCoverage GET /knowledge-bases/:id/graph/coverage
+//
+// M6-1 WS1.5：KB 设置页覆盖进度条 + 图谱页「未覆盖」标注的数据源。
+//
+// 两边的数据在这一层合流：starkb-api /graph/coverage 给状态计数（它的
+// graph_doc_state 只有进过建图队列的文档），WeKnora 侧补上**分母**——KB 文档总数
+// 与粘贴类豁免数（D3 口径）。没有分母，"ready: 12" 无法回答「覆盖了多少」。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCoverage(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	out := gin.H{"available": false}
+	if h.knowledgeService != nil {
+		docs, err := h.knowledgeService.ListKnowledgeByKnowledgeBaseID(c.Request.Context(), kb.ID)
+		if err != nil {
+			logger.Warnf(c.Request.Context(), "graph coverage: 列 KB %s 文档失败: %v", kb.ID, err)
+		}
+		total, exempt := countGraphEligibleDocs(docs)
+		out["total_docs"] = total
+		out["exempt_manual"] = exempt
+		out["eligible"] = total - exempt
+	}
+
+	starkbURL := os.Getenv("STARKB_API_URL")
+	if starkbURL == "" {
+		out["reason"] = "STARKB_API_URL 未配置"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), graphStatusProxyTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		starkbURL+"/graph/coverage?kb_id="+url.QueryEscape(kb.ID), nil)
+	if err != nil {
+		out["reason"] = err.Error()
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logger.Warnf(c.Request.Context(), "graph coverage proxy: %v", err)
+		out["reason"] = "starkb-api 不可达"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		out["reason"] = "starkb-api 返回异常"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	var coverage map[string]any
+	if err := json.Unmarshal(body, &coverage); err != nil {
+		out["reason"] = "响应解析失败"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	out["available"] = true
+	out["coverage"] = coverage
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
 }

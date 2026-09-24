@@ -761,3 +761,11 @@ export function getKnowledgeBaseGraphEdge(kbId: string, source: string, target: 
     params: { source, target },
   });
 }
+
+/**
+ * M6-1 WS1.5：图谱覆盖进度（状态计数来自 starkb-api，分母/豁免在 WeKnora 侧合流）。
+ * D3 口径：粘贴类文档无契约语义、不参与建图，已从分母剔除（exempt_manual）。
+ */
+export function getKnowledgeBaseGraphCoverage(kbId: string) {
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/coverage`);
+}
