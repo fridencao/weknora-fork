@@ -213,9 +213,12 @@ type ModelParametersDTO struct {
 	SupportsVision      bool                      `json:"supports_vision"`
 	ContextWindow       int                       `json:"context_window,omitempty"`
 	MaxOutputTokens     int                       `json:"max_output_tokens,omitempty"`
-	MaxConcurrency      int                       `json:"max_concurrency,omitempty"`
-	AppID               string                    `json:"app_id,omitempty"`
-	Spec                *types.ModelSpecOverride  `json:"spec,omitempty"`
+	// 模型行思考默认（编辑界面配置；调用方显式设置优先）
+	ReasoningEffort      string `json:"reasoning_effort,omitempty"`
+	ThinkingBudgetTokens int    `json:"thinking_budget_tokens,omitempty"`
+	MaxConcurrency       int    `json:"max_concurrency,omitempty"`
+	AppID                string `json:"app_id,omitempty"`
+	Spec                 *types.ModelSpecOverride `json:"spec,omitempty"`
 }
 
 // NewModelResponse converts a stored Model into its response shape.
@@ -227,19 +230,21 @@ func NewModelResponse(ctx context.Context, m *types.Model) *ModelResponse {
 		return nil
 	}
 	params := ModelParametersDTO{
-		BaseURL:             m.Parameters.BaseURL,
-		InterfaceType:       m.Parameters.InterfaceType,
-		EmbeddingParameters: m.Parameters.EmbeddingParameters,
-		ParameterSize:       m.Parameters.ParameterSize,
-		Provider:            m.Parameters.Provider,
-		ExtraConfig:         m.Parameters.ExtraConfig,
-		CustomHeaders:       m.Parameters.CustomHeaders,
-		SupportsVision:      m.Parameters.SupportsVision,
-		ContextWindow:       m.Parameters.ContextWindow,
-		MaxOutputTokens:     m.Parameters.MaxOutputTokens,
-		MaxConcurrency:      m.Parameters.MaxConcurrency,
-		AppID:               m.Parameters.AppID,
-		Spec:                m.Parameters.Spec,
+		BaseURL:              m.Parameters.BaseURL,
+		InterfaceType:        m.Parameters.InterfaceType,
+		EmbeddingParameters:  m.Parameters.EmbeddingParameters,
+		ParameterSize:        m.Parameters.ParameterSize,
+		Provider:             m.Parameters.Provider,
+		ExtraConfig:          m.Parameters.ExtraConfig,
+		CustomHeaders:        m.Parameters.CustomHeaders,
+		SupportsVision:       m.Parameters.SupportsVision,
+		ContextWindow:        m.Parameters.ContextWindow,
+		MaxOutputTokens:      m.Parameters.MaxOutputTokens,
+		ReasoningEffort:      m.Parameters.ReasoningEffort,
+		ThinkingBudgetTokens: m.Parameters.ThinkingBudgetTokens,
+		MaxConcurrency:       m.Parameters.MaxConcurrency,
+		AppID:                m.Parameters.AppID,
+		Spec:                 m.Parameters.Spec,
 	}
 	canManageBuiltin := m.IsBuiltin && types.IsSystemAdminFromContext(ctx)
 	if !CanViewIntegrationSecrets(ctx) && !canManageBuiltin {

@@ -41,6 +41,9 @@ services:
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
         - WITH_ANYDOC=${WITH_ANYDOC:-1}
+        # Rust/Chrome 扩展工具链默认关（与 scripts/build_starkb_images.sh 一致），
+        # 否则 compose build 路径会拉起 browserskill 工具链（大且易挂）
+        - WITH_BROWSERSKILL=${WITH_BROWSERSKILL:-0}
         # Go 模块代理（国内环境必需；默认走 goproxy.cn，可经 .env 覆盖为直连）
         - GOPROXY_ARG=${GOPROXY_ARG:-https://goproxy.cn,direct}
     container_name: WeKnora-app
