@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -459,25 +460,40 @@ func getFloat64(m map[string]interface{}, key string) float64 {
 }
 
 // searchResultFromMap rebuilds a *types.SearchResult from a map that went
-// through JSON/Redis serialization, preserving all fields including metadata.
+// through JSON/Redis serialization, preserving every serialized field.
+//
+// The SSE references event is written to the stream manager as a typed
+// types.References and read back after a JSON round trip, where it arrives as
+// []interface{} of map[string]interface{}. Dropping a field here silently
+// thins the live event relative to the persisted message — most visibly
+// chunk_metadata, which carries the StarKB sbk_* provenance (L4 block anchors)
+// the provenance panel reads. The panel then showed its empty state until a
+// page reload re-read the message from the database.
 func searchResultFromMap(refMap map[string]interface{}) *types.SearchResult {
 	sr := &types.SearchResult{
-		ID:                   getString(refMap, "id"),
-		Content:              getString(refMap, "content"),
-		KnowledgeID:          getString(refMap, "knowledge_id"),
-		ChunkIndex:           int(getFloat64(refMap, "chunk_index")),
-		KnowledgeTitle:       getString(refMap, "knowledge_title"),
-		StartAt:              int(getFloat64(refMap, "start_at")),
-		EndAt:                int(getFloat64(refMap, "end_at")),
-		Seq:                  int(getFloat64(refMap, "seq")),
-		Score:                getFloat64(refMap, "score"),
-		ChunkType:            getString(refMap, "chunk_type"),
-		ParentChunkID:        getString(refMap, "parent_chunk_id"),
-		ImageInfo:            getString(refMap, "image_info"),
-		KnowledgeFilename:    getString(refMap, "knowledge_filename"),
-		KnowledgeSource:      getString(refMap, "knowledge_source"),
-		KnowledgeDescription: getString(refMap, "knowledge_description"),
-		KnowledgeBaseID:      getString(refMap, "knowledge_base_id"),
+		ID:                      getString(refMap, "id"),
+		Content:                 getString(refMap, "content"),
+		KnowledgeID:             getString(refMap, "knowledge_id"),
+		ChunkIndex:              int(getFloat64(refMap, "chunk_index")),
+		KnowledgeTitle:          getString(refMap, "knowledge_title"),
+		StartAt:                 int(getFloat64(refMap, "start_at")),
+		EndAt:                   int(getFloat64(refMap, "end_at")),
+		Seq:                     int(getFloat64(refMap, "seq")),
+		Score:                   getFloat64(refMap, "score"),
+		MatchType:               types.MatchType(int(getFloat64(refMap, "match_type"))),
+		Channels:                retrieverTypesFromAny(refMap["channels"]),
+		SubChunkID:              stringSliceFromAny(refMap["sub_chunk_id"]),
+		ChunkType:               getString(refMap, "chunk_type"),
+		ParentChunkID:           getString(refMap, "parent_chunk_id"),
+		ImageInfo:               getString(refMap, "image_info"),
+		KnowledgeFilename:       getString(refMap, "knowledge_filename"),
+		KnowledgeSource:         getString(refMap, "knowledge_source"),
+		KnowledgeChannel:        getString(refMap, "knowledge_channel"),
+		MatchedContent:          getString(refMap, "matched_content"),
+		KnowledgeDescription:    getString(refMap, "knowledge_description"),
+		KnowledgeCustomMetadata: getString(refMap, "knowledge_custom_metadata"),
+		KnowledgeBaseID:         getString(refMap, "knowledge_base_id"),
+		ChunkMetadata:           jsonFromAny(refMap["chunk_metadata"]),
 	}
 	if meta, ok := refMap["metadata"].(map[string]interface{}); ok {
 		metadata := make(map[string]string)
@@ -489,6 +505,69 @@ func searchResultFromMap(refMap map[string]interface{}) *types.SearchResult {
 		sr.Metadata = metadata
 	}
 	return sr
+}
+
+// stringSliceFromAny normalizes a JSON-decoded value into a string slice.
+// Absent/nil stays nil so an empty result is not serialized as [].
+func stringSliceFromAny(value interface{}) []string {
+	switch typed := value.(type) {
+	case nil:
+		return nil
+	case []string:
+		return typed
+	case []interface{}:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text, ok := item.(string); ok && text != "" {
+				out = append(out, text)
+			}
+		}
+		if len(out) == 0 {
+			return nil
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// retrieverTypesFromAny restores the M5-3 channel labels after the Redis
+// round trip, where types.SearchResult.Channels arrives as []interface{} of
+// strings. Empty stays nil so single-channel results keep omitting the field.
+func retrieverTypesFromAny(value interface{}) []types.RetrieverType {
+	raw := stringSliceFromAny(value)
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]types.RetrieverType, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, types.RetrieverType(item))
+	}
+	return out
+}
+
+// jsonFromAny re-encodes a JSON-decoded value back into types.JSON. The value
+// is a nested map/slice after the stream round trip; a string is tolerated for
+// paths that already carry encoded JSON.
+func jsonFromAny(value interface{}) types.JSON {
+	switch typed := value.(type) {
+	case nil:
+		return nil
+	case types.JSON:
+		return typed
+	case string:
+		raw := strings.TrimSpace(typed)
+		if raw == "" || raw == "null" {
+			return nil
+		}
+		return types.JSON(raw)
+	default:
+		raw, err := json.Marshal(typed)
+		if err != nil || len(raw) == 0 || string(raw) == "null" {
+			return nil
+		}
+		return types.JSON(raw)
+	}
 }
 
 // createDefaultSummaryConfig and fillSummaryConfigDefaults used to build

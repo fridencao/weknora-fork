@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -62,23 +63,31 @@ func TestValidateUnscopedTagIDs(t *testing.T) {
 // survive.
 func TestSearchResultFromMap_RoundTrip(t *testing.T) {
 	original := &types.SearchResult{
-		ID:                   "chunk-1",
-		Content:              "first part\nsecond part",
-		KnowledgeID:          "knowledge-1",
-		ChunkIndex:           3,
-		KnowledgeTitle:       "title",
-		StartAt:              10,
-		EndAt:                20,
-		Seq:                  2,
-		Score:                4.5,
-		ChunkType:            "text",
-		ParentChunkID:        "parent-1",
-		ImageInfo:            `[{"url":"cdn.example.com"}]`,
-		KnowledgeFilename:    "doc.txt",
-		KnowledgeSource:      "upload",
-		KnowledgeDescription: "desc",
-		KnowledgeBaseID:      "kb-1",
-		Metadata:             map[string]string{"page": "3"},
+		ID:                      "chunk-1",
+		Content:                 "first part\nsecond part",
+		KnowledgeID:             "knowledge-1",
+		ChunkIndex:              3,
+		KnowledgeTitle:          "title",
+		StartAt:                 10,
+		EndAt:                   20,
+		Seq:                     2,
+		Score:                   4.5,
+		MatchType:               types.MatchTypeGraph,
+		Channels:                []types.RetrieverType{types.VectorRetrieverType, types.GraphRetrieverType},
+		SubChunkID:              []string{"sub-1", "sub-2"},
+		ChunkType:               "text",
+		ParentChunkID:           "parent-1",
+		ImageInfo:               `[{"url":"cdn.example.com"}]`,
+		KnowledgeFilename:       "doc.txt",
+		KnowledgeSource:         "upload",
+		KnowledgeChannel:        "web",
+		KnowledgeDescription:    "desc",
+		KnowledgeCustomMetadata: `{"owner":"team-a"}`,
+		KnowledgeBaseID:         "kb-1",
+		Metadata:                map[string]string{"page": "3"},
+		// StarKB L4 provenance rides in chunk_metadata; losing it here made the
+		// live SSE references event thinner than the persisted message.
+		ChunkMetadata: types.JSON(`{"sbk_blocks":[{"block_id":"p001-b001"}],"sbk_pages":[1],"sbk_method":"interval"}`),
 	}
 
 	raw, err := json.Marshal(original)
@@ -97,14 +106,55 @@ func TestSearchResultFromMap_RoundTrip(t *testing.T) {
 	assert.Equal(t, original.EndAt, got.EndAt)
 	assert.Equal(t, original.Seq, got.Seq)
 	assert.Equal(t, original.Score, got.Score)
+	assert.Equal(t, original.MatchType, got.MatchType)
+	assert.Equal(t, original.Channels, got.Channels)
+	assert.Equal(t, original.SubChunkID, got.SubChunkID)
 	assert.Equal(t, original.ChunkType, got.ChunkType)
 	assert.Equal(t, original.ParentChunkID, got.ParentChunkID)
 	assert.Equal(t, original.ImageInfo, got.ImageInfo)
 	assert.Equal(t, original.KnowledgeFilename, got.KnowledgeFilename)
 	assert.Equal(t, original.KnowledgeSource, got.KnowledgeSource)
+	assert.Equal(t, original.KnowledgeChannel, got.KnowledgeChannel)
 	assert.Equal(t, original.KnowledgeDescription, got.KnowledgeDescription)
+	assert.Equal(t, original.KnowledgeCustomMetadata, got.KnowledgeCustomMetadata)
 	assert.Equal(t, original.KnowledgeBaseID, got.KnowledgeBaseID)
 	assert.Equal(t, original.Metadata, got.Metadata)
+	assert.JSONEq(t, string(original.ChunkMetadata), string(got.ChunkMetadata))
+}
+
+// The Redis stream manager hands the SSE loop the references as
+// []interface{}/map[string]interface{}. buildStreamResponse must still surface
+// the StarKB sbk_* provenance, otherwise the live references event is thinner
+// than the persisted message and the provenance panel stays empty until reload.
+func TestBuildStreamResponse_KeepsChunkMetadataAfterRedisRoundTrip(t *testing.T) {
+	evt := interfaces.StreamEvent{
+		ID:   "refs-1",
+		Type: types.ResponseTypeReferences,
+		Data: map[string]interface{}{
+			"references": []interface{}{
+				map[string]interface{}{
+					"id":              "chunk-1",
+					"content":         "body",
+					"knowledge_id":    "knowledge-1",
+					"knowledge_title": "title",
+					"chunk_metadata": map[string]interface{}{
+						"sbk_blocks": []interface{}{map[string]interface{}{"block_id": "p001-b001"}},
+						"sbk_pages":  []interface{}{float64(1)},
+						"sbk_method": "interval",
+					},
+				},
+			},
+		},
+	}
+
+	response := buildStreamResponse(evt, "req-1")
+
+	require.Len(t, response.KnowledgeReferences, 1)
+	ref := response.KnowledgeReferences[0]
+	require.NotEmpty(t, ref.ChunkMetadata)
+	assert.JSONEq(t,
+		`{"sbk_blocks":[{"block_id":"p001-b001"}],"sbk_pages":[1],"sbk_method":"interval"}`,
+		string(ref.ChunkMetadata))
 }
 
 func TestCreateAgentQueryEventIncludesPersistedTimestamps(t *testing.T) {
