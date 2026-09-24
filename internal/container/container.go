@@ -569,6 +569,16 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewDataSourceHandler))
 	// Wiki page handler
 	must(container.Provide(handler.NewWikiPageHandler))
+
+	// M6 后：KB 内全量文档批量入队 wiki:ingest。WikiPageHandler 用 WithBatchIngest
+	// 额外注入 taskEnqueuer / knowledgeService / pendingRepo（避免改动原有
+	// NewWikiPageHandler 6 参签名）。该 invoke 在 WikiPageHandler 之后，用于
+	// 把现有单实例参数化注入新依赖。
+	must(container.Invoke(func(h *handler.WikiPageHandler, ks interfaces.KnowledgeService,
+		t interfaces.TaskEnqueuer, pr interfaces.TaskPendingOpsRepository) error {
+		h.WithBatchIngest(ks, t, pr)
+		return nil
+	}))
 	// IM integration
 	logger.Debugf(ctx, "[Container] Registering IM integration...")
 	must(container.Provide(imPkg.NewService))

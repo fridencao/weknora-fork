@@ -351,6 +351,11 @@ func RegisterWikiPageRoutes(r *gin.RouterGroup, wikiHandler *handler.WikiPageHan
 		wikiRead.GET("/lint", g.Viewer(), g.KBAccessRead("kb_id"), wikiHandler.Lint)
 		wiki.POST("/auto-fix", g.OwnedWikiKBOrAdmin(), g.KBAccessWrite("kb_id"), wikiHandler.AutoFix)
 
+		// M6 后：KB 内全部文档批量入队 wiki:ingest——补 KB 启用 wiki 时不会
+		// 自动重建存量文档的产品 gap。权限与 rebuild-links 一致（KB owner/admin
+		// + write），与 KB 角色模型保持对称。
+		wiki.POST("/batch-ingest", g.OwnedWikiKBOrAdmin(), g.KBAccessWrite("kb_id"), wikiHandler.BatchIngest)
+
 		// Issues
 		wikiRead.GET("/issues", g.Viewer(), g.KBAccessRead("kb_id"), wikiHandler.ListIssues)
 		wiki.PUT("/issues/:issue_id/status", g.OwnedWikiKBOrAdmin(), g.KBAccessWrite("kb_id"), wikiHandler.UpdateIssueStatus)

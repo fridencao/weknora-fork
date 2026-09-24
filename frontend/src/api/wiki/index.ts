@@ -351,3 +351,23 @@ export function updateWikiIssueStatus(kbId: string, issueId: string, status: str
 export function rebuildWikiLinks(kbId: string) {
   return post(`/api/v1/knowledgebase/${kbId}/wiki/rebuild-links`, {});
 }
+
+export interface BatchIngestResult {
+  kb_id: string
+  queued: number
+  skipped: number
+  total: number
+  docs: Array<{
+    knowledge_id: string
+    queued: boolean
+    reason?: string
+  }>
+  poll_url: string
+}
+
+export function batchIngestWiki(kbId: string) {
+  // M6 后：批量入队 KB 内全部文档 wiki:ingest；补 KB 启用 wiki 时不会自动
+  // 重建存量文档的产品 gap。后端文档列只对 enabled + parse_status=completed
+  // 入队；disabled/deleted/parse-status!=completed 的会出现在 skipped。
+  return post(`/api/v1/knowledgebase/${kbId}/wiki/batch-ingest`, {});
+}

@@ -124,6 +124,46 @@
               />
             </div>
 
+            <!-- M6 后：KB 启用 wiki 后批量重建（补存量文档不自动 ingest 的产品 gap）。
+                 仅在编辑模式 + kbId 已绑定时显示——避免新建 KB 时空触发。 -->
+            <div v-if="!isFAQ && formData.indexingStrategy.wikiEnabled && editorMode === 'edit'" class="form-item">
+              <label class="form-label">{{ $t('knowledgeEditor.wiki.batchIngestLabel') }}</label>
+              <p class="form-tip">{{ $t('knowledgeEditor.wiki.batchIngestTip') }}</p>
+              <div class="wiki-batch-ingest-row">
+                <t-button variant="outline" size="small" :loading="batchIngestLoading"
+                  :disabled="batchIngestQueued > 0" @click="openBatchIngestConfirm">
+                  {{ batchIngestQueued > 0
+                    ? $t('knowledgeEditor.wiki.batchIngestPolling', { n: batchIngestQueued })
+                    : $t('knowledgeEditor.wiki.batchIngestCta') }}
+                </t-button>
+                <span v-if="batchIngestLastResult" class="wiki-batch-ingest-result">
+                  {{ $t('knowledgeEditor.wiki.batchIngestLastResult',
+                    { queued: batchIngestLastResult.queued,
+                      skipped: batchIngestLastResult.skipped,
+                      total: batchIngestLastResult.total }) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 批量重建确认弹窗：显示 KB 名 + 文档数 + 估算耗时，强制二次确认。 -->
+            <t-dialog
+              v-model:visible="batchIngestConfirmOpen"
+              :header="$t('knowledgeEditor.wiki.batchIngestConfirmTitle')"
+              :width="520"
+              :on-close="closeBatchIngestConfirm"
+              :confirm-btn="$t('knowledgeEditor.wiki.batchIngestConfirmCta')"
+              :cancel-btn="$t('common.cancel')"
+              @confirm="executeBatchIngest"
+            >
+              <p class="batch-ingest-confirm-body">
+                {{ $t('knowledgeEditor.wiki.batchIngestConfirmBody', { name: formData.name }) }}
+              </p>
+              <ul class="batch-ingest-confirm-list">
+                <li>{{ $t('knowledgeEditor.wiki.batchIngestConfirmHint') }}</li>
+                <li>{{ $t('knowledgeEditor.wiki.batchIngestConfirmCost') }}</li>
+              </ul>
+            </t-dialog>
+
             <div class="form-item" data-guide="kb-create-name">
               <label class="form-label required">{{ $t('knowledgeEditor.basic.nameLabel') }}</label>
               <t-input
@@ -515,6 +555,7 @@ import { copyWithToast } from '@/utils/clipboard'
 import { useEditorResourcesStore } from '@/stores/editorResources'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { batchIngestWiki, getWikiStats, type WikiStats } from '@/api/wiki'
 import KBModelConfig from './settings/KBModelConfig.vue'
 import KBParserSettings from './settings/KBParserSettings.vue'
 import KBStorageSettings from './settings/KBStorageSettings.vue'
@@ -562,6 +603,86 @@ const saveButtonLabel = computed(() =>
 const copyKbId = async () => {
   await copyWithToast(activeKbId.value, 'common.copied')
 }
+
+// ---- M6 后：KB Wiki 批量重建（补存量文档不会自动 ingest 的产品 gap） ----
+interface BatchIngestResult {
+  queued: number
+  skipped: number
+  total: number
+}
+const batchIngestLoading = ref(false)
+const batchIngestConfirmOpen = ref(false)
+const batchIngestQueued = ref(0)
+const batchIngestLastResult = ref<BatchIngestResult | null>(null)
+let batchIngestPollTimer: ReturnType<typeof setInterval> | null = null
+
+const stopBatchIngestPolling = () => {
+  if (batchIngestPollTimer) {
+    clearInterval(batchIngestPollTimer)
+    batchIngestPollTimer = null
+  }
+}
+
+const startBatchIngestPolling = () => {
+  stopBatchIngestPolling()
+  if (!activeKbId.value) return
+  const kbIdStr = activeKbId.value
+  batchIngestPollTimer = setInterval(async () => {
+    try {
+      const res: { data?: WikiStats } = await getWikiStats(kbIdStr)
+      const stats = res?.data
+      const pending = stats?.pending_tasks ?? 0
+      batchIngestQueued.value = pending
+      if (pending === 0) {
+        // pending 落到 0，停轮询；按钮回到初始文案
+        stopBatchIngestPolling()
+        batchIngestQueued.value = 0
+      }
+    } catch {
+      // 轮询失败不打断主流程
+    }
+  }, 3000)
+}
+
+const openBatchIngestConfirm = () => {
+  if (!activeKbId.value) {
+    MessagePlugin.warning(t('knowledgeEditor.wiki.batchIngestNoKbId'))
+    return
+  }
+  batchIngestConfirmOpen.value = true
+}
+
+const closeBatchIngestConfirm = () => {
+  batchIngestConfirmOpen.value = false
+}
+
+const executeBatchIngest = async () => {
+  if (!activeKbId.value) return
+  batchIngestConfirmOpen.value = false
+  batchIngestLoading.value = true
+  try {
+    const res = await batchIngestWiki(activeKbId.value)
+    const data = (res as { data?: BatchIngestResult })?.data ?? res
+    batchIngestLastResult.value = {
+      queued: Number(data?.queued ?? 0),
+      skipped: Number(data?.skipped ?? 0),
+      total: Number(data?.total ?? 0),
+    }
+    if (batchIngestLastResult.value.queued > 0) {
+      startBatchIngestPolling()
+    }
+    MessagePlugin.success(t('knowledgeEditor.wiki.batchIngestSuccess',
+      { queued: batchIngestLastResult.value.queued,
+        total: batchIngestLastResult.value.total }))
+  } catch (e) {
+    MessagePlugin.error(t('knowledgeEditor.wiki.batchIngestFailed'))
+    console.error('[wiki batch-ingest]', e)
+  } finally {
+    batchIngestLoading.value = false
+  }
+}
+
+onBeforeUnmount(() => stopBatchIngestPolling())
 
 const currentSection = ref<string>('basic')
 

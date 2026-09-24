@@ -13,6 +13,7 @@ import (
 	"github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
+	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	secutils "github.com/Tencent/WeKnora/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,10 @@ type WikiPageHandler struct {
 	lintService   *service.WikiLintService
 	auditService  interfaces.AuditLogService
 	memoryService interfaces.MemoryService
+	// M6 后扩展：KB 级 Wiki 重建（POST /wiki/batch-ingest）
+	knowledgeService interfaces.KnowledgeService
+	taskEnqueuer     interfaces.TaskEnqueuer
+	pendingRepo      interfaces.TaskPendingOpsRepository
 }
 
 // NewWikiPageHandler creates a new wiki page handler
@@ -42,6 +47,20 @@ func NewWikiPageHandler(
 		auditService:  auditService,
 		memoryService: memoryService,
 	}
+}
+
+// WithBatchIngest injects the dependencies required by POST /wiki/batch-ingest.
+// Created separately so existing wirings (e.g. test mocks that pre-date the
+// batch-ingest feature) keep compiling unchanged.
+func (h *WikiPageHandler) WithBatchIngest(
+	knowledgeService interfaces.KnowledgeService,
+	taskEnqueuer interfaces.TaskEnqueuer,
+	pendingRepo interfaces.TaskPendingOpsRepository,
+) *WikiPageHandler {
+	h.knowledgeService = knowledgeService
+	h.taskEnqueuer = taskEnqueuer
+	h.pendingRepo = pendingRepo
+	return h
 }
 
 // validateWikiKB validates that the KB exists and is a wiki type
@@ -1090,4 +1109,110 @@ func (h *WikiPageHandler) AutoFix(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"fixed": fixed, "message": fmt.Sprintf("Auto-fixed %d issues", fixed)})
+}
+
+// BatchIngest godoc
+//
+// @Summary      重新生成 KB 内全部文档的 Wiki 页面
+// @Description  KB 启用 Wiki 后，将已解析完成的存量文档批量入队 wiki:ingest
+//                任务。每个文档入 pending_op + 入一次 KB-scoped asynq trigger；
+//                worker 端按 dedup_key (knowledge_id) 自动去重。返回值供前端
+//                popup 显示进度（pending_tasks via /wiki/stats 轮询）。
+// @Tags         知识库 · Wiki
+// @Produce      json
+// @Param        kb_id  path      string  true  "知识库ID"
+// @Success      200    {object}  map[string]interface{}
+// @Failure      400    {object}  errors.AppError  "KB 未启用 Wiki 或无文档"
+// @Security     Bearer
+// @Security     ApiKeyAuth
+// @Router       /knowledgebase/{kb_id}/wiki/batch-ingest [post]
+func (h *WikiPageHandler) BatchIngest(c *gin.Context) {
+	kbID := secutils.SanitizeForLog(c.Param("kb_id"))
+	if kbID == "" {
+		c.Error(errors.NewBadRequestError("Knowledge base ID is required"))
+		return
+	}
+
+	ctx := c.Request.Context()
+	kb, err := h.kbService.GetKnowledgeBaseByID(ctx, kbID)
+	if err != nil {
+		c.Error(errors.NewNotFoundError("Knowledge base not found"))
+		return
+	}
+	if !kb.IsWikiEnabled() {
+		c.Error(errors.NewBadRequestError("Wiki feature is not enabled for this knowledge base"))
+		return
+	}
+	// BatchIngest 必须经 WithBatchIngest 注入依赖；未注入时显式返回 503 而不是
+	// 静默走零道——防止上线早期部分部署漏注入导致任务没入队但 HTTP 200。
+	if h.knowledgeService == nil || h.taskEnqueuer == nil || h.pendingRepo == nil {
+		c.Error(errors.NewInternalServerError("batch-ingest unavailable: handler dependencies not wired"))
+		return
+	}
+
+	docs, err := h.knowledgeService.ListKnowledgeByKnowledgeBaseID(ctx, kbID)
+	if err != nil {
+		logger.Errorf(ctx, "wiki batch-ingest: list KB %s docs failed: %v", kbID, err)
+		c.Error(errors.NewInternalServerError(err.Error()))
+		return
+	}
+
+	type docResult struct {
+		KnowledgeID string `json:"knowledge_id"`
+		Queued      bool   `json:"queued"`
+		Reason      string `json:"reason,omitempty"`
+	}
+	results := make([]docResult, 0, len(docs))
+	queuedCount := 0
+	skipped := 0
+	for _, d := range docs {
+		if d == nil {
+			continue
+		}
+		// 仅对已启用、未删除、已解析成功的文档入队；其它原因记录 reason 不阻塞主流程。
+		if d.DeletedAt != nil || d.EnableStatus == "" || d.EnableStatus == "disabled" {
+			results = append(results, docResult{KnowledgeID: d.ID, Queued: false,
+				Reason: "disabled"})
+			skipped++
+			continue
+		}
+		if d.ParseStatus != types.ParseStatusCompleted {
+			results = append(results, docResult{KnowledgeID: d.ID, Queued: false,
+				Reason: "parse_status=" + d.ParseStatus})
+			skipped++
+			continue
+		}
+		ok, err := service.EnqueueWikiIngest(ctx, h.taskEnqueuer, h.pendingRepo,
+			kb.TenantID, kb.ID, d.ID)
+		if err != nil {
+			logger.Errorf(ctx, "wiki batch-ingest: enqueue %s failed: %v", d.ID, err)
+			results = append(results, docResult{KnowledgeID: d.ID, Queued: false,
+				Reason: "enqueue_error"})
+			continue
+		}
+		if ok {
+			results = append(results, docResult{KnowledgeID: d.ID, Queued: true})
+			queuedCount++
+		} else {
+			// KB 已被删除时 pending_repo 返回 accepted=false（与现有路径同语义）
+			results = append(results, docResult{KnowledgeID: d.ID, Queued: false,
+				Reason: "kb_deleted"})
+			skipped++
+		}
+	}
+
+	logger.Infof(ctx, "wiki batch-ingest: KB %s queued=%d skipped=%d total=%d",
+		kbID, queuedCount, skipped, len(docs))
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"kb_id":          kbID,
+			"queued":         queuedCount,
+			"skipped":        skipped,
+			"total":          len(docs),
+			"docs":           results,
+			"poll_url":       fmt.Sprintf("/api/v1/knowledgebase/%s/wiki/stats", kbID),
+		},
+	})
 }
