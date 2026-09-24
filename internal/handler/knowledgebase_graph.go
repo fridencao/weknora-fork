@@ -21,6 +21,7 @@ import (
 	"time"
 
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
+	"github.com/Tencent/WeKnora/internal/infrastructure/docparser"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/gin-gonic/gin"
@@ -468,6 +469,19 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCoverage(c *gin.Context) {
 		out["total_docs"] = total
 		out["exempt_manual"] = exempt
 		out["eligible"] = total - exempt
+
+		// M6-1 后扩展：KB 解析引擎画像（仅 starkb 引擎的产物才会写图谱契约）。
+		// 出两条信息供前端：
+		//   parser_engine_consistent=true：所有规则都锁定 starkb
+		//   parser_engine_consistent=false：覆盖不全或为默认（非 starkb）
+		// unsupported_count 是 eligible_docs 中 inferred engine != starkb 的数量；
+		// 用解析引擎默认 + KB 规则合并推断（与 docparser 侧 ResolveParserEngine
+		// 同口径，避免出现「前端以为 ok 后端判 fail」的不一致）。
+		unsupported := countUnsupportedEngineDocs(docs, kb.ChunkingConfig)
+		if unsupported >= 0 {
+			out["unsupported_engine_count"] = unsupported
+		}
+		out["parser_engine_consistent"] = isStarkbConsistent(kb.ChunkingConfig)
 	}
 
 	starkbURL := os.Getenv("STARKB_API_URL")
@@ -476,36 +490,43 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCoverage(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
 		return
 	}
-	ctx, cancel := context.WithTimeout(c.Request.Context(), graphStatusProxyTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		starkbURL+"/graph/coverage?kb_id="+url.QueryEscape(kb.ID), nil)
-	if err != nil {
-		out["reason"] = err.Error()
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
-		return
+
+// isStarkbConsistent 判断 KB 的 chunking_config.parser_engine_rules 是否
+// 一致锁定到 StarKB 引擎。docs/11 §3：仅 starkb 引擎才会写图谱契约；其它
+// 引擎（builtin / simple / anydoc / mineru / mineru_cloud / paddleocr_vl /
+// _cloud）解析完成的文档不会进入建图管线。
+//
+// 判定：
+// - 没有 ParserEngineRules：视为使用默认引擎 ≠ starkb，返回 false；
+// - 存在规则但全部 Engine == "starkb"：返回 true；
+// - 存在规则但 Engine 不是 starkb：false（用户决策"全部用 starkb"的可视化）；
+// - 混合（部分 starkb 部分不是）：false 并附汇总由前端呈现。
+func isStarkbConsistent(cfg types.ChunkingConfig) bool {
+	if len(cfg.ParserEngineRules) == 0 {
+		return false
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		logger.Warnf(c.Request.Context(), "graph coverage proxy: %v", err)
-		out["reason"] = "starkb-api 不可达"
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
-		return
+	for _, r := range cfg.ParserEngineRules {
+		if r.Engine != docparser.StarkbEngineName {
+			return false
+		}
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil || resp.StatusCode != http.StatusOK {
-		out["reason"] = "starkb-api 返回异常"
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
-		return
+	return true
+}
+
+// countUnsupportedEngineDocs 统计 KB 内 inferred engine != starkb 的
+// eligible_docs 数（粘贴类豁免的不计入）。与 docparser.engines 中
+// ResolveParserEngine 同口径：若 KB 有规则先按规则，否则用全局默认。
+// 返回 -1 时表示无法推断（缺 file_type 字段等），调用方按 -1 不出键即可。
+func countUnsupportedEngineDocs(docs []*types.Knowledge, cfg types.ChunkingConfig) int {
+	n := 0
+	for _, d := range docs {
+		if graphExemptDoc(d) {
+			continue
+		}
+		engine := cfg.ResolveParserEngine(d.FileType)
+		if engine != docparser.StarkbEngineName {
+			n++
+		}
 	}
-	var coverage map[string]any
-	if err := json.Unmarshal(body, &coverage); err != nil {
-		out["reason"] = "响应解析失败"
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
-		return
-	}
-	out["available"] = true
-	out["coverage"] = coverage
-	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+	return n
 }

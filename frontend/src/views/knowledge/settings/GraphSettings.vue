@@ -68,6 +68,33 @@
       </div>
     </div>
 
+    <!-- M6-4：解析引擎提示。仅 StarKB 引擎 (starkb) 解析的文档会写图谱契约包；
+      其它引擎（builtin / simple / anydoc / mineru / mineru_cloud / paddleocr_vl
+      / _cloud）完成后不会进建图管线。当 KB parser_engine_rules 锁定非 starkb，
+      或 eligible 文档中仍存在非 starkb inferred engine 时，给出强提示引导。
+      docs/04 / docs/11 §3 WS1.4：M6-2 句级溯源根基是 starkb 引擎的契约产物。 -->
+    <div v-if="kbId && showEngineHint" class="setting-row engine-hint-row">
+      <div class="setting-control full-width">
+        <t-alert
+          theme="warning"
+          :title="t('graphSettings.engineHintTitle')"
+          :close="false"
+        >
+          <template #default>
+            <p>{{ t('graphSettings.engineHintBody') }}</p>
+            <ul v-if="!parserEngineConsistent || unsupportedEngineCount > 0">
+              <li v-if="!parserEngineConsistent">
+                {{ t('graphSettings.engineHintInconsistent') }}
+              </li>
+              <li v-if="unsupportedEngineCount > 0">
+                {{ t('graphSettings.engineHintUnsupCount', { n: unsupportedEngineCount }) }}
+              </li>
+            </ul>
+          </template>
+        </t-alert>
+      </div>
+    </div>
+
     <!-- M6-1：图谱浏览（下钻 / 证据跳溯源 / 深链）搬到独立路由页。设置页只留配置与
          入口——400px 表单列放不下全屏画布，下钻也会变成模态套模态，且对话侧无法深链。 -->
     <div v-if="kbId" class="setting-row">
@@ -304,6 +331,17 @@ const coverageLoading = ref(false)
 const coverageSummaryState = computed(() => coverageSummary(coverage.value))
 const exemptManual = computed(() =>
   typeof coverage.value?.exempt_manual === 'number' ? coverage.value.exempt_manual : 0)
+
+// M6 后扩展：解析引擎不一致 / 不支持文档计数。仅 starkb 引擎会写图谱契约，
+// 其它引擎产物不进图谱；这里出两条信息供前端：
+//   parser_engine_consistent    - KB parser_engine_rules 是否全为 starkb
+//   unsupported_engine_count    - 已解析但 inferred engine != starkb 的 eligible 文档数
+const parserEngineConsistent = computed(() => coverage.value?.parser_engine_consistent !== false)
+const unsupportedEngineCount = computed(() =>
+  typeof coverage.value?.unsupported_engine_count === 'number'
+    ? coverage.value.unsupported_engine_count : 0)
+const showEngineHint = computed(() =>
+  !parserEngineConsistent.value || unsupportedEngineCount.value > 0)
 
 const loadCoverage = async () => {
   if (!props.kbId) return
