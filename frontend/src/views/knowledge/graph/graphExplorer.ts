@@ -230,3 +230,27 @@ export function parseEdgeParam(value: unknown): { source: string; target: string
   }
 }
 
+/**
+ * 按文档过滤子图（WS1.1b：文档列表徽标 → 图谱页聚焦）。
+ *
+ * 依据：图谱节点/边的 source_id 是 LightRAG chunk key（`{docID}-chunk-NNN`，
+ * `<SEP>` 连接），key 前段就是 WeKnora knowledge doc id（A0 口径），所以
+ * 「与该文档相关的实体」可以纯前端判定，不需要新后端接口。
+ *
+ * 返回过滤后的 nodes/edges 以及命中数；docId 为空返回原数据（matched=-1 表示
+ * 未启用过滤，与「过滤后 0 个」区分开）。
+ */
+export function filterGraphByDoc(
+  nodes: GraphNodeDatum[],
+  edges: GraphEdgeDatum[],
+  docId: string,
+): { nodes: GraphNodeDatum[]; edges: GraphEdgeDatum[]; matched: number } {
+  const id = String(docId || '').trim()
+  if (!id) return { nodes, edges, matched: -1 }
+  const marker = `${id}-chunk-`
+  const kept = nodes.filter((n) => String(n.source_id || '').includes(marker))
+  const keptIds = new Set(kept.map((n) => n.id))
+  const keptEdges = edges.filter((e) => keptIds.has(e.source) && keptIds.has(e.target))
+  return { nodes: kept, edges: keptEdges, matched: kept.length }
+}
+

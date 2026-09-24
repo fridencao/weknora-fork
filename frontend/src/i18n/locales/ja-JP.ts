@@ -749,6 +749,7 @@ export default {
     viewModeList: 'リスト表示',
     viewModeToggle: '表示を切り替え',
     graphBadge: {
+      openGraph: 'ナレッジグラフでこのドキュメントを見る',
       state: {
         none: '未構築',
         pending: '待機中',
@@ -2351,6 +2352,9 @@ export default {
     noRelations: '（関係タイプなし）',
     directionIn: '逆向き',
     edgeEvidenceEmpty: 'この関係には位置を特定できる原文の根拠がまだありません',
+    docFilterBanner: 'このドキュメントに関係する {n} 個のエンティティのみ表示中',
+    docFilterEmpty: 'このドキュメントのエンティティはまだグラフに現れていません',
+    docFilterClear: 'すべて表示',
   },
   graphSettings: {
     lightragTitle: 'LightRAG ナレッジグラフ',

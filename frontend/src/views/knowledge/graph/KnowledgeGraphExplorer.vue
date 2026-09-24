@@ -18,6 +18,17 @@
 
     <div class="graph-explorer__body">
       <section class="graph-explorer__canvas">
+        <!-- WS1.1b：文档列表徽标深链过来时按文档过滤子图（?doc=） -->
+        <div v-if="docFilterId" class="graph-explorer__docfilter">
+          <t-icon name="filter" size="var(--app-icon-sm)" />
+          <span v-if="docFilterMatched > 0">
+            {{ t('knowledgeGraph.docFilterBanner', { n: docFilterMatched }) }}
+          </span>
+          <span v-else>{{ t('knowledgeGraph.docFilterEmpty') }}</span>
+          <t-button variant="text" size="small" @click="clearDocFilter">
+            {{ t('knowledgeGraph.docFilterClear') }}
+          </t-button>
+        </div>
         <div v-if="loading && !nodes.length" class="graph-explorer__hint">
           {{ t('knowledgeGraph.loading') }}
         </div>
@@ -25,18 +36,18 @@
           {{ viewError || t('knowledgeGraph.empty') }}
         </div>
         <GraphForceChart
-          v-show="nodes.length"
+          v-show="shownNodes.length"
           ref="chartRef"
-          :nodes="nodes"
-          :edges="edges"
+          :nodes="shownNodes"
+          :edges="shownEdges"
           height="100%"
           :highlight-id="selectedId"
-          :empty-text="t('knowledgeGraph.empty')"
+          :empty-text="docFilterId ? t('knowledgeGraph.docFilterEmpty') : t('knowledgeGraph.empty')"
           @node-click="onNodeClick"
           @edge-click="onEdgeClick"
           @background-click="clearSelection"
         />
-        <p v-if="!selectedId && nodes.length" class="graph-explorer__hint graph-explorer__hint--float">
+        <p v-if="!selectedId && shownNodes.length" class="graph-explorer__hint graph-explorer__hint--float">
           {{ t('knowledgeGraph.selectHint') }}
         </p>
       </section>
@@ -180,6 +191,7 @@ import {
   descriptionsOf,
   edgeParam,
   evidenceToProvenanceInput,
+  filterGraphByDoc,
   graphScale,
   neighborRows,
   parseEdgeParam,
@@ -217,6 +229,21 @@ const evidence = computed(() => detail.value?.evidence || [])
 const entityDescriptions = computed(() => descriptionsOf(detail.value?.entity))
 const relations = computed(() => relationRows(edgeDetail.value))
 const edgeEvidence = computed(() => edgeDetail.value?.evidence || [])
+
+// WS1.1b：?doc=<knowledgeId> 按文档过滤子图。依据：节点/边 source_id 里的
+// LightRAG chunk key 前段就是 WeKnora doc id（A0 口径），纯前端可判定。
+const docFilterId = computed(() => String(route.query.doc || '').trim())
+const filteredGraph = computed(() =>
+  filterGraphByDoc(nodes.value, edges.value, docFilterId.value))
+const shownNodes = computed(() => filteredGraph.value.nodes)
+const shownEdges = computed(() => filteredGraph.value.edges)
+const docFilterMatched = computed(() => filteredGraph.value.matched)
+
+function clearDocFilter() {
+  const query = { ...route.query }
+  delete query.doc
+  void router.replace({ query })
+}
 
 async function loadGraph() {
   if (!kbId.value) return
@@ -413,6 +440,23 @@ watch(() => route.query.edge, (value) => {
     position: relative;
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  &__docfilter {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 16px);
+    padding: 4px 8px;
+    border: 1px solid var(--td-component-stroke);
+    border-radius: 6px;
+    background: var(--td-bg-color-container);
+    color: var(--td-text-color-secondary);
+    font-size: var(--app-text-sm, 13px);
   }
 
   &__hint {

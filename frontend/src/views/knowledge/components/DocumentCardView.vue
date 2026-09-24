@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { formatFileSize } from '@/utils/files';
 import { formatReferenceSnippet } from '@/utils/referenceSources';
 import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
@@ -103,6 +104,12 @@ const onRetryGraph = async (id: string) => {
   } finally {
     graphRetryingId.value = null;
   }
+};
+
+// WS1.1b：徽标点击 → 图谱浏览器按本文档聚焦（?doc=）
+const router = useRouter();
+const onOpenGraph = (id: string) => {
+  void router.push({ name: 'knowledgeBaseGraph', params: { kbId: props.kbId }, query: { doc: id } });
 };
 const tagEditorId = ref<string | null>(null);
 const cardSummaries = computed(() => new Map(props.items.map(item => [item.id, formatReferenceSnippet(item.description)])));
@@ -376,6 +383,7 @@ const handleAction = (action: 'download' | 'edit' | 'view-trace' | 'reparse' | '
             :interactive="canMutateKnowledge"
             :retrying="graphRetryingId === item.id"
             @retry="onRetryGraph(item.id)"
+            @open="onOpenGraph(item.id)"
           />
           <div v-if="(canEdit || canDownload) && batchMode" class="card-nav-check" @click.stop>
             <t-checkbox

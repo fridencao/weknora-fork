@@ -5211,6 +5211,9 @@ export default {
     noRelations: '(нет типа отношения)',
     directionIn: 'обратное',
     edgeEvidenceEmpty: 'Для этого отношения пока нет исходных доказательств с определяемой позицией',
+    docFilterBanner: 'Показаны {n} сущностей, связанных с этим документом',
+    docFilterEmpty: 'Сущности этого документа ещё не попали в граф',
+    docFilterClear: 'Показать все',
   },
   graphSettings: {
     lightragTitle: 'Граф знаний LightRAG',
@@ -6981,6 +6984,7 @@ export default {
     viewModeList: 'Список',
     viewModeToggle: 'Переключить вид',
     graphBadge: {
+      openGraph: 'Показать этот документ в графе знаний',
       state: {
         none: 'Нет графа',
         pending: 'В очереди',

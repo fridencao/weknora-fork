@@ -4,6 +4,7 @@ import {
   descriptionsOf,
   edgeParam,
   evidenceToProvenanceInput,
+  filterGraphByDoc,
   graphScale,
   neighborRows,
   neighborsTruncated,
@@ -132,4 +133,37 @@ test('parseEdgeParam rejects malformed external input', () => {
   assert.equal(parseEdgeParam('a||b'), null)
   assert.equal(parseEdgeParam(undefined), null)
   assert.equal(parseEdgeParam('%zz|%zz'), null, '畸形百分号编码不能把异常冒到渲染层')
+})
+
+const DOC_NODES = [
+  { id: '宁德时代', source_id: 'doc-a-chunk-000<SEP>doc-b-chunk-001' },
+  { id: '曾毓群', source_id: 'doc-a-chunk-002' },
+  { id: '无关实体', source_id: 'doc-c-chunk-000' },
+  { id: '无来源', source_id: '' },
+]
+const DOC_EDGES = [
+  { source: '宁德时代', target: '曾毓群' },
+  { source: '宁德时代', target: '无关实体' },
+]
+
+test('filterGraphByDoc keeps only entities evidenced by the document', () => {
+  const out = filterGraphByDoc(DOC_NODES, DOC_EDGES, 'doc-a')
+  // 多值 source_id 里含该文档 chunk 的也算命中；跨文档实体被排除
+  assert.deepEqual(out.nodes.map((n) => n.id), ['宁德时代', '曾毓群'])
+  // 只保留两端都保留的边，悬空边会渲染成断线
+  assert.deepEqual(out.edges, [{ source: '宁德时代', target: '曾毓群' }])
+  assert.equal(out.matched, 2)
+})
+
+test('filterGraphByDoc disabled with empty doc id', () => {
+  const out = filterGraphByDoc(DOC_NODES, DOC_EDGES, '  ')
+  assert.equal(out.nodes, DOC_NODES, '原样返回，不做浅拷贝')
+  assert.equal(out.matched, -1, '与「过滤后 0 个」区分')
+})
+
+test('filterGraphByDoc reports zero matches explicitly', () => {
+  const out = filterGraphByDoc(DOC_NODES, DOC_EDGES, 'doc-zzz')
+  assert.deepEqual(out.nodes, [])
+  assert.deepEqual(out.edges, [])
+  assert.equal(out.matched, 0, '0 个是真实结果，前端要据此提示「该文档尚未进图谱」')
 })

@@ -23,7 +23,15 @@
   </t-popup>
 
   <t-tooltip v-else :content="tip" placement="top">
-    <span class="graph-badge" :class="`graph-badge--${stateKey}`">
+    <!-- WS1.1b：已建图/待更新可点进图谱浏览器按文档聚焦；其余状态保持原交互 -->
+    <span v-if="openable" class="graph-badge graph-badge--openable" :class="`graph-badge--${stateKey}`"
+      role="button" tabindex="0"
+      :aria-label="`${label} · ${t('knowledgeBase.graphBadge.openGraph')}`"
+      @click.stop="emit('open')" @keydown.enter.prevent="emit('open')">
+      <t-icon v-if="icon" :name="icon" :class="{ 'icon-spin': spin }" />
+      <span>{{ label }}</span>
+    </span>
+    <span v-else class="graph-badge" :class="`graph-badge--${stateKey}`">
       <t-icon v-if="icon" :name="icon" :class="{ 'icon-spin': spin }" />
       <span>{{ label }}</span>
     </span>
@@ -49,7 +57,11 @@ const props = defineProps<{
   retrying?: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'retry'): void }>()
+const emit = defineEmits<{
+  (e: 'retry'): void
+  /** WS1.1b：ready/stale 徽标点击——宿主据此跳图谱浏览器（?doc= 聚焦本文档）。 */
+  (e: 'open'): void
+}>()
 
 const { t } = useI18n()
 const panelOpen = ref(false)
@@ -80,6 +92,9 @@ const icon = computed(() => {
 
 const spin = computed(() =>
   stateKey.value === 'pending' || stateKey.value === 'building' || stateKey.value === 'deleting')
+
+/** 只有「图里真有这篇文档」的状态可点：building/none 进去是空的，failed 保持看错因。 */
+const openable = computed(() => stateKey.value === 'ready' || stateKey.value === 'stale')
 
 const tip = computed(() => t(`knowledgeBase.graphBadge.tip.${stateKey.value}`))
 </script>
@@ -130,6 +145,19 @@ const tip = computed(() => t(`knowledgeBase.graphBadge.tip.${stateKey.value}`))
   color: var(--td-error-color);
   background: var(--td-error-color-light);
   cursor: pointer;
+}
+
+.graph-badge--openable {
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(0.96);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--td-brand-color);
+    outline-offset: 1px;
+  }
 }
 
 .icon-spin {

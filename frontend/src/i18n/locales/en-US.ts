@@ -749,6 +749,7 @@ export default {
     viewModeList: 'List view',
     viewModeToggle: 'Toggle view',
     graphBadge: {
+      openGraph: 'View this document in the knowledge graph',
       state: {
         none: 'No graph',
         pending: 'Queued',
@@ -2351,6 +2352,9 @@ export default {
     noRelations: '(no relation type)',
     directionIn: 'reverse',
     edgeEvidenceEmpty: 'No locatable source evidence for this relation yet',
+    docFilterBanner: 'Showing {n} entities related to this document',
+    docFilterEmpty: 'Entities of this document have not entered the graph yet',
+    docFilterClear: 'View all',
   },
   graphSettings: {
     lightragTitle: 'LightRAG Knowledge Graph',

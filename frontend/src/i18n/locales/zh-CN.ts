@@ -5213,6 +5213,9 @@ export default {
     noRelations: '（无关系类型）',
     directionIn: '反向',
     edgeEvidenceEmpty: '该关系暂无可定位的原文证据',
+    docFilterBanner: '仅显示与该文档相关的 {n} 个实体',
+    docFilterEmpty: '该文档的实体尚未出现在图谱中',
+    docFilterClear: '查看全部',
   },
   graphSettings: {
     lightragTitle: 'LightRAG 图谱',
@@ -6983,6 +6986,7 @@ export default {
     viewModeList: '列表视图',
     viewModeToggle: '切换视图',
     graphBadge: {
+      openGraph: '在知识图谱中查看该文档',
       state: {
         none: '未建图',
         pending: '排队中',

@@ -5211,6 +5211,9 @@ export default {
     noRelations: '(관계 유형 없음)',
     directionIn: '역방향',
     edgeEvidenceEmpty: '이 관계에서 위치를 특정할 수 있는 원문 근거가 아직 없습니다',
+    docFilterBanner: '이 문서와 관련된 {n}개 엔티티만 표시 중',
+    docFilterEmpty: '이 문서의 엔티티가 아직 그래프에 나타나지 않았습니다',
+    docFilterClear: '전체 보기',
   },
   graphSettings: {
     lightragTitle: 'LightRAG 지식 그래프',
@@ -6981,6 +6984,7 @@ export default {
     viewModeList: '목록 보기',
     viewModeToggle: '보기 전환',
     graphBadge: {
+      openGraph: '지식 그래프에서 이 문서 보기',
       state: {
         none: '미구축',
         pending: '대기 중',

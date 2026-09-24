@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { formatFileSize } from '@/utils/files';
 import KnowledgeTagPopover from './KnowledgeTagPopover.vue';
 import DocumentFileIcon from './DocumentFileIcon.vue';
@@ -106,6 +107,12 @@ const onRetryGraph = async (id: string) => {
   } finally {
     graphRetryingId.value = null;
   }
+};
+
+// WS1.1b：徽标点击 → 图谱浏览器按本文档聚焦（?doc=）
+const router = useRouter();
+const onOpenGraph = (id: string) => {
+  void router.push({ name: 'knowledgeBaseGraph', params: { kbId: props.kbId }, query: { doc: id } });
 };
 
 const formatTime = (time?: string) => {
@@ -310,6 +317,7 @@ const handleAction = (action: 'download' | 'edit' | 'reparse' | 'cancel-parse' |
                 :interactive="canMutateKnowledge"
                 :retrying="graphRetryingId === item.id"
                 @retry="onRetryGraph(item.id)"
+                @open="onOpenGraph(item.id)"
               />
             </div>
             <span class="row-file-meta">
