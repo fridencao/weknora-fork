@@ -339,6 +339,13 @@ type ChunkingConfig struct {
 var defaultParserEngineByType = map[string]string{
 	"ppt":  "markitdown",
 	"pptx": "markitdown",
+	// markdown/纯文本直通契约（2026-09-24）：starkb 对这三类走
+	// markdown-passthrough 产契约包，使其可进图谱（builtin 无解析产物，
+	// 图谱投喂必报「契约包缺失」）。已固化 builtin 规则的存量 KB 需在
+	// KB 编辑→解析引擎里把 md/markdown/txt 切到 starkb。
+	"md":       "starkb",
+	"markdown": "starkb",
+	"txt":      "starkb",
 }
 
 // preferParserEngine, if set, may override DefaultParserEngine. The
