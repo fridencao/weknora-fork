@@ -741,3 +741,13 @@ export function retryKnowledgeBaseGraphDocs(kbId: string, knowledgeIds: string[]
 export function getKnowledgeBaseGraphView(kbId: string) {
   return get(`/api/v1/knowledge-bases/${kbId}/graph/view`);
 }
+
+/**
+ * M6-1 WS1.2：图谱实体下钻（实体 + 邻居 + 已回跳为 WeKnora 子 chunk 的证据）。
+ * 证据侧带 chunk_metadata，可直接喂给 ProvenancePanel（L3 页码 / L4 区块锚点）。
+ */
+export function getKnowledgeBaseGraphEntity(kbId: string, name: string) {
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/entity`, {
+    params: { name },
+  });
+}

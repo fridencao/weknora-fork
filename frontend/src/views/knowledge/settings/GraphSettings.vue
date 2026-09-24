@@ -44,7 +44,20 @@
       </div>
     </div>
 
-    <!-- M5-1：图谱可视化力导图 -->
+    <!-- M6-1：图谱浏览（下钻 / 证据跳溯源 / 深链）搬到独立路由页。设置页只留配置与
+         入口——400px 表单列放不下全屏画布，下钻也会变成模态套模态，且对话侧无法深链。 -->
+    <div v-if="kbId" class="setting-row">
+      <div class="setting-info">
+        <label>{{ t('graphSettings.graphViewLabel') }}</label>
+      </div>
+      <div class="setting-control">
+        <t-button variant="outline" size="small" @click="openExplorer">
+          {{ t('graphSettings.openExplorer') }}
+        </t-button>
+      </div>
+    </div>
+
+    <!-- M5-1：图谱可视化力导图（只读预览；完整交互在独立图谱页） -->
     <div v-if="kbId && graphData && graphData.available" class="setting-row vertical">
       <div class="setting-info">
         <label>{{ t('graphSettings.graphViewLabel') }}</label>
@@ -117,10 +130,27 @@
 // GET /knowledge-bases/:id/graph/status（Go 代理 starkb-api /graph/status）。
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { getKnowledgeBaseGraphStatus, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
 import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
+import { useUIStore } from '@/stores/ui'
 
 const { t } = useI18n()
+const router = useRouter()
+const uiStore = useUIStore()
+
+/**
+ * M6-1：跳图谱浏览器独立页。
+ *
+ * KB 设置是以弹层呈现的（uiStore.showKBEditorModal），不先收起就会在新页面上压着
+ * 一层设置。只在弹层确实打开时收起：本组件也被上传确认弹窗内嵌使用（那里不传
+ * kbId，按钮不渲染），不能无条件动弹层状态。
+ */
+function openExplorer() {
+  if (!props.kbId) return
+  if (uiStore.showKBEditorModal) uiStore.closeKBEditor()
+  void router.push({ name: 'knowledgeBaseGraph', params: { kbId: props.kbId } })
+}
 
 interface GraphConfig {
   autoBuild: boolean

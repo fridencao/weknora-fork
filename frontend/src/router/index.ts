@@ -123,6 +123,15 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          // M6-1 WS1.2：图谱浏览器独立页（`?node=` 可深链到某个实体）。
+          // 放独立路由而非 KB 详情页 tab：非 Wiki KB 没有 tab 行，且 Wiki KB 的
+          // 「图谱」已被页面链接图谱占用，两个「图谱」并排会混淆。
+          path: "knowledge-bases/:kbId/graph",
+          name: "knowledgeBaseGraph",
+          component: () => import("../views/knowledge/graph/KnowledgeGraphExplorer.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           path: "knowledge-search",
           // 旧路径保留为重定向，打开全局命令面板（⌘K），带上可选的 q 参数
           redirect: (to) => {

@@ -137,6 +137,8 @@ func TestGraphEntityDetailResolvesEvidenceToWeKnoraChunks(t *testing.T) {
 	require.Equal(t, "chunk-1", evidence[0]["chunk_id"])
 	require.Equal(t, "doc-a", evidence[0]["knowledge_id"])
 	require.Equal(t, "宁德时代年报", evidence[0]["title"], "标题回填供下钻面板展示")
+	// chunk_metadata 必须透出，否则溯源面板拿不到 sbk_blocks、只能给到文档级
+	require.Contains(t, string(evidence[0]["chunk_metadata"].(types.JSON)), "sbk_blocks")
 }
 
 func TestGraphEntityDetailDropsEvidenceFromOtherKnowledgeBases(t *testing.T) {

@@ -191,12 +191,18 @@ func (s *knowledgeBaseService) GraphEntityDetail(
 			logger.Warnf(ctx, "graph entity: 证据回跳失败（前端仅展示实体与邻居）: %v", err)
 		}
 		for _, c := range chunks {
-			evidence = append(evidence, map[string]any{
+			item := map[string]any{
 				"chunk_id":     c.ID,
 				"knowledge_id": c.KnowledgeID,
 				"title":        titleByDoc[c.KnowledgeID],
 				"snippet":      snippet(c.Content, 400),
-			})
+			}
+			// chunk_metadata 原样透出：溯源面板的 L3（页码）与 L4（区块锚点）都从
+			// 这里读 sbk_pages / sbk_blocks，不透出就只能给到文档级、点不到具体位置。
+			if len(c.Metadata) > 0 {
+				item["chunk_metadata"] = c.Metadata
+			}
+			evidence = append(evidence, item)
 		}
 	}
 

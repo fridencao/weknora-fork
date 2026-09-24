@@ -1,0 +1,137 @@
+// M6-1 WS1.2 · 图谱浏览器页的纯逻辑层（与渲染/请求解耦，可单测）。
+//
+// 两处容易出错的归一化：后端字段可能缺省（老数据面 / 降级响应），以及证据条目要
+// 翻译成 ProvenancePanel 认得的输入形状——字段名对不上时面板会静默显示空态，
+// 而不是报错，所以值得用测试盯住。
+
+import type { GraphEdgeDatum, GraphNodeDatum } from '@/components/knowledge/graphForceChart'
+import type { ProvenanceInput } from '@/utils/provenance'
+
+export type GraphViewPayload = {
+  available?: boolean
+  reason?: string
+  workspace?: string
+  nodes?: GraphNodeDatum[]
+  edges?: GraphEdgeDatum[]
+  total_nodes?: number
+  total_edges?: number
+  truncated?: boolean
+}
+
+export type GraphEntityRef = {
+  id: string
+  entity_type?: string
+  description?: string
+  degree?: number
+}
+
+export type GraphNeighbor = {
+  id: string
+  entity_type?: string
+  relation_type?: string
+  description?: string
+  /** out = 该实体指向邻居；in = 邻居指向该实体 */
+  direction?: 'out' | 'in' | string
+}
+
+export type GraphEvidence = {
+  chunk_id: string
+  knowledge_id?: string
+  title?: string
+  snippet?: string
+  chunk_metadata?: unknown
+}
+
+export type GraphEntityDetail = {
+  available?: boolean
+  reason?: string
+  workspace?: string
+  entity?: GraphEntityRef
+  neighbors?: GraphNeighbor[]
+  neighbor_total?: number
+  evidence?: GraphEvidence[]
+  evidence_total?: number
+  chunk_total?: number
+  dropped_chunks?: number
+  truncated?: boolean
+}
+
+/** 图谱规模口径：shown ≤ total，供「显示 300 / 共 5000」提示用。 */
+export type GraphScale = {
+  shownNodes: number
+  shownEdges: number
+  totalNodes: number
+  totalEdges: number
+  truncated: boolean
+}
+
+/**
+ * 归一化图谱规模。
+ *
+ * 缺 total_* 时退化为「已展示即全部」：旧数据面（M5-1 的 /graph/view）没有这两个
+ * 字段，若按 0 处理会把「共 0 个节点」显示在明明有节点的图上。
+ */
+export function graphScale(view: GraphViewPayload | null | undefined): GraphScale {
+  const shownNodes = view?.nodes?.length ?? 0
+  const shownEdges = view?.edges?.length ?? 0
+  const totalNodes = typeof view?.total_nodes === 'number' ? view.total_nodes : shownNodes
+  const totalEdges = typeof view?.total_edges === 'number' ? view.total_edges : shownEdges
+  return {
+    shownNodes,
+    shownEdges,
+    totalNodes: Math.max(totalNodes, shownNodes),
+    totalEdges: Math.max(totalEdges, shownEdges),
+    truncated: Boolean(view?.truncated) || totalNodes > shownNodes,
+  }
+}
+
+/** API 响应可能是 {success,data} 信封，也可能已经是载荷本身。 */
+export function unwrapGraphPayload<T>(res: unknown): T | null {
+  if (!res || typeof res !== 'object') return null
+  const body = res as { data?: unknown; available?: unknown }
+  if (body.data && typeof body.data === 'object') return body.data as T
+  return body as T
+}
+
+/**
+ * 证据条目 → ProvenancePanel 输入。
+ *
+ * 面板按 `knowledge_title` / `chunk_metadata` 取 L2/L3/L4，字段名与下钻接口不同
+ * （接口叫 title），这里做映射；chunk_id 同时作为 input.id 供面板去重与高亮。
+ */
+export function evidenceToProvenanceInput(evidence: GraphEvidence): ProvenanceInput {
+  return {
+    id: evidence.chunk_id,
+    knowledge_id: evidence.knowledge_id || '',
+    knowledge_title: evidence.title || '',
+    content: evidence.snippet || '',
+    chunk_metadata: evidence.chunk_metadata ?? null,
+  }
+}
+
+/** 邻居列表归一化：过滤空 id、去重，并按关系类型稳定排序（同类型聚在一起更好读）。 */
+export function neighborRows(detail: GraphEntityDetail | null | undefined): GraphNeighbor[] {
+  const seen = new Set<string>()
+  const rows: GraphNeighbor[] = []
+  for (const n of detail?.neighbors || []) {
+    if (!n?.id || seen.has(n.id)) continue
+    seen.add(n.id)
+    rows.push(n)
+  }
+  return rows.sort((a, b) => {
+    const ra = a.relation_type || ''
+    const rb = b.relation_type || ''
+    if (ra !== rb) return ra < rb ? -1 : 1
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  })
+}
+
+/**
+ * 邻居数是否有截断。后端用 `neighbor_ids >= max_neighbors` 判定，因此
+ * neighbor_total 是「去重后的邻居数」而不是行数——两者不一致时不报截断。
+ */
+export function neighborsTruncated(detail: GraphEntityDetail | null | undefined): boolean {
+  const rows = detail?.neighbors?.length ?? 0
+  const total = detail?.neighbor_total
+  return typeof total === 'number' && total > rows
+}
