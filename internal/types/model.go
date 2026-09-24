@@ -144,6 +144,14 @@ type ModelParameters struct {
 	// which falls back to DefaultMaxContextTokens.
 	ContextWindow   int `yaml:"context_window,omitempty"    json:"context_window,omitempty"`
 	MaxOutputTokens int `yaml:"max_output_tokens,omitempty" json:"max_output_tokens,omitempty"`
+	// ReasoningEffort 是模型行配置的思考强度默认（模型编辑界面设置）：
+	// "off" 关闭思考（厂商能力允许时）；auto/minimal/low/medium/high/xhigh/max
+	// 调整强度（协议层按厂商阶梯收窄）。空 = 模型自身默认，不发送思考字段。
+	// 仅在调用方（agent/会话/管线）未表达偏好时生效，见 chat 默认值装饰器。
+	ReasoningEffort string `yaml:"reasoning_effort,omitempty" json:"reasoning_effort,omitempty"`
+	// ThinkingBudgetTokens 是思考 token 预算默认（仅暴露 budget 字段的厂商
+	// 生效，如 Anthropic/DashScope/Gemini）。0 = 厂商默认。
+	ThinkingBudgetTokens int `yaml:"thinking_budget_tokens,omitempty" json:"thinking_budget_tokens,omitempty"`
 	// MaxConcurrency caps concurrent in-flight BACKGROUND (ingestion /
 	// enrichment) calls to THIS specific model, keyed by model ID and shared
 	// across all replicas. 0 (the default) means "fall back to the

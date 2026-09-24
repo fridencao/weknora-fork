@@ -375,6 +375,8 @@ function convertToLegacyFormat(model: ModelConfig) {
     embedRetryBaseDelayMs: model.parameters.embed_retry_base_delay_ms,
     embedRateLimitDelayMs: model.parameters.embed_rate_limit_delay_ms,
     maxOutputTokens: model.parameters.max_output_tokens || undefined,
+    reasoningEffort: model.parameters.reasoning_effort || '',
+    thinkingBudget: model.parameters.thinking_budget_tokens || undefined,
     customHeaders: model.parameters.custom_headers
       ? Object.entries(model.parameters.custom_headers).map(([key, value]) => ({ key, value: String(value) }))
       : [],
@@ -684,6 +686,15 @@ const handleModelSave = async (modelData: any) => {
         ...((saveType === 'chat' || saveType === 'vllm')
           && Number(modelData.maxOutputTokens) > 0
           ? { max_output_tokens: Math.round(Number(modelData.maxOutputTokens)) }
+          : {}),
+        // 思考模式/强度与预算（模型行默认；'' / 0 = 不写入，沿用模型自身默认）
+        ...((saveType === 'chat' || saveType === 'vllm')
+          && modelData.reasoningEffort
+          ? { reasoning_effort: modelData.reasoningEffort }
+          : {}),
+        ...((saveType === 'chat' || saveType === 'vllm')
+          && Number(modelData.thinkingBudget) > 0
+          ? { thinking_budget_tokens: Math.round(Number(modelData.thinkingBudget)) }
           : {}),
         ...specFields,
         // 后台并发上限：仅 chat/embedding/vllm 受治理，>0 才写入（0/空沿用全局默认）。

@@ -94,6 +94,11 @@ type ChatConfig struct {
 	AppSecret     string // 加密值，由工厂函数调用方传入，在使用前已解密
 	// Spec carries per-row catalog overrides (protocol, compat, levels).
 	Spec *types.ModelSpecOverride
+	// ReasoningEffort 是模型行配置的思考强度默认（模型编辑界面设置）；
+	// 调用方未表达思考偏好时经默认值装饰器生效，空 = 模型自身默认。
+	ReasoningEffort api.ReasoningEffort
+	// ThinkingBudgetTokens 是模型行配置的思考预算默认（0 = 厂商默认）。
+	ThinkingBudgetTokens int
 }
 
 // ConfigFromModel 根据 types.Model 构造 ChatConfig。
@@ -117,6 +122,9 @@ func ConfigFromModel(m *types.Model, appID, appSecret string) *ChatConfig {
 		AppID:          appID,
 		AppSecret:      appSecret,
 		Spec:           m.Parameters.Spec,
+		// 模型行的思考默认：落库值在此统一校验拼写，未知值丢弃（不误当开启）
+		ReasoningEffort:      api.SanitizeReasoningEffort(context.Background(), m.Parameters.ReasoningEffort, "model parameters"),
+		ThinkingBudgetTokens: m.Parameters.ThinkingBudgetTokens,
 	}
 }
 
@@ -134,6 +142,8 @@ func NewChat(config *ChatConfig, ollamaService *ollama.OllamaService) (Chat, err
 	}
 	c, err = wrapChatDebug(c, err)
 	c, err = wrapChatLangfuse(c, err)
+	// 模型行思考默认（编辑界面配置）：链路最内层，纯字段合并。
+	c, err = wrapChatModelDefaults(c, config, err)
 	// B2：finish_reason=length 加倍预算重试一次，仍截断则显式报错。
 	// 置于 concurrency 之内：重试的两次 provider 往返共用同一并发槽位。
 	c, err = wrapChatLengthRetry(c, err)

@@ -553,6 +553,27 @@
         </div>
 
         <!--
+          Chat / VLM: 思考模式与强度（模型行默认）。agent/会话显式设置优先；
+          厂商不支持的档位由协议层按目录阶梯收窄；清空 = 模型自身默认。
+        -->
+        <div v-if="activeModelType === 'chat' || activeModelType === 'vllm'" class="form-item">
+          <label class="form-label">{{ $t('model.editor.reasoningEffortLabel') }}</label>
+          <t-select v-model="formData.reasoningEffort" clearable
+            :placeholder="$t('model.editor.reasoningEffortPlaceholder')">
+            <t-option v-for="opt in REASONING_EFFORT_OPTIONS" :key="opt.value" :value="opt.value"
+              :label="$t(opt.labelKey)" />
+          </t-select>
+          <p class="form-desc">{{ $t('model.editor.reasoningEffortDesc') }}</p>
+        </div>
+        <div v-if="(activeModelType === 'chat' || activeModelType === 'vllm')
+          && formData.reasoningEffort && formData.reasoningEffort !== 'off'" class="form-item">
+          <label class="form-label">{{ $t('model.editor.thinkingBudgetLabel') }}</label>
+          <t-input v-model.number="formData.thinkingBudget" type="number" :min="0" :max="1000000"
+            :placeholder="$t('model.editor.thinkingBudgetPlaceholder')" />
+          <p class="form-desc">{{ $t('model.editor.thinkingBudgetDesc') }}</p>
+        </div>
+
+        <!--
           Background concurrency cap for this model. Only chat / embedding / vllm
           are gated by the governor (see internal/models/limiter), so we surface
           it just for those three. 0 = fall back to the global default.
@@ -694,6 +715,10 @@ interface ModelFormData {
    * | chat_template_kwargs). Only rows saved by older UIs carry it; the catalog
    * decides the encoding otherwise. Empty string = drop the key on save.
    */
+  /** 模型行思考强度默认（reasoning_effort）：'' = 跟随模型自身默认 */
+  reasoningEffort?: string
+  /** 模型行思考预算默认（tokens），0/undefined = 厂商默认 */
+  thinkingBudget?: number
   thinkingControl?: string
   /**
    * Provider-specific extra_config entries: vendor-declared extra fields
@@ -1273,6 +1298,8 @@ const formData = ref<ModelFormData>({
   embedRetryBaseDelayMs: undefined,
   embedRateLimitDelayMs: undefined,
   maxOutputTokens: undefined,
+  reasoningEffort: '',
+  thinkingBudget: undefined,
   thinkingControl: '',
   extraConfig: {},
   specCompat: '',
@@ -1487,6 +1514,8 @@ watch(() => props.visible, (val) => {
           appSecret: '',
           extraConfig: loadedExtra,
           thinkingControl: props.modelData.thinkingControl || '',
+          reasoningEffort: props.modelData.reasoningEffort || '',
+          thinkingBudget: props.modelData.thinkingBudget,
           spec: loadedSpec,
           specCompat: props.modelData.specCompat
             ?? (loadedSpec?.compat ? JSON.stringify(loadedSpec.compat, null, 2) : ''),
@@ -1563,6 +1592,8 @@ const resetForm = () => {
     embedRetryBaseDelayMs: undefined,
     embedRateLimitDelayMs: undefined,
     maxOutputTokens: undefined,
+  reasoningEffort: '',
+  thinkingBudget: undefined,
     thinkingControl: '',
     extraConfig: {},
     specCompat: '',
@@ -1669,6 +1700,16 @@ const removeCustomHeader = (idx: number) => {
 }
 
 // 过滤后的模型列表
+// 思考强度档位（模型行默认）；厂商不支持的档位由 Go 协议层按目录阶梯收窄
+const REASONING_EFFORT_OPTIONS = [
+  { value: 'off', labelKey: 'model.editor.reasoning.off' },
+  { value: 'minimal', labelKey: 'model.editor.reasoning.minimal' },
+  { value: 'low', labelKey: 'model.editor.reasoning.low' },
+  { value: 'medium', labelKey: 'model.editor.reasoning.medium' },
+  { value: 'high', labelKey: 'model.editor.reasoning.high' },
+  { value: 'max', labelKey: 'model.editor.reasoning.max' },
+] as const
+
 const filteredOllamaModels = computed(() => {
   if (!searchKeyword.value) return ollamaModelList.value
   return ollamaModelList.value.filter(model =>

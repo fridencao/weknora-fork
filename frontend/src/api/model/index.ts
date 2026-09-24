@@ -78,6 +78,11 @@ export interface ModelConfig {
     // 对话/VLM 的上下文窗口（token）。0 或不填表示使用后端默认 200000。
     context_window?: number;
     max_output_tokens?: number;
+    // 思考模式/强度与预算（模型行默认；agent/会话显式设置优先）。
+    // reasoning_effort: off/minimal/low/medium/high/max；不填=模型自身默认。
+    // thinking_budget_tokens 仅对暴露 budget 字段的厂商生效；0/不填=厂商默认。
+    reasoning_effort?: string;
+    thinking_budget_tokens?: number;
     // 后台任务（入库/富化）对该模型的并发上限，按模型 ID 全副本共享。
     // 0 或不填表示沿用全局默认（model.max_concurrency）；仅对 chat/embedding/vllm 生效。
     max_concurrency?: number;
