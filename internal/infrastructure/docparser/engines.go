@@ -102,7 +102,9 @@ func (e *starkbEngine) Description() string {
 }
 
 func (e *starkbEngine) FileTypes(_ bool) []string {
-	return []string{"pdf", "docx", "doc", "pptx", "xlsx"}
+	// md/markdown/txt：markdown 直通契约（starkb-api markdown-passthrough），
+	// 使纯文本文档也能进图谱（2026-09-24 前只有 MinerU 可解析的格式）。
+	return []string{"pdf", "docx", "doc", "pptx", "xlsx", "md", "markdown", "txt"}
 }
 
 func (e *starkbEngine) CheckAvailable(docreaderConnected bool, _ map[string]string) (bool, string) {

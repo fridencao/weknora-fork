@@ -204,6 +204,11 @@ def _build_default_registry() -> ParserEngineRegistry:
             "doc": StarkbParser,
             "pptx": StarkbParser,
             "xlsx": StarkbParser,
+            # markdown/纯文本直通契约（starkb-api markdown-passthrough，
+            # 2026-09-24）：使 md/txt 也能进图谱（此前「契约包缺失」）。
+            "md": StarkbParser,
+            "markdown": StarkbParser,
+            "txt": StarkbParser,
         },
         description="StarKB 全管线解析引擎（MinerU 档位路由 + 契约归一层，溯源坐标系）",
         check_available=lambda overrides: (
