@@ -124,6 +124,42 @@ func (s *knowledgeService) GraphCleanupOnDelete(ctx context.Context, knowledgeLi
 	}
 }
 
+// GraphCleanupOnKBDelete 整库删除时登记该 KB 全部文档的图谱清理。
+//
+// 此前 KB 删除只清理了内置图谱引擎（graphEngine.DelGraph，D2 已废弃），
+// LightRAG 侧的 graph_doc_state 行与 chunk/实体/向量全部残留——删库重建后
+// 陈旧状态会以幽灵行的形式污染新图谱（用户实测）。与单篇删除共用 starkb-api
+// 墓碑机制（异步消化，失败留墓碑重试）；best-effort，失败仅告警。
+//
+// 必须在知识条目尚未软删时调用（需要 FileName 判定「进过图谱」的文档）。
+func GraphCleanupOnKBDelete(ctx context.Context, tenantID uint64, kbID string,
+	knowledgeList []*types.Knowledge) {
+	if os.Getenv("STARKB_API_URL") == "" || kbID == "" {
+		return
+	}
+	docIDs := make([]string, 0, len(knowledgeList))
+	for _, k := range knowledgeList {
+		if k != nil && k.ID != "" && k.FileName != "" {
+			docIDs = append(docIDs, k.ID)
+		}
+	}
+	if len(docIDs) == 0 {
+		return
+	}
+	out := postStarkbGraph(ctx, "/graph/docs/delete", map[string]any{
+		"tenant_id": strconv.FormatUint(tenantID, 10),
+		"kb_id":     kbID,
+		"workspace": graphWorkspaceForKBID(kbID),
+		"doc_ids":   docIDs,
+	})
+	if out == nil {
+		logger.Warnf(ctx, "graph cleanup: KB %s 整库清理未登记（starkb-api 不可达，%d 篇）",
+			kbID, len(docIDs))
+		return
+	}
+	logger.Infof(ctx, "graph cleanup: KB %s 整库删除已登记 %d 篇图谱清理", kbID, len(docIDs))
+}
+
 // graphAutoBuildTurnedOn 判断图谱自动建图开关是否发生 off→on 边沿。
 //
 // 抽成纯函数是因为这个判断只有两种错法，且都难在联调中发现：

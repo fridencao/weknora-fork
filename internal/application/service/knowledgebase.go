@@ -903,6 +903,11 @@ func (s *knowledgeBaseService) ProcessKBDelete(ctx context.Context, t *asynq.Tas
 		knowledgeIDs = append(knowledgeIDs, knowledge.ID)
 	}
 
+	// ADR-008 决策 3.6：整库删除同样要登记 LightRAG 图谱清理。此前只清了内置
+	// 图谱引擎，LightRAG 的状态行/向量全残留——删库重建后出现幽灵队列行
+	// （用户实测）。须在知识条目软删前调用（需要 FileName）。
+	GraphCleanupOnKBDelete(ctx, tenantID, kbID, knowledgeList)
+
 	// Repeat the best-effort queue scrub with document IDs. Some batch tasks
 	// only carry knowledge_id(s), and active work from the first pass may have
 	// enqueued another downstream task before cancellation reached it.
