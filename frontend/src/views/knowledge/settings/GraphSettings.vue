@@ -19,6 +19,31 @@
       </div>
     </div>
 
+    <!-- ADR-008：建图抽取模型（graph_config.build_model_id）。空 = 跟随知识库
+      模型；可单独换成快速/关思考模型——图谱抽取是批量吞吐场景，思考模型单
+      chunk 拖数分钟（实证 30 倍差距）。 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <label>{{ t('graphSettings.buildModelLabel') }}</label>
+        <p class="desc">{{ t('graphSettings.buildModelDescription') }}</p>
+      </div>
+      <div class="setting-control">
+        <t-select
+          :value="localGraphConfig.buildModelId || ''"
+          clearable
+          :placeholder="kbModelPlaceholder"
+          @change="(v: unknown) => handleBuildModelChange(String(v ?? ''))"
+        >
+          <t-option
+            v-for="m in chatModels"
+            :key="m.id"
+            :value="m.id"
+            :label="m.display_name || m.name"
+          />
+        </t-select>
+      </div>
+    </div>
+
     <!-- M5-1：图谱可视化力导图 -->
     <div v-if="kbId && graphData && graphData.available" class="setting-row vertical">
       <div class="setting-info">
@@ -90,7 +115,7 @@
 // 控件移除；props 保留 graphExtract 以兼容父组件的保存载荷。
 // 自动建图开关写 KB 的 auto_graph_config（A1 钩子消费）；健康度来自
 // GET /knowledge-bases/:id/graph/status（Go 代理 starkb-api /graph/status）。
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getKnowledgeBaseGraphStatus, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
 import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
@@ -130,7 +155,23 @@ watch(() => props.graphConfig, (v) => {
 }, { deep: true })
 
 const handleGraphConfigChange = (v: boolean) => {
-  localGraphConfig.value = { autoBuild: !!v }
+  // 切换开关不得清掉已选的建图模型
+  localGraphConfig.value = { autoBuild: !!v, buildModelId: localGraphConfig.value.buildModelId || '' }
+  emit('update:graphConfig', { ...localGraphConfig.value })
+}
+
+// 知识库问答模型列表（建图模型候选）：Embedding/ASR 等不参与抽取
+const chatModels = computed(() =>
+  (props.allModels || []).filter((m: any) => m.type === 'KnowledgeQA'))
+
+// 未单独指定时的默认 = 知识库模型（父组件 formData.modelConfig.llmModelId）
+const kbModelPlaceholder = computed(() => {
+  const kbModel = (props.allModels || []).find((m: any) => m.id === props.modelId)
+  return kbModel ? (kbModel.display_name || kbModel.name) : t('graphSettings.buildModelFollowKb')
+})
+
+const handleBuildModelChange = (v: string) => {
+  localGraphConfig.value = { autoBuild: localGraphConfig.value.autoBuild, buildModelId: v || '' }
   emit('update:graphConfig', { ...localGraphConfig.value })
 }
 
