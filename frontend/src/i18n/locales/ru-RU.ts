@@ -3702,6 +3702,9 @@ export default {
     referencesDrawerDocsSection: 'Документы базы знаний',
     referencesDrawerToolsSection: 'Инструменты',
     referencesDrawerEmpty: 'Источники отсутствуют',
+    referencesDrawerChannelVector: 'Вектор',
+    referencesDrawerChannelKeywords: 'Ключевые слова',
+    referencesDrawerChannelGraph: 'Граф',
     provenance: {
       title: 'Прослеживаемость',
       badge: 'Источник',

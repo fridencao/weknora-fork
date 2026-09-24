@@ -71,6 +71,14 @@
                     <div class="reference-item__document-main">
                       <div class="reference-item__title-row">
                         <h5 class="reference-item__title" :title="item.title">{{ item.title }}</h5>
+                        <span v-if="itemChannels(item).length" class="reference-item__channels">
+                          <span
+                            v-for="channel in itemChannels(item)"
+                            :key="channel"
+                            class="reference-item__channel"
+                            :class="`reference-item__channel--${channel}`"
+                          >{{ channelLabel(channel) }}</span>
+                        </span>
                         <button
                           v-if="canOpenProvenance(item)"
                           type="button"
@@ -156,6 +164,7 @@ import {
   buildReferenceSections,
   formatReferenceSnippet,
   resolveReferenceHighlightKey,
+  visibleChannels,
   type ReferenceListItem,
 } from '@/utils/referenceSources'
 import type { ProvenanceInput } from '@/utils/provenance'
@@ -233,6 +242,23 @@ function setItemRef(key: string, el: HTMLElement | null) {
 function onFaviconError(event: Event) {
   const img = event.target as HTMLImageElement | null
   if (img) img.style.display = 'none'
+}
+
+// M5-3: which retrieval channels contributed this citation. Only keyword /
+// graph participation is badged — pure vector hits are the default.
+const CHANNEL_LABEL_KEYS: Record<string, string> = {
+  vector: 'chat.referencesDrawerChannelVector',
+  keywords: 'chat.referencesDrawerChannelKeywords',
+  graph: 'chat.referencesDrawerChannelGraph',
+}
+
+function itemChannels(item: ReferenceListItem): string[] {
+  return visibleChannels(item.channels)
+}
+
+function channelLabel(channel: string): string {
+  const key = CHANNEL_LABEL_KEYS[channel]
+  return key ? t(key) : channel
 }
 
 function hasMoreContent(item: ReferenceListItem) {
@@ -624,6 +650,30 @@ watch(visible, (open) => {
   line-height: 1;
   opacity: 0;
   transition: opacity var(--app-motion-fast) ease, color var(--app-motion-fast) ease;
+}
+
+// M5-3 · 多通道来源标签（图谱/关键词）。图谱用主色描边以示「图谱通道真实命中」。
+.reference-item__channels {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.reference-item__channel {
+  padding: 0 5px;
+  font-size: var(--app-text-xs, 11px);
+  line-height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--td-component-stroke);
+  color: var(--td-text-color-secondary);
+  white-space: nowrap;
+
+  &--graph {
+    border-color: var(--td-brand-color);
+    color: var(--td-brand-color);
+  }
 }
 
 .reference-item:hover .reference-item__open,

@@ -3702,6 +3702,9 @@ export default {
     referencesDrawerDocsSection: '지식베이스 문서',
     referencesDrawerToolsSection: '도구',
     referencesDrawerEmpty: '참고 출처가 없습니다',
+    referencesDrawerChannelVector: '벡터',
+    referencesDrawerChannelKeywords: '키워드',
+    referencesDrawerChannelGraph: '그래프',
     provenance: {
       title: '출처 추적',
       badge: '출처',

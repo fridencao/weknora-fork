@@ -3704,6 +3704,9 @@ export default {
     referencesDrawerDocsSection: '知识库文档',
     referencesDrawerToolsSection: '工具',
     referencesDrawerEmpty: '暂无参考来源',
+    referencesDrawerChannelVector: '向量',
+    referencesDrawerChannelKeywords: '关键词',
+    referencesDrawerChannelGraph: '图谱',
     provenance: {
       title: '溯源',
       badge: '溯源',

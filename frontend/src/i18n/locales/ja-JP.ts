@@ -3692,6 +3692,9 @@ export default {
     referencesDrawerDocsSection: 'ドキュメント',
     referencesDrawerToolsSection: 'ツール',
     referencesDrawerEmpty: '出典はありません',
+    referencesDrawerChannelVector: 'ベクトル',
+    referencesDrawerChannelKeywords: 'キーワード',
+    referencesDrawerChannelGraph: 'グラフ',
     provenance: {
       title: '出所トレース',
       badge: '出所',

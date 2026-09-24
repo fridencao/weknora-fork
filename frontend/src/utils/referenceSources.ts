@@ -1,5 +1,9 @@
 export type ReferenceItemKind = 'web' | 'document' | 'tool'
 
+/** M5-3: retrieval channels a hit actually came from (SearchResult.channels). */
+export const REFERENCE_CHANNELS = ['vector', 'keywords', 'graph'] as const
+export type ReferenceChannel = (typeof REFERENCE_CHANNELS)[number]
+
 export type KnowledgeReferenceLike = {
   id?: string
   chunk_ids?: string[]
@@ -11,6 +15,7 @@ export type KnowledgeReferenceLike = {
   chunk_type?: string
   content?: string
   metadata?: Record<string, string>
+  channels?: string[]
 }
 
 export type ReferenceListItem = {
@@ -28,6 +33,31 @@ export type ReferenceListItem = {
   knowledgeId?: string
   knowledgeBaseId?: string
   content?: string
+  channels?: string[]
+}
+
+/** Keep only known channel names, de-duplicated, preserving backend order. */
+export function normalizeChannels(value?: string[] | null): string[] {
+  if (!Array.isArray(value)) return []
+  const out: string[] = []
+  for (const raw of value) {
+    const name = String(raw || '').trim()
+    if (!name || out.includes(name)) continue
+    if (!(REFERENCE_CHANNELS as readonly string[]).includes(name)) continue
+    out.push(name)
+  }
+  return out
+}
+
+/**
+ * Channel chips worth showing on a citation row. Pure vector hits are the
+ * default and carry no information, so a single 'vector' label renders nothing;
+ * anything involving keywords or the graph does (M5-3).
+ */
+export function visibleChannels(channels?: string[] | null): string[] {
+  const list = normalizeChannels(channels)
+  if (list.length === 1 && list[0] === 'vector') return []
+  return list
 }
 
 export type ReferenceDrawerSection = {
@@ -178,6 +208,7 @@ function buildDocumentItem(item: KnowledgeReferenceLike, index: number): Referen
     knowledgeBaseId: item.knowledge_base_id,
     snippet: truncateText(item.content || '', 220) || undefined,
     content: item.content,
+    channels: normalizeChannels(item.channels),
   }
 }
 
@@ -228,6 +259,13 @@ function mergeDocumentReferences(refs: KnowledgeReferenceLike[]): KnowledgeRefer
     if (!existing.knowledge_title && item.knowledge_title) existing.knowledge_title = item.knowledge_title
     if (!existing.knowledge_filename && item.knowledge_filename) existing.knowledge_filename = item.knowledge_filename
     if (!existing.knowledge_base_id && item.knowledge_base_id) existing.knowledge_base_id = item.knowledge_base_id
+    // M5-3: a document grouped from several chunks keeps the union of the
+    // channels those chunks came from, in backend order.
+    const mergedChannels = normalizeChannels([
+      ...(existing.channels || []),
+      ...(item.channels || []),
+    ])
+    if (mergedChannels.length) existing.channels = mergedChannels
     for (const chunkId of chunkIds) {
       if (!existing.chunk_ids?.includes(chunkId)) {
         existing.chunk_ids = [...(existing.chunk_ids || []), chunkId]

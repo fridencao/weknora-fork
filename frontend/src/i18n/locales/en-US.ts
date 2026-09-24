@@ -3692,6 +3692,9 @@ export default {
     referencesDrawerDocsSection: 'Documents',
     referencesDrawerToolsSection: 'Tools',
     referencesDrawerEmpty: 'No sources available',
+    referencesDrawerChannelVector: 'Vector',
+    referencesDrawerChannelKeywords: 'Keywords',
+    referencesDrawerChannelGraph: 'Graph',
     provenance: {
       title: 'Provenance',
       badge: 'Provenance',

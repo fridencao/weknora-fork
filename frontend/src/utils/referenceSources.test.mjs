@@ -4,8 +4,10 @@ import {
   buildReferenceSections,
   buildReferenceList,
   getDomainFromUrl,
+  normalizeChannels,
   normalizeReferenceUrl,
   resolveReferenceHighlightKey,
+  visibleChannels,
 } from './referenceSources.ts'
 
 test('buildReferenceList separates web and document references', () => {
@@ -177,4 +179,37 @@ test('formatReferenceSnippet strips markdown noise from preview text', async () 
 
 test('getDomainFromUrl strips www prefix', () => {
   assert.equal(getDomainFromUrl('https://www.example.com/x'), 'example.com')
+})
+
+// ---- M5-3：引用行的多通道来源标签 ----
+
+test('normalizeChannels drops unknown names and duplicates, keeping order', () => {
+  assert.deepEqual(normalizeChannels(['vector', 'graph', 'vector', 'bogus']), ['vector', 'graph'])
+  assert.deepEqual(normalizeChannels(), [])
+  assert.deepEqual(normalizeChannels(['WEBSEARCH']), [])
+})
+
+test('visibleChannels hides the default pure-vector case only', () => {
+  assert.deepEqual(visibleChannels(['vector']), [])
+  assert.deepEqual(visibleChannels(['graph']), ['graph'])
+  assert.deepEqual(visibleChannels(['vector', 'graph']), ['vector', 'graph'])
+  assert.deepEqual(visibleChannels(['keywords', 'vector']), ['keywords', 'vector'])
+})
+
+test('buildReferenceList carries channels onto document items', () => {
+  const items = buildReferenceList([
+    { id: 'chunk-1', knowledge_id: 'doc-1', knowledge_title: 'Policy', channels: ['vector', 'graph'] },
+  ])
+  assert.equal(items.length, 1)
+  assert.deepEqual(items[0].channels, ['vector', 'graph'])
+  assert.deepEqual(visibleChannels(items[0].channels), ['vector', 'graph'])
+})
+
+test('grouped document references keep the union of their chunk channels', () => {
+  const items = buildReferenceList([
+    { id: 'chunk-1', knowledge_id: 'doc-1', knowledge_title: 'Policy', channels: ['vector'] },
+    { id: 'chunk-2', knowledge_id: 'doc-1', knowledge_title: 'Policy', channels: ['graph'] },
+  ])
+  assert.equal(items.length, 1)
+  assert.deepEqual(items[0].channels, ['vector', 'graph'])
 })
