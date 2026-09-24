@@ -150,15 +150,18 @@ func (p *PluginSearchGraph) OnEvent(
 		}
 		seen[c.ID] = true
 		chatManage.SearchResult = append(chatManage.SearchResult, &types.SearchResult{
-			ID:            c.ID,
-			Content:       c.Content,
-			KnowledgeID:   c.KnowledgeID,
-			ChunkIndex:    c.ChunkIndex,
-			StartAt:       c.StartAt,
-			EndAt:         c.EndAt,
-			Seq:           c.ChunkIndex,
-			Score:         1.0,
-			MatchType:     types.MatchTypeGraph,
+			ID:          c.ID,
+			Content:     c.Content,
+			KnowledgeID: c.KnowledgeID,
+			ChunkIndex:  c.ChunkIndex,
+			StartAt:     c.StartAt,
+			EndAt:       c.EndAt,
+			Seq:         c.ChunkIndex,
+			Score:       1.0,
+			MatchType:   types.MatchTypeGraph,
+			// M5-3：图谱插件追加的 chunk 自带 graph 标签，前端引用角标可
+			// 真实识别图谱参与（与 HybridSearch 的 RRF 通道标签同口径）。
+			Channels:      []types.RetrieverType{types.GraphRetrieverType},
 			ChunkType:     string(c.ChunkType),
 			ParentChunkID: c.ParentChunkID,
 			ChunkMetadata: c.Metadata,

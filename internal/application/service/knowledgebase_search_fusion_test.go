@@ -134,6 +134,52 @@ func TestFuseOrDeduplicate_ThreeWayRRFBoostsGraphEndorsedChunks(t *testing.T) {
 		"graph endorsement should improve chunk c's rank")
 }
 
+func TestFuseOrDeduplicate_TagsActualChannelsPerHit(t *testing.T) {
+	t.Parallel()
+
+	vec := []*types.IndexWithScore{
+		{ChunkID: "v-only", Score: 0.9},
+		{ChunkID: "v+k", Score: 0.8},
+		{ChunkID: "v+g", Score: 0.7},
+	}
+	kw := []*types.IndexWithScore{{ChunkID: "v+k", Score: 1.0}}
+	graph := []*types.IndexWithScore{{ChunkID: "v+g", Score: 1.0}}
+
+	got := fuseOrDeduplicate(context.Background(), vec, kw, graph, nil)
+	channels := make(map[string][]types.RetrieverType, len(got))
+	for _, r := range got {
+		channels[r.ChunkID] = r.Channels
+	}
+
+	// M5-3：标签反映**实际参与**的通道，按 vector→keywords→graph 顺序。
+	require.Equal(t, []types.RetrieverType{types.VectorRetrieverType}, channels["v-only"])
+	require.Equal(t, []types.RetrieverType{
+		types.VectorRetrieverType, types.KeywordsRetrieverType}, channels["v+k"])
+	require.Equal(t, []types.RetrieverType{
+		types.VectorRetrieverType, types.GraphRetrieverType}, channels["v+g"])
+}
+
+func TestFuseOrDeduplicate_KeepsGraphRecallChannelTag(t *testing.T) {
+	t.Parallel()
+
+	// graphRecallForSearch 产出的结果自带 graph 标签；融合不得把它覆盖成
+	// 首通道标签（正是 M5-3 要修的显示层缺口）。
+	graph := []*types.IndexWithScore{{
+		ChunkID:  "graph-only",
+		Score:    1.0,
+		Channels: []types.RetrieverType{types.GraphRetrieverType},
+	}}
+
+	got := fuseOrDeduplicate(context.Background(), nil,
+		[]*types.IndexWithScore{{ChunkID: "kw", Score: 1.0}}, graph, nil)
+
+	byID := map[string][]types.RetrieverType{}
+	for _, r := range got {
+		byID[r.ChunkID] = r.Channels
+	}
+	require.Equal(t, []types.RetrieverType{types.GraphRetrieverType}, byID["graph-only"])
+}
+
 func TestRetrievalConfig_GraphWeightDefault(t *testing.T) {
 	t.Parallel()
 

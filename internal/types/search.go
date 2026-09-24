@@ -171,6 +171,10 @@ type SearchResult struct {
 	MatchType MatchType `                              json:"match_type"`
 	// SubChunkIndex
 	SubChunkID []string `                              json:"sub_chunk_id"`
+	// Channels lists the retrieval channels that actually contributed this
+	// chunk (vector/keywords/graph), filled in by RRF fusion (M5-3). nil means
+	// a single-channel result that never went through fusion.
+	Channels []RetrieverType `                         json:"channels,omitempty"`
 	// Metadata
 	Metadata map[string]string `                              json:"metadata"`
 

@@ -240,7 +240,8 @@ func (s *knowledgeBaseService) assembleSearchResults(
 		if knowledge, ok := knowledgeMap[chunk.KnowledgeID]; ok {
 			matchType := idx.matchTypes[chunk.ID]
 			matchedContent := idx.matchedContents[chunk.ID]
-			searchResults = append(searchResults, s.buildSearchResult(chunk, knowledge, score, matchType, matchedContent))
+			searchResults = append(searchResults, s.buildSearchResult(
+				chunk, knowledge, score, matchType, matchedContent, inputChunk.Channels))
 			addedChunkIDs[chunk.ID] = true
 		} else {
 			logger.Warnf(ctx, "Knowledge not found for chunk: %s, knowledge_id: %s", chunk.ID, chunk.KnowledgeID)
@@ -274,7 +275,8 @@ func (s *knowledgeBaseService) assembleSearchResults(
 					continue
 				}
 				matchedContent := idx.matchedContents[chunkID]
-				searchResults = append(searchResults, s.buildSearchResult(chunk, knowledge, score, matchType, matchedContent))
+				searchResults = append(searchResults, s.buildSearchResult(
+					chunk, knowledge, score, matchType, matchedContent, nil))
 			}
 		}
 	}
@@ -325,11 +327,15 @@ func (s *knowledgeBaseService) collectRelatedChunkIDs(chunk *types.Chunk, proces
 }
 
 // buildSearchResult creates a search result from chunk and knowledge.
+// channels carries the retrieval channels that contributed the hit (M5-3);
+// enrichment passes (parent/nearby/relation) have no fusion channels, so they
+// pass nil.
 func (s *knowledgeBaseService) buildSearchResult(chunk *types.Chunk,
 	knowledge *types.Knowledge,
 	score float64,
 	matchType types.MatchType,
 	matchedContent string,
+	channels []types.RetrieverType,
 ) *types.SearchResult {
 	return &types.SearchResult{
 		ID:                      chunk.ID,
@@ -343,6 +349,7 @@ func (s *knowledgeBaseService) buildSearchResult(chunk *types.Chunk,
 		Seq:                     chunk.ChunkIndex,
 		Score:                   score,
 		MatchType:               matchType,
+		Channels:                channels,
 		Metadata:                knowledge.GetMetadata(),
 		ChunkType:               string(chunk.ChunkType),
 		ParentChunkID:           chunk.ParentChunkID,
