@@ -58,11 +58,36 @@ func (h *KnowledgeBaseHandler) ownedKBDocIDsForGraph(ctx context.Context, kbID s
 
 // graphWorkspaceForKBHandler 与 service 侧 graphWorkspaceForKB 同口径：
 // shared（默认）= 全局图谱空间；kb = 按 KB 隔离（WS6 形态）。
+//
+// M6-4 WS4.3 per-KB 化（用户决策：切档走前端设置，docs/10 §6.3 「不迁」原
+// 决议被推翻）——优先级：KB 设置 > 系统 env > 默认 shared；显式 shared 优先
+// 于 env，避免「系统默认升 kb 后老 KB 误切」。
 func graphWorkspaceForKBHandler(kb *types.KnowledgeBase) string {
+	if kb != nil && kb.GraphConfig != nil {
+		switch kb.GraphConfig.WorkspaceMode {
+		case "kb":
+			return kb.ID
+		case "shared":
+			return ""
+			// "" / 未知值 = 跟随系统
+		}
+	}
 	if os.Getenv("STARKB_GRAPH_WORKSPACE_MODE") == "kb" && kb != nil {
 		return kb.ID
 	}
 	return ""
+}
+
+// graphWorkspaceModeForKB 报告 KB 的有效切档模式（KB 设置或回退 env），
+// 供 /graph/status 端点如实返回「当前这个 KB 实际走哪种图谱空间」。
+func graphWorkspaceModeForKB(kb *types.KnowledgeBase) string {
+	if kb != nil && kb.GraphConfig != nil && kb.GraphConfig.WorkspaceMode != "" {
+		return kb.GraphConfig.WorkspaceMode
+	}
+	if os.Getenv("STARKB_GRAPH_WORKSPACE_MODE") == "kb" {
+		return "kb"
+	}
+	return "shared"
 }
 
 // GetKnowledgeBaseGraphStatus GET /knowledge-bases/:id/graph/status
@@ -75,7 +100,7 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphStatus(c *gin.Context) {
 
 	out := gin.H{
 		"graph_config":   kb.GraphConfig,
-		"workspace_mode": map[string]string{"kb": "kb"}[os.Getenv("STARKB_GRAPH_WORKSPACE_MODE")],
+		"workspace_mode": graphWorkspaceModeForKB(kb),
 	}
 
 	starkbURL := os.Getenv("STARKB_API_URL")

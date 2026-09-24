@@ -196,6 +196,12 @@ type GraphConfig struct {
 	BuildModelID string `yaml:"build_model_id,omitempty" json:"build_model_id,omitempty"`
 	// BackfillMaxDocsPerHour 补齐限速（ADR-008 决策 3.4，0 = 服务端默认 3）
 	BackfillMaxDocsPerHour int `yaml:"backfill_max_docs_per_hour,omitempty" json:"backfill_max_docs_per_hour,omitempty"`
+	// WorkspaceMode 控制多图谱空间切档（M6-4 WS4.3 per-KB 化）：
+	//   ""        = 跟随系统默认（STARKB_GRAPH_WORKSPACE_MODE env，未设即 shared）
+	//   "shared"  = 全局共享图谱空间（旧 default 形态，多 KB 图谱合并）
+	//   "kb"      = 按 KB 隔离（X-Workspace 路由到 kb_id；新 KB 切档形态）
+	// 显式 shared 优先于 env，避免「系统默认升 kb 后老 KB 误切」。
+	WorkspaceMode string `yaml:"workspace_mode,omitempty" json:"workspace_mode,omitempty"`
 }
 
 // Value serializes the graph configuration for database storage.

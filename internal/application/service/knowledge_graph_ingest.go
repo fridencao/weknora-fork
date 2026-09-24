@@ -51,7 +51,19 @@ func (s *KnowledgePostProcessService) graphBuildOnIngestEnabled(ctx context.Cont
 
 // graphWorkspaceForKB 决定该 KB 的图谱投喂落哪个 workspace。
 // shared（默认）= 全局空间（与存量单图谱空间一致）；kb = 按 KB 隔离（WS6 形态）。
+//
+// M6-4 WS4.3 per-KB 化：优先级 KB 设置 > env > 默认 shared；
+// 与 handler.graphWorkspaceForKBHandler 同口径（docs/10 §6.3 不迁决议
+// 已推翻；切档走前端 KB 设置）。
 func graphWorkspaceForKB(kb *types.KnowledgeBase) string {
+	if kb != nil && kb.GraphConfig != nil {
+		switch kb.GraphConfig.WorkspaceMode {
+		case "kb":
+			return kb.ID
+		case "shared":
+			return ""
+		}
+	}
 	if os.Getenv("STARKB_GRAPH_WORKSPACE_MODE") == "kb" && kb != nil {
 		return kb.ID
 	}

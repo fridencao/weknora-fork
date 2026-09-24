@@ -44,6 +44,30 @@
       </div>
     </div>
 
+    <!-- M6-4 WS4.3：per-KB 图谱空间切档（docs/10 §6.3 「不迁」决议推翻）。
+      三态：
+      - 系统默认（跟随 STARKB_GRAPH_WORKSPACE_MODE，未设即 shared）
+      - 共享（强制 default，与其它 KB 图谱合并）
+      - 按 KB 隔离（独立 workspace=X-Workspace: kb-id）
+      切档后需触发 starkb-api 重抽取（其它 KB 看不到了）；共享切到隔离需
+      重抽取（空间数据已分裂）。切换对前端而言是设置项，立刻生效。 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <label>{{ t('graphSettings.workspaceModeLabel') }}</label>
+        <p class="desc">{{ t('graphSettings.workspaceModeDescription') }}</p>
+      </div>
+      <div class="setting-control">
+        <t-radio-group
+          :value="localGraphConfig.workspaceMode || ''"
+          @change="(v: unknown) => handleWorkspaceModeChange(String(v) as '' | 'shared' | 'kb')"
+        >
+          <t-radio value="">{{ t('graphSettings.workspaceModeDefault') }}</t-radio>
+          <t-radio value="shared">{{ t('graphSettings.workspaceModeShared') }}</t-radio>
+          <t-radio value="kb">{{ t('graphSettings.workspaceModeKb') }}</t-radio>
+        </t-radio-group>
+      </div>
+    </div>
+
     <!-- M6-1：图谱浏览（下钻 / 证据跳溯源 / 深链）搬到独立路由页。设置页只留配置与
          入口——400px 表单列放不下全屏画布，下钻也会变成模态套模态，且对话侧无法深链。 -->
     <div v-if="kbId" class="setting-row">
@@ -203,6 +227,11 @@ function openExplorer() {
 interface GraphConfig {
   autoBuild: boolean
   buildModelId?: string
+  // M6-4 WS4.3：per-KB 图谱空间切档（docs/10 §6.3 「不迁」决议推翻）。
+  // - 缺省：跟随系统默认（STARKB_GRAPH_WORKSPACE_MODE env，未设即 shared）
+  // - 'shared'：强制共享（旧 default 形态，多 KB 图谱合并）
+  // - 'kb'：按 KB 隔离（X-Workspace 路由到 kb_id，新 KB 切档形态）
+  workspaceMode?: '' | 'shared' | 'kb'
 }
 
 interface Props {
@@ -250,6 +279,15 @@ const kbModelPlaceholder = computed(() => {
 
 const handleBuildModelChange = (v: string) => {
   localGraphConfig.value = { autoBuild: localGraphConfig.value.autoBuild, buildModelId: v || '' }
+  emit('update:graphConfig', { ...localGraphConfig.value })
+}
+
+const handleWorkspaceModeChange = (v: '' | 'shared' | 'kb') => {
+  localGraphConfig.value = {
+    autoBuild: localGraphConfig.value.autoBuild,
+    buildModelId: localGraphConfig.value.buildModelId || '',
+    workspaceMode: v,
+  }
   emit('update:graphConfig', { ...localGraphConfig.value })
 }
 
