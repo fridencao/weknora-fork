@@ -5179,6 +5179,7 @@ export default {
     lightragDescription: '지식베이스 단위 LightRAG 그래프: 문서가 파싱 완료되면 자동으로 지식 그래프를 구축하며, 검색·Q&A의 그래프 리콜 채널로 동작합니다(근거 추적 포함).',
     autoBuildLabel: '자동 그래프 구축',
     autoBuildDescription: '활성화하면 이 지식베이스의 문서는 파싱 완료 후 자동으로 그래프 구축에 투입됩니다. 실패 항목은 아래 상태에 표시되며 재시도할 수 있습니다.',
+    graphViewLabel: '그래프 시각화',
     statusTitle: '그래프 상태',
     statusDescription: '그래프 규모와 최근 구축 작업(그래프 서비스 헬스 엔드포인트 제공)',
     statDocs: '구축된 문서',

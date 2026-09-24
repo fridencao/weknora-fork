@@ -5181,6 +5181,7 @@ export default {
     lightragDescription: '配置知识库级 LightRAG 图谱：上传文档解析完成后自动构建知识图谱，并在检索问答中作为图谱召回通道（带证据溯源）。',
     autoBuildLabel: '自动建图',
     autoBuildDescription: '开启后，本知识库内文档解析完成将自动投喂图谱构建（无需手工触发）；构建失败会在下方状态中列出并支持重试。',
+    graphViewLabel: '图谱可视化',
     statusTitle: '图谱状态',
     statusDescription: '图谱规模与最近建图任务（数据来自图谱服务健康度接口）',
     statDocs: '已建图文档',

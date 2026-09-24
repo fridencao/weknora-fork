@@ -2334,6 +2334,7 @@ export default {
     lightragDescription: 'ナレッジベース単位の LightRAG グラフ：解析完了したドキュメントから自動でナレッジグラフを構築し、検索・Q&A のグラフ召回チャネルとして機能します（エビデンス溯源付き）。',
     autoBuildLabel: '自動グラフ構築',
     autoBuildDescription: '有効にすると、このナレッジベースのドキュメントは解析完了後に自動でグラフ構築に投入されます。失敗は下記ステータスに表示され、再実行できます。',
+    graphViewLabel: 'グラフ可視化',
     statusTitle: 'グラフステータス',
     statusDescription: 'グラフ規模と最近の構築ジョブ（グラフサービスのヘルスエンドポイントより）',
     statDocs: '構築済みドキュメント',

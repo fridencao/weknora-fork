@@ -2334,6 +2334,7 @@ export default {
     lightragDescription: 'Knowledge-base-level LightRAG graph: documents are automatically turned into a knowledge graph after parsing and serve as the graph recall channel in retrieval and Q&A (with evidence provenance).',
     autoBuildLabel: 'Automatic graph building',
     autoBuildDescription: 'When enabled, finished documents in this knowledge base are automatically fed into graph building; failures are listed below and can be retried.',
+    graphViewLabel: 'Graph visualization',
     statusTitle: 'Graph status',
     statusDescription: 'Graph scale and recent build jobs (from the graph service health endpoint)',
     statDocs: 'Docs in graph',
