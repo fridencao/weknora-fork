@@ -2347,6 +2347,10 @@ export default {
     evidenceEmpty: 'No locatable source evidence for this entity yet',
     droppedEvidence: '{count} evidence item(s) skipped (outside this knowledge base or without a contract anchor)',
     openProvenance: 'View provenance',
+    relations: 'Relations',
+    noRelations: '(no relation type)',
+    directionIn: 'reverse',
+    edgeEvidenceEmpty: 'No locatable source evidence for this relation yet',
   },
   graphSettings: {
     lightragTitle: 'LightRAG Knowledge Graph',

@@ -33,6 +33,7 @@
           :highlight-id="selectedId"
           :empty-text="t('knowledgeGraph.empty')"
           @node-click="onNodeClick"
+          @edge-click="onEdgeClick"
           @background-click="clearSelection"
         />
         <p v-if="!selectedId && nodes.length" class="graph-explorer__hint graph-explorer__hint--float">
@@ -61,8 +62,8 @@
               <dd>{{ detail.entity?.degree ?? 0 }}</dd>
             </div>
           </dl>
-          <p class="graph-explorer__description">
-            {{ detail.entity?.description || t('knowledgeGraph.noDescription') }}
+          <p v-for="(d, i) in entityDescriptions" :key="i" class="graph-explorer__description">
+            {{ d }}
           </p>
 
           <h4 class="graph-explorer__section">{{ t('knowledgeGraph.neighbors') }}</h4>
@@ -98,6 +99,58 @@
           {{ detail?.reason || t('knowledgeGraph.unavailable') }}
         </p>
       </aside>
+
+      <!-- M6-1 WS1.2：点边下钻。实体的证据是「节点 ∪ 邻居」合并集，答不了
+           「这条关系从哪句话抽出来的」，所以边单独取、单独展示。 -->
+      <aside v-else-if="selectedEdge" class="graph-explorer__panel">
+        <div v-if="edgeLoading" class="graph-explorer__panel-hint">
+          {{ t('knowledgeGraph.loading') }}
+        </div>
+        <template v-else-if="edgeDetail && edgeDetail.available">
+          <h3 class="graph-explorer__entity graph-explorer__entity--edge">
+            <span>{{ selectedEdge.source }}</span>
+            <t-icon name="arrow-right" size="var(--app-icon-sm)" />
+            <span>{{ selectedEdge.target }}</span>
+          </h3>
+
+          <h4 class="graph-explorer__section">{{ t('knowledgeGraph.relations') }}</h4>
+          <ul v-if="relations.length" class="graph-explorer__list">
+            <li v-for="(r, i) in relations" :key="i" class="graph-explorer__relation">
+              <div class="graph-explorer__relation-tags">
+                <t-tag v-for="rt in r.relation_type ? r.relation_type.split('、') : []"
+                  :key="rt" variant="light" size="small">{{ rt }}</t-tag>
+                <t-tag v-if="r.direction === 'in'" theme="warning" variant="outline" size="small">
+                  {{ t('knowledgeGraph.directionIn') }}
+                </t-tag>
+              </div>
+              <p v-for="(d, j) in r.descriptions" :key="j" class="graph-explorer__evidence-snippet">
+                {{ d }}
+              </p>
+            </li>
+          </ul>
+          <p v-else class="graph-explorer__muted">{{ t('knowledgeGraph.noRelations') }}</p>
+
+          <h4 class="graph-explorer__section">{{ t('knowledgeGraph.evidence') }}</h4>
+          <ul v-if="edgeEvidence.length" class="graph-explorer__list">
+            <li v-for="e in edgeEvidence" :key="e.chunk_id" class="graph-explorer__evidence">
+              <div class="graph-explorer__evidence-head">
+                <span class="graph-explorer__evidence-title">{{ e.title || e.knowledge_id }}</span>
+                <t-button variant="text" size="small" @click="openProvenance(e)">
+                  {{ t('knowledgeGraph.openProvenance') }}
+                </t-button>
+              </div>
+              <p class="graph-explorer__evidence-snippet">{{ e.snippet }}</p>
+            </li>
+          </ul>
+          <p v-else class="graph-explorer__muted">{{ t('knowledgeGraph.edgeEvidenceEmpty') }}</p>
+          <p v-if="edgeDetail.dropped_chunks" class="graph-explorer__muted">
+            {{ t('knowledgeGraph.droppedEvidence', { count: edgeDetail.dropped_chunks }) }}
+          </p>
+        </template>
+        <p v-else class="graph-explorer__panel-hint">
+          {{ edgeDetail?.reason || t('knowledgeGraph.unavailable') }}
+        </p>
+      </aside>
     </div>
 
     <ProvenancePanel />
@@ -121,13 +174,18 @@ import { useRoute, useRouter } from 'vue-router'
 import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 import ProvenancePanel from '@/components/ProvenancePanel.vue'
 import { provideProvenancePanel } from '@/composables/useProvenancePanel'
-import { getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
+import { getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
 import type { GraphEdgeDatum, GraphNodeDatum } from '@/components/knowledge/graphForceChart'
 import {
+  descriptionsOf,
+  edgeParam,
   evidenceToProvenanceInput,
   graphScale,
   neighborRows,
+  parseEdgeParam,
+  relationRows,
   unwrapGraphPayload,
+  type GraphEdgeDetail,
   type GraphEntityDetail,
   type GraphEvidence,
   type GraphViewPayload,
@@ -149,9 +207,16 @@ const selectedId = ref('')
 const detail = ref<GraphEntityDetail | null>(null)
 const detailLoading = ref(false)
 
+const selectedEdge = ref<{ source: string; target: string } | null>(null)
+const edgeDetail = ref<GraphEdgeDetail | null>(null)
+const edgeLoading = ref(false)
+
 const scale = computed(() => graphScale(viewTotal.value))
 const neighbors = computed(() => neighborRows(detail.value))
 const evidence = computed(() => detail.value?.evidence || [])
+const entityDescriptions = computed(() => descriptionsOf(detail.value?.entity))
+const relations = computed(() => relationRows(edgeDetail.value))
+const edgeEvidence = computed(() => edgeDetail.value?.evidence || [])
 
 async function loadGraph() {
   if (!kbId.value) return
@@ -191,26 +256,69 @@ async function loadEntity(name: string) {
   }
 }
 
-/** 选中并在 URL 上留痕（`?node=`），对话侧/文档侧才能深链到某个实体。 */
+async function loadEdge(source: string, target: string) {
+  if (!kbId.value || !source || !target) return
+  edgeLoading.value = true
+  try {
+    const res = await getKnowledgeBaseGraphEdge(kbId.value, source, target)
+    edgeDetail.value = unwrapGraphPayload<GraphEdgeDetail>(res)
+  } catch {
+    edgeDetail.value = { available: false }
+  } finally {
+    edgeLoading.value = false
+  }
+}
+
+/** 选中并在 URL 上留痕（`?node=` / `?edge=`），对话侧/文档侧才能深链。 */
 function selectNode(id: string) {
   if (!id) return
   selectedId.value = id
+  selectedEdge.value = null
+  edgeDetail.value = null
   void loadEntity(id)
-  if (String(route.query.node || '') !== id) {
-    void router.replace({ query: { ...route.query, node: id } })
+  const query = { ...route.query }
+  delete query.edge
+  if (String(route.query.node || '') === id) {
+    void router.replace({ query })
+    return
   }
+  void router.replace({ query: { ...query, node: id } })
+}
+
+function selectEdge(source: string, target: string) {
+  if (!source || !target) return
+  selectedEdge.value = { source, target }
+  selectedId.value = ''
+  detail.value = null
+  void loadEdge(source, target)
+  const query = { ...route.query }
+  delete query.node
+  const next = edgeParam(source, target)
+  if (String(route.query.edge || '') === next) {
+    void router.replace({ query })
+    return
+  }
+  void router.replace({ query: { ...query, edge: next } })
 }
 
 function onNodeClick(node: GraphNodeDatum) {
   selectNode(node?.id || '')
 }
 
+function onEdgeClick(edge: GraphEdgeDatum) {
+  if (!edge?.source || !edge?.target) return
+  selectEdge(edge.source, edge.target)
+}
+
 function clearSelection() {
   selectedId.value = ''
   detail.value = null
-  if (route.query.node) {
+  selectedEdge.value = null
+  edgeDetail.value = null
+  if (route.query.node || route.query.edge) {
     const query = { ...route.query }
     delete query.node
+    delete query.edge
     void router.replace({ query })
   }
 }
@@ -235,15 +343,36 @@ function goBack() {
 
 onMounted(async () => {
   await loadGraph()
+  // 深链：?node= 或 ?edge=（二选一，node 优先）
   const deepLink = String(route.query.node || '')
-  if (deepLink) selectNode(deepLink)
+  if (deepLink) {
+    selectNode(deepLink)
+    return
+  }
+  const edge = parseEdgeParam(route.query.edge)
+  if (edge) selectEdge(edge.source, edge.target)
 })
 
 watch(() => route.query.node, (value) => {
   const next = String(value || '')
   if (next === selectedId.value) return
-  if (next) selectNode(next)
-  else clearSelection()
+  if (next) {
+    selectNode(next)
+    return
+  }
+  // node 被移除也可能是选边时顺手删的，此时不能把刚选的边清掉
+  if (selectedEdge.value) return
+  clearSelection()
+})
+
+watch(() => route.query.edge, (value) => {
+  const next = parseEdgeParam(value)
+  if (!next) return
+  // URL 是自己写的（replace）时再触发会重复请求，这里按端点判重
+  if (selectedEdge.value
+    && selectedEdge.value.source === next.source
+    && selectedEdge.value.target === next.target) return
+  selectEdge(next.source, next.target)
 })
 </script>
 
@@ -322,6 +451,24 @@ watch(() => route.query.node, (value) => {
     font-weight: 600;
     color: var(--td-text-color-primary);
     word-break: break-all;
+
+    &--edge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+  }
+
+  &__relation {
+    padding: 4px 0;
+  }
+
+  &__relation-tags {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
   }
 
   &__fields {

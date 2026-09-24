@@ -146,6 +146,15 @@ type KnowledgeBaseService interface {
 	// rather than failing the page. Evidence is restricted to documents of the
 	// given knowledge base (a shared graph space would otherwise leak others).
 	GraphEntityDetail(ctx context.Context, kbID string, name string) (map[string]any, error)
+
+	// GraphEdgeDetail returns drill-down data for one graph relation (M6-1 WS1.2):
+	// the relation attributes and the evidence of **that edge only** (resolved back
+	// to WeKnora sub-chunks). Entity drill-down cannot answer "which sentence was
+	// this relation extracted from" — its evidence is the node ∪ neighbours union.
+	//
+	// Same contract as GraphEntityDetail: never errors, degrades to
+	// {"available": false, ...}, and evidence is restricted to the KB's documents.
+	GraphEdgeDetail(ctx context.Context, kbID string, source string, target string) (map[string]any, error)
 }
 
 // KnowledgeBaseRepository defines the knowledge base repository interface

@@ -751,3 +751,13 @@ export function getKnowledgeBaseGraphEntity(kbId: string, name: string) {
     params: { name },
   });
 }
+
+/**
+ * M6-1 WS1.2：图谱边下钻（该关系**自己的**证据）。
+ * 实体下钻的证据是「节点 ∪ 全部邻居」，答不了「这条关系从哪句话抽出来的」。
+ */
+export function getKnowledgeBaseGraphEdge(kbId: string, source: string, target: string) {
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/edge`, {
+    params: { source, target },
+  });
+}

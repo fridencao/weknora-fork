@@ -2347,6 +2347,10 @@ export default {
     evidenceEmpty: 'このエンティティには位置を特定できる原文の根拠がまだありません',
     droppedEvidence: '{count} 件の根拠はこのナレッジベース外か契約アンカーがないため除外しました',
     openProvenance: 'トレーサビリティを表示',
+    relations: '関係',
+    noRelations: '（関係タイプなし）',
+    directionIn: '逆向き',
+    edgeEvidenceEmpty: 'この関係には位置を特定できる原文の根拠がまだありません',
   },
   graphSettings: {
     lightragTitle: 'LightRAG ナレッジグラフ',

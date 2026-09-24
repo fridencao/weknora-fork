@@ -5206,6 +5206,10 @@ export default {
     evidenceEmpty: 'Для этой сущности пока нет исходных доказательств с определяемой позицией',
     droppedEvidence: 'Пропущено доказательств: {count} (вне этой базы знаний или без контрактного якоря)',
     openProvenance: 'Показать происхождение',
+    relations: 'Отношения',
+    noRelations: '(нет типа отношения)',
+    directionIn: 'обратное',
+    edgeEvidenceEmpty: 'Для этого отношения пока нет исходных доказательств с определяемой позицией',
   },
   graphSettings: {
     lightragTitle: 'Граф знаний LightRAG',

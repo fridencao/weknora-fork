@@ -338,3 +338,31 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntity(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 }
+
+// GetKnowledgeBaseGraphEdge GET /knowledge-bases/:id/graph/edge?source=&target=
+//
+// M6-1 WS1.2：点边下钻。实体的下钻证据是「节点 ∪ 全部邻居」的合并集，答不了
+// 「**这条**关系是从哪句话抽出来的」，所以边需要单独的入口。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEdge(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	source := strings.TrimSpace(c.Query("source"))
+	target := strings.TrimSpace(c.Query("target"))
+	if source == "" || target == "" {
+		_ = c.Error(apperrors.NewBadRequestError("source and target are required"))
+		return
+	}
+	if len([]rune(source)) > graphEntityNameMaxRunes || len([]rune(target)) > graphEntityNameMaxRunes {
+		_ = c.Error(apperrors.NewBadRequestError("source or target too long"))
+		return
+	}
+	data, err := h.service.GraphEdgeDetail(c.Request.Context(), kb.ID, source, target)
+	if err != nil {
+		_ = c.Error(apperrors.NewInternalServerError(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
+}

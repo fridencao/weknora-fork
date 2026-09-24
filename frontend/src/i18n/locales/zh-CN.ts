@@ -5208,6 +5208,10 @@ export default {
     evidenceEmpty: '该实体暂无可定位的原文证据',
     droppedEvidence: '{count} 条证据不在本知识库或无契约锚点，已略过',
     openProvenance: '查看溯源',
+    relations: '关系',
+    noRelations: '（无关系类型）',
+    directionIn: '反向',
+    edgeEvidenceEmpty: '该关系暂无可定位的原文证据',
   },
   graphSettings: {
     lightragTitle: 'LightRAG 图谱',

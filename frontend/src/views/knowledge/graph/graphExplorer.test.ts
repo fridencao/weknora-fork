@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  descriptionsOf,
+  edgeParam,
   evidenceToProvenanceInput,
   graphScale,
   neighborRows,
   neighborsTruncated,
+  parseEdgeParam,
+  relationRows,
   unwrapGraphPayload,
 } from './graphExplorer.ts'
 
@@ -86,4 +90,46 @@ test('neighborsTruncated only fires when the backend dropped neighbours', () => 
   assert.equal(neighborsTruncated({ neighbors: [{ id: 'a' }], neighbor_total: 9 }), true)
   // 后端没给 total 时不误报
   assert.equal(neighborsTruncated({ neighbors: [{ id: 'a' }] }), false)
+})
+
+test('descriptionsOf prefers the structured list and never leaks <SEP>', () => {
+  assert.deepEqual(
+    descriptionsOf({ descriptions: ['甲', '乙'], description: '旧数据面合并串' }),
+    ['甲', '乙'],
+  )
+  // 旧数据面只有合并串：直接渲染会让用户看到「甲<SEP>乙」
+  assert.deepEqual(descriptionsOf({ description: '甲<SEP>乙' }), ['甲', '乙'])
+  assert.deepEqual(descriptionsOf({ description: '' }), [])
+  assert.deepEqual(descriptionsOf(null), [])
+})
+
+test('relationRows flattens merged fields and dedupes identical relations', () => {
+  const rows = relationRows({
+    relations: [
+      { source: 'a', target: 'b', relation_type: '创始人<SEP>股东', description: '甲<SEP>乙' },
+      { source: 'a', target: 'b', relation_type: '创始人<SEP>股东', description: '甲<SEP>乙' },
+      { source: 'a', target: 'b', relation_type: '供应商', description: '供货' },
+    ],
+  })
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0].relation_type, '创始人、股东')
+  assert.deepEqual(rows[0].descriptions, ['甲', '乙'])
+  assert.equal(rows[1].relation_type, '供应商')
+})
+
+test('edge round-trips through the URL even when names contain the separator', () => {
+  const param = edgeParam('曾毓群', '宁德时代')
+  assert.deepEqual(parseEdgeParam(param), { source: '曾毓群', target: '宁德时代' })
+  // 名字里带 | 不行——先编码再拼接才能保证分隔符无歧义
+  const tricky = edgeParam('a|b', 'c|d')
+  assert.notEqual(tricky.split('|').length, 3)
+  assert.deepEqual(parseEdgeParam(tricky), { source: 'a|b', target: 'c|d' })
+})
+
+test('parseEdgeParam rejects malformed external input', () => {
+  assert.equal(parseEdgeParam('no-separator'), null)
+  assert.equal(parseEdgeParam('a|a'), null, '自环没有意义')
+  assert.equal(parseEdgeParam('a||b'), null)
+  assert.equal(parseEdgeParam(undefined), null)
+  assert.equal(parseEdgeParam('%zz|%zz'), null, '畸形百分号编码不能把异常冒到渲染层')
 })

@@ -5206,6 +5206,10 @@ export default {
     evidenceEmpty: '이 엔티티에서 위치를 특정할 수 있는 원문 근거가 아직 없습니다',
     droppedEvidence: '{count}건의 근거는 이 지식베이스 밖이거나 계약 앵커가 없어 제외했습니다',
     openProvenance: '출처 보기',
+    relations: '관계',
+    noRelations: '(관계 유형 없음)',
+    directionIn: '역방향',
+    edgeEvidenceEmpty: '이 관계에서 위치를 특정할 수 있는 원문 근거가 아직 없습니다',
   },
   graphSettings: {
     lightragTitle: 'LightRAG 지식 그래프',

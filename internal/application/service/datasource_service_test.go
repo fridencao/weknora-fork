@@ -127,6 +127,9 @@ func (s *processSyncKBService) ProcessKBDelete(context.Context, *asynq.Task) err
 func (s *processSyncKBService) GraphEntityDetail(context.Context, string, string) (map[string]any, error) {
 	return nil, nil
 }
+func (s *processSyncKBService) GraphEdgeDetail(context.Context, string, string, string) (map[string]any, error) {
+	return nil, nil
+}
 
 var _ interfaces.KnowledgeBaseService = (*processSyncKBService)(nil)
 
