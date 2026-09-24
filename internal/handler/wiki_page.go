@@ -13,7 +13,6 @@ import (
 	"github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
-	"github.com/Tencent/WeKnora/internal/types"
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	secutils "github.com/Tencent/WeKnora/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -1170,7 +1169,7 @@ func (h *WikiPageHandler) BatchIngest(c *gin.Context) {
 			continue
 		}
 		// 仅对已启用、未删除、已解析成功的文档入队；其它原因记录 reason 不阻塞主流程。
-		if d.DeletedAt != nil || d.EnableStatus == "" || d.EnableStatus == "disabled" {
+		if d.DeletedAt.Valid || d.EnableStatus == "" || d.EnableStatus == "disabled" {
 			results = append(results, docResult{KnowledgeID: d.ID, Queued: false,
 				Reason: "disabled"})
 			skipped++
