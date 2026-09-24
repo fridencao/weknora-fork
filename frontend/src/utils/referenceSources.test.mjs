@@ -5,6 +5,7 @@ import {
   buildReferenceList,
   getDomainFromUrl,
   normalizeChannels,
+  normalizeGraphEntities,
   normalizeReferenceUrl,
   resolveReferenceHighlightKey,
   visibleChannels,
@@ -212,4 +213,38 @@ test('grouped document references keep the union of their chunk channels', () =>
   ])
   assert.equal(items.length, 1)
   assert.deepEqual(items[0].channels, ['vector', 'graph'])
+})
+
+// M6-1 WS1.3：图谱召回实体 chips
+
+test('normalizeGraphEntities trims, dedupes and caps keeping relevance order', () => {
+  assert.deepEqual(
+    normalizeGraphEntities(['宁德时代', ' 曾毓群 ', '', '宁德时代']),
+    ['宁德时代', '曾毓群'],
+  )
+  const many = Array.from({ length: 20 }, (_, i) => `实体${i}`)
+  assert.equal(normalizeGraphEntities(many).length, 8)
+  assert.deepEqual(normalizeGraphEntities(many)[7], '实体7', '截断保留的是最相关的')
+  assert.deepEqual(normalizeGraphEntities(null), [])
+})
+
+test('buildReferenceList carries graph entities onto document items', () => {
+  const items = buildReferenceList([
+    { id: 'chunk-1', knowledge_id: 'doc-1', knowledge_title: '年报', channels: ['graph'], graph_entities: ['宁德时代'] },
+  ])
+  assert.deepEqual(items[0].graphEntities, ['宁德时代'])
+  // 非图谱引用没有实体，不渲染空容器
+  const plain = buildReferenceList([
+    { id: 'chunk-2', knowledge_id: 'doc-2', knowledge_title: '其它', channels: ['vector'] },
+  ])
+  assert.deepEqual(plain[0].graphEntities, [])
+})
+
+test('grouped document references keep the union of their graph entities', () => {
+  const items = buildReferenceList([
+    { id: 'chunk-1', knowledge_id: 'doc-1', knowledge_title: '年报', channels: ['graph'], graph_entities: ['宁德时代'] },
+    { id: 'chunk-2', knowledge_id: 'doc-1', knowledge_title: '年报', channels: ['graph'], graph_entities: ['曾毓群', '宁德时代'] },
+  ])
+  assert.equal(items.length, 1)
+  assert.deepEqual(items[0].graphEntities, ['宁德时代', '曾毓群'])
 })

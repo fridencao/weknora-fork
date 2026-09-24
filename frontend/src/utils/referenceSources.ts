@@ -16,6 +16,8 @@ export type KnowledgeReferenceLike = {
   content?: string
   metadata?: Record<string, string>
   channels?: string[]
+  /** M6-1 WS1.3: entity names the graph channel matched for this query. */
+  graph_entities?: string[]
 }
 
 export type ReferenceListItem = {
@@ -34,9 +36,12 @@ export type ReferenceListItem = {
   knowledgeBaseId?: string
   content?: string
   channels?: string[]
+  graphEntities?: string[]
 }
 
-/** Keep only known channel names, de-duplicated, preserving backend order. */
+/**
+ * Keep only known channel names, de-duplicated, preserving backend order.
+ */
 export function normalizeChannels(value?: string[] | null): string[] {
   if (!Array.isArray(value)) return []
   const out: string[] = []
@@ -45,6 +50,26 @@ export function normalizeChannels(value?: string[] | null): string[] {
     if (!name || out.includes(name)) continue
     if (!(REFERENCE_CHANNELS as readonly string[]).includes(name)) continue
     out.push(name)
+  }
+  return out
+}
+
+/** Max entity chips rendered per citation row; extras would blow up the drawer. */
+export const MAX_REFERENCE_GRAPH_ENTITIES = 8
+
+/**
+ * M6-1 WS1.3: entity names from the graph channel, trimmed/deduped/capped,
+ * order preserved (backend order = LightRAG relevance order; the cap keeps
+ * the most relevant ones).
+ */
+export function normalizeGraphEntities(value?: string[] | null): string[] {
+  if (!Array.isArray(value)) return []
+  const out: string[] = []
+  for (const raw of value) {
+    const name = String(raw || '').trim()
+    if (!name || out.includes(name)) continue
+    out.push(name)
+    if (out.length >= MAX_REFERENCE_GRAPH_ENTITIES) break
   }
   return out
 }
@@ -209,6 +234,7 @@ function buildDocumentItem(item: KnowledgeReferenceLike, index: number): Referen
     snippet: truncateText(item.content || '', 220) || undefined,
     content: item.content,
     channels: normalizeChannels(item.channels),
+    graphEntities: normalizeGraphEntities(item.graph_entities),
   }
 }
 
@@ -266,6 +292,13 @@ function mergeDocumentReferences(refs: KnowledgeReferenceLike[]): KnowledgeRefer
       ...(item.channels || []),
     ])
     if (mergedChannels.length) existing.channels = mergedChannels
+    // M6-1 WS1.3: same union rule for graph entity names — chunks of one
+    // document may evidence different entities of the same query.
+    const mergedEntities = normalizeGraphEntities([
+      ...(existing.graph_entities || []),
+      ...(item.graph_entities || []),
+    ])
+    if (mergedEntities.length) existing.graph_entities = mergedEntities
     for (const chunkId of chunkIds) {
       if (!existing.chunk_ids?.includes(chunkId)) {
         existing.chunk_ids = [...(existing.chunk_ids || []), chunkId]

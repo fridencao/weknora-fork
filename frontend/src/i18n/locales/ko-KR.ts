@@ -3719,6 +3719,7 @@ export default {
     referencesDrawerChannelVector: '벡터',
     referencesDrawerChannelKeywords: '키워드',
     referencesDrawerChannelGraph: '그래프',
+    referencesDrawerOpenGraph: '지식 그래프에서 "{entity}" 보기',
     provenance: {
       title: '출처 추적',
       badge: '출처',

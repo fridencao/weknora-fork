@@ -3724,6 +3724,7 @@ export default {
     referencesDrawerChannelVector: 'Vector',
     referencesDrawerChannelKeywords: 'Keywords',
     referencesDrawerChannelGraph: 'Graph',
+    referencesDrawerOpenGraph: 'View "{entity}" in the knowledge graph',
     provenance: {
       title: 'Provenance',
       badge: 'Provenance',

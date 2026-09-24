@@ -212,6 +212,12 @@ type SearchResult struct {
 	// KnowledgeBaseID is the ID of the knowledge base this result belongs to
 	KnowledgeBaseID string `json:"knowledge_base_id,omitempty"`
 
+	// GraphEntities lists the entity names the graph channel matched for this
+	// query (M6-1 WS1.3). Query-level, stamped on every result the graph
+	// channel contributed to; the references drawer turns them into deep links
+	// to the graph explorer (?node=). Empty for non-graph contributions.
+	GraphEntities []string `json:"graph_entities,omitempty"`
+
 	// ContentRevision is the chunk edit revision at retrieval time.
 	// Internal only: used by the merge pipeline to decide whether source
 	// coordinates are still trustworthy.

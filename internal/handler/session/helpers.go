@@ -494,6 +494,9 @@ func searchResultFromMap(refMap map[string]interface{}) *types.SearchResult {
 		KnowledgeCustomMetadata: getString(refMap, "knowledge_custom_metadata"),
 		KnowledgeBaseID:         getString(refMap, "knowledge_base_id"),
 		ChunkMetadata:           jsonFromAny(refMap["chunk_metadata"]),
+		// M6-1 WS1.3：图谱召回实体名。漏了的话 SSE 实时事件里的引用就没有
+		// 「在图谱中查看」入口，要等刷新后从库里重读才出现。
+		GraphEntities: stringSliceFromAny(refMap["graph_entities"]),
 	}
 	if meta, ok := refMap["metadata"].(map[string]interface{}); ok {
 		metadata := make(map[string]string)

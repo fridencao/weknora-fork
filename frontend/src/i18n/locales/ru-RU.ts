@@ -3719,6 +3719,7 @@ export default {
     referencesDrawerChannelVector: 'Вектор',
     referencesDrawerChannelKeywords: 'Ключевые слова',
     referencesDrawerChannelGraph: 'Граф',
+    referencesDrawerOpenGraph: 'Показать «{entity}» в графе знаний',
     provenance: {
       title: 'Прослеживаемость',
       badge: 'Источник',

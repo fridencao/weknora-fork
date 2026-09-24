@@ -3724,6 +3724,7 @@ export default {
     referencesDrawerChannelVector: 'ベクトル',
     referencesDrawerChannelKeywords: 'キーワード',
     referencesDrawerChannelGraph: 'グラフ',
+    referencesDrawerOpenGraph: 'ナレッジグラフで「{entity}」を見る',
     provenance: {
       title: '出所トレース',
       badge: '出所',

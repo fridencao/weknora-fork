@@ -11,6 +11,7 @@ package service
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,16 +48,19 @@ func (s *knowledgeBaseService) graphChannelEnvDefault(ctx context.Context) bool 
 // 查询词 → LightRAG mix 查询 → KB 文档范围过滤 → 正文契约锚点回跳 WeKnora 子 chunk。
 // 开关：tenant 检索配置（设置 UI）优先，未配置时回落部署默认。
 // 任何失败返回 nil（调用方按二通道继续），不向调用方透出错误。
+//
+// 第二个返回值是本次图谱召回命中的实体名清单（M6-1 WS1.3），查询级——调用方把它
+// 盖到 Channels 含 graph 的最终结果上，前端引用抽屉据此深链图谱浏览器。
 func (s *knowledgeBaseService) graphRecallForSearch(
 	ctx context.Context, kbIDs []string, query string, topK int,
 	retrievalCfg *types.RetrievalConfig,
-) []*types.IndexWithScore {
+) ([]*types.IndexWithScore, []string) {
 	if !retrievalCfg.GetGraphChannelEnabled(s.graphChannelEnvDefault(ctx)) || query == "" || len(kbIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 	tenantID, ok := types.TenantIDFromContext(ctx)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	// KB 范围 → 允许回跳的文档 ID 集合（修复口径：对照 knowledge doc_id）。
@@ -73,21 +77,22 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 	}
 	if len(allowed) == 0 {
 		logger.Infof(ctx, "graph recall: KB 范围内无可回跳文档，跳过")
-		return nil
+		return nil, nil
 	}
 
 	client := chatpipeline.NewLightragClientFromEnv()
 	if client.BaseURL() == "" {
 		logger.Infof(ctx, "graph recall: LIGHT_RAG_BASE_URL 未配置，跳过")
-		return nil
+		return nil, nil
 	}
 	gctx, cancel := context.WithTimeout(ctx, s.graphRecallTimeout(ctx))
 	defer cancel()
 	data, err := s.graphQueryMerged(gctx, client, kbIDs, query, topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: 查询失败（降级二通道）: %v", err)
-		return nil
+		return nil, nil
 	}
+	entityNames := CollectGraphEntityNames(data, maxGraphEntityNames)
 
 	// 图谱证据 → WeKnora 子 chunk：KB 文档范围过滤 + 正文契约锚点回跳（A0 修复）。
 	// 旧实现按 73 字符定长键解析 `{doc36}-{chunk36}`，而 LightRAG 实际产出
@@ -95,17 +100,17 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 	refs := chatpipeline.CollectGraphEvidence(data, allowed)
 	if len(refs) == 0 {
 		logger.Infof(ctx, "graph recall: 图谱证据均在 KB 范围外或键非法")
-		return nil
+		return nil, entityNames
 	}
 	chunks, err := chatpipeline.ResolveGraphEvidence(
 		ctx, s.chunkRepo, tenantID, refs, s.graphChunksPerHit(ctx), topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: chunk 回跳失败: %v", err)
-		return nil
+		return nil, entityNames
 	}
 	if len(chunks) == 0 {
 		logger.Infof(ctx, "graph recall: %d 条证据均无契约锚点可定位", len(refs))
-		return nil
+		return nil, entityNames
 	}
 
 	results := make([]*types.IndexWithScore, 0, len(chunks))
@@ -120,9 +125,42 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 			Channels:    []types.RetrieverType{types.GraphRetrieverType},
 		})
 	}
-	logger.Infof(ctx, "graph recall: 命中 %d chunk（图谱证据 %d 条，KB 范围 %d 文档）",
-		len(results), len(refs), len(allowed))
-	return results
+	logger.Infof(ctx, "graph recall: 命中 %d chunk（图谱证据 %d 条，KB 范围 %d 文档，实体 %v）",
+		len(results), len(refs), len(allowed), entityNames)
+	return results, entityNames
+}
+
+// maxGraphEntityNames 单次检索透出的实体名上限。引用抽屉只展示一小排 chips，
+// 更多只会把 UI 撑爆；排序保持 LightRAG 的相关性顺序（截断即"最相关的 N 个"）。
+const maxGraphEntityNames = 8
+
+// CollectGraphEntityNames 收集图谱召回命中的实体名（保序去重，封顶 max）。
+//
+// 抽成纯函数便于单测：实体名会被前端拿去深链图谱浏览器，空名/重复必须在这里清掉。
+func CollectGraphEntityNames(data *chatpipeline.LightragQueryData, max int) []string {
+	if data == nil || max <= 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(data.Data.Entities))
+	out := make([]string, 0, len(data.Data.Entities))
+	for _, e := range data.Data.Entities {
+		name := strings.TrimSpace(e.EntityName)
+		if name == "" {
+			continue
+		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+		if len(out) >= max {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // graphChunksPerHit 单条图谱证据最多回跳的 WeKnora 子 chunk 数。

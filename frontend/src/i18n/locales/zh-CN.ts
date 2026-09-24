@@ -3721,6 +3721,7 @@ export default {
     referencesDrawerChannelVector: '向量',
     referencesDrawerChannelKeywords: '关键词',
     referencesDrawerChannelGraph: '图谱',
+    referencesDrawerOpenGraph: '在知识图谱中查看「{entity}」',
     provenance: {
       title: '溯源',
       badge: '溯源',

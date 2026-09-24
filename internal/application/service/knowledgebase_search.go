@@ -270,7 +270,7 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	// 与 RRF 参数都取自 config.RetrievalDefaults()。
 	vectorResults, keywordResults := classifyRetrievalResults(ctx, retrieveResults)
 	retrievalCfg := s.cfg.RetrievalDefaults()
-	graphResults := s.graphRecallForSearch(ctx, searchKBIDs, params.QueryText, matchCount, retrievalCfg)
+	graphResults, graphEntities := s.graphRecallForSearch(ctx, searchKBIDs, params.QueryText, matchCount, retrievalCfg)
 	if len(vectorResults) == 0 && len(keywordResults) == 0 && len(graphResults) == 0 {
 		logger.Info(ctx, "No search results found")
 		return nil, nil
@@ -300,7 +300,28 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 		deduplicatedChunks = deduplicatedChunks[:params.MatchCount]
 	}
 
-	return s.processSearchResults(ctx, deduplicatedChunks, params.SkipContextEnrichment)
+	results, err := s.processSearchResults(ctx, deduplicatedChunks, params.SkipContextEnrichment)
+	if err != nil {
+		return nil, err
+	}
+
+	// M6-1 WS1.3：把本次图谱召回的实体名盖到图谱通道参与过的结果上（查询级，
+	// 不能挂在单个 chunk 上——RRF 去重后同一 chunk 只保留一个实例，vector 先到
+	// 就会把 graph 实例上的载荷挤掉）。前端引用抽屉据此深链图谱浏览器。
+	if len(graphEntities) > 0 {
+		for _, r := range results {
+			if r == nil {
+				continue
+			}
+			for _, ch := range r.Channels {
+				if ch == types.GraphRetrieverType {
+					r.GraphEntities = graphEntities
+					break
+				}
+			}
+		}
+	}
+	return results, nil
 }
 
 // normalizedMatchCount resolves the effective primary-match cap for a search.

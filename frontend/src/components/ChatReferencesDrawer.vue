@@ -104,6 +104,19 @@
                       <p v-if="item.snippet && !expandedKeys.has(item.key)" class="reference-item__snippet">
                         {{ formatReferenceSnippet(item.snippet) }}
                       </p>
+                      <!-- M6-1 WS1.3：图谱召回实体 → 深链图谱浏览器并高亮。
+                           只在图谱通道真的贡献了这条引用时出现（后端已保证）。 -->
+                      <div v-if="item.graphEntities?.length && item.knowledgeBaseId && !embeddedMode"
+                        class="reference-item__graph-entities">
+                        <t-icon name="data-share" size="var(--app-icon-sm)" class="reference-item__graph-mark" />
+                        <a v-for="entity in item.graphEntities" :key="entity"
+                          class="reference-item__graph-entity"
+                          :href="getGraphHref(item, entity)"
+                          :title="t('chat.referencesDrawerOpenGraph', { entity })"
+                          @click.stop>
+                          {{ entity }}
+                        </a>
+                      </div>
                       <div v-if="expandedKeys.has(item.key)" class="reference-item__content">
                         {{ formatReferenceSnippet(item.content) }}
                       </div>
@@ -307,6 +320,15 @@ function getDocumentHref(item: ReferenceListItem) {
   return router.resolve({
     path: `/platform/knowledge-bases/${item.knowledgeBaseId}`,
     query,
+  }).href
+}
+
+// M6-1 WS1.3：实体 chip 落到图谱浏览器并高亮该节点（?node= 深链）。
+function getGraphHref(item: ReferenceListItem, entity: string) {
+  if (!item.knowledgeBaseId) return ''
+  return router.resolve({
+    path: `/platform/knowledge-bases/${item.knowledgeBaseId}/graph`,
+    query: { node: entity },
   }).href
 }
 
@@ -720,6 +742,34 @@ watch(visible, (open) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* M6-1 WS1.3：图谱召回实体 chips —— 视觉上是「可点的图节点」，不是标签 */
+.reference-item__graph-entities {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.reference-item__graph-mark {
+  color: var(--td-brand-color);
+  flex: 0 0 auto;
+}
+
+.reference-item__graph-entity {
+  padding: 1px 8px;
+  border: 1px solid var(--td-brand-color-light);
+  border-radius: 999px;
+  font-size: var(--app-text-sm);
+  color: var(--td-brand-color);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--td-brand-color-light);
+  }
 }
 
 .reference-item__content {
