@@ -3766,7 +3766,9 @@ export default {
       method_failed: 'アライメント失敗',
       chunkId: 'チャンク ID',
       excerpt: '内容抜粋',
-      l5Pending: 'L5 表の行/列トレースは後続バージョンで提供予定',
+      l5Pending: 'L5 表の行/列トレースには生成時の主張ポインタの紐付けが必要で、後続バージョンで提供予定',
+      granularitySentence: '文レベル',
+      granularityBlock: 'ブロックレベル',
     },
     sandbox: {
         panelTitle: 'サンドボックス',

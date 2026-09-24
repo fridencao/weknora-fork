@@ -125,12 +125,21 @@
           </div>
         </dl>
         <div v-if="model.chunk.content" class="provenance-panel__excerpt">
-          <span class="provenance-panel__excerpt-label">{{ t('chat.provenance.excerpt') }}</span>
+          <span class="provenance-panel__excerpt-label">
+            {{ t('chat.provenance.excerpt') }}
+            <!-- M6-2：粒度明示——句级确定性定位成功，或降级为块级 -->
+            <t-tag v-if="granularity" size="small" variant="light"
+              :theme="granularity === 'sentence' ? 'success' : 'warning'">
+              {{ granularity === 'sentence'
+                ? t('chat.provenance.granularitySentence')
+                : t('chat.provenance.granularityBlock') }}
+            </t-tag>
+          </span>
           <div ref="excerptBody" class="provenance-panel__excerpt-body" v-html="excerptHtml"></div>
         </div>
       </section>
 
-      <!-- L5 表格行列暂不在 WS2 范围 -->
+      <!-- L5 表格行列：需生成期论断指针绑定（chat_pipeline 插件），数据面就绪前不做假高亮 -->
       <p class="provenance-panel__note">{{ t('chat.provenance.l5Pending') }}</p>
     </div>
   </t-drawer>
@@ -143,6 +152,7 @@ import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useProvenancePanel } from '@/composables/useProvenancePanel'
 import { extractProvenance, type ProvenanceModel } from '@/utils/provenance'
+import { findRangeInText, resolveClaimSentence, verifySpan } from '@/utils/sentencePointer'
 import { configureMarkedForChatMarkdown } from '@/utils/chatMarkdownRenderer'
 import { sanitizeMarkdownHTML } from '@/utils/security'
 
@@ -222,7 +232,88 @@ const locateRelevantBlock = async () => {
   body.scrollTop = Math.max(0, (el as HTMLElement).offsetTop - body.clientHeight / 3)
 }
 
-watch([excerptHtml, claimContext], locateRelevantBlock)
+// ---- M6-2 · L5 句级定位（确定性指针，优先于上面的块级模糊兜底） ----
+const granularity = ref<'' | 'sentence' | 'block'>('')
+
+/** 清掉上一轮的高亮（块级 class + 句级 mark）。 */
+const clearHighlights = (body: HTMLElement) => {
+  body.querySelectorAll('.provenance-panel__hit').forEach((el) => {
+    el.classList.remove('provenance-panel__hit')
+  })
+  body.querySelectorAll('mark.provenance-panel__sentence').forEach((mark) => {
+    const parent = mark.parentNode
+    if (!parent) return
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
+    parent.removeChild(mark)
+    parent.normalize()
+  })
+}
+
+/**
+ * 句级高亮：L5 指针匹配（确定性）→ span 校验（text_hash 角色，防内容漂移）→
+ * DOM 文本节点游标放置（空白不敏感子串定位，markdown 渲染不改字符序列）。
+ * 任何一层失败都返回 false，由块级路径兜底。
+ */
+const highlightSentence = (body: HTMLElement): boolean => {
+  const sentences = model.value?.chunk.sentences || []
+  const raw = model.value?.chunk.content || ''
+  const claim = claimContext.value
+  if (!sentences.length || !claim || !raw) return false
+  const resolved = resolveClaimSentence(sentences, claim)
+  if (!resolved) return false
+  const verified = verifySpan(raw, resolved.sentence)
+  if (!verified.ok) return false
+
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT)
+  const nodes: { node: Text; start: number; end: number }[] = []
+  let total = 0
+  let current: Node | null
+  while ((current = walker.nextNode())) {
+    const textNode = current as Text
+    const len = textNode.textContent?.length || 0
+    nodes.push({ node: textNode, start: total, end: total + len })
+    total += len
+  }
+  const haystack = nodes.map((x) => x.node.textContent).join('')
+  const range = findRangeInText(haystack, resolved.sentence.text)
+  if (!range) return false
+
+  const marks: HTMLElement[] = []
+  for (const item of nodes) {
+    if (item.end <= range.start || item.start >= range.end) continue
+    const len = item.node.textContent?.length || 0
+    const localStart = Math.max(range.start - item.start, 0)
+    const localEnd = Math.min(range.end - item.start, len)
+    if (localEnd <= localStart) continue
+    const mark = document.createElement('mark')
+    mark.className = 'provenance-panel__sentence'
+    const tail = item.node.splitText(localEnd)
+    mark.appendChild(item.node.splitText(localStart))
+    item.node.parentNode?.insertBefore(mark, tail)
+    marks.push(mark)
+  }
+  if (!marks.length) return false
+  body.scrollTop = Math.max(0, marks[0].offsetTop - body.clientHeight / 3)
+  return true
+}
+
+const locateClaim = async () => {
+  await nextTick()
+  const body = excerptBody.value
+  if (!body) return
+  clearHighlights(body)
+  granularity.value = ''
+  if (!claimContext.value) return
+  if (highlightSentence(body)) {
+    granularity.value = 'sentence'
+    return
+  }
+  // 降级：块级模糊定位（粒度标签如实标注，不假装句级）
+  granularity.value = 'block'
+  locateRelevantBlock()
+}
+
+watch([excerptHtml, claimContext], locateClaim)
 
 const methodLabel = computed(() => {
   const method = model.value?.chunk.method || ''
@@ -466,5 +557,15 @@ function close() {
   font-size: var(--app-text-xs);
   color: var(--td-text-color-placeholder);
   text-align: center;
+}
+</style>
+
+<style lang="less">
+/* 非 scoped：句级高亮的 <mark> 是运行时 DOM 注入的，带不上 scoped 属性选择器 */
+.provenance-panel__excerpt-body mark.provenance-panel__sentence {
+  background: var(--td-warning-color-light);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 </style>

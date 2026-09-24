@@ -36,6 +36,17 @@ export type ProvenanceChunk = {
   blockIds: string[]
   /** 对齐方法：exact / fuzzy / failed / … */
   method: string
+  /** M6-2：sbk_sentences 句级指针（L5，正文句切分 + 字符偏移）。缺失 = 数据面未升级。 */
+  sentences: ProvenanceSentence[]
+}
+
+/** L5 句级指针（docs/04 §4）：offset 相对 chunk.content 原文坐标系。 */
+export type ProvenanceSentence = {
+  text: string
+  start: number
+  end: number
+  /** 句起点之前最近的内联契约锚点；空串 = 无前置锚点，消费方以 sbk_blocks 主块兜底 */
+  blockId: string
 }
 
 export type ProvenanceModel = {
@@ -116,9 +127,33 @@ function normalizePages(value: unknown): number[] {
   return Array.from(seen).sort((a, b) => a - b)
 }
 
+/**
+ * 归一化 sbk_sentences（L5，M6-2）：[{text,start,end,block_id}] → ProvenanceSentence[]。
+ * 防御历史/异常数据：非正区间、end≤start、空文本的条目丢弃，不做截断——
+ * 偏移指针的价值就在于精确，模糊修补只会把错误藏进高亮里。
+ */
+function normalizeSentences(value: unknown): ProvenanceSentence[] {
+  if (!Array.isArray(value)) return []
+  const out: ProvenanceSentence[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const text = typeof item.text === 'string' ? item.text.trim() : ''
+    const start = typeof item.start === 'number' ? Math.trunc(item.start) : Number.NaN
+    const end = typeof item.end === 'number' ? Math.trunc(item.end) : Number.NaN
+    if (!text || !Number.isFinite(start) || !Number.isFinite(end)) continue
+    if (start < 0 || end <= start) continue
+    out.push({
+      text,
+      start,
+      end,
+      blockId: typeof item.block_id === 'string' ? item.block_id.trim() : '',
+    })
+  }
+  return out
+}
+
 /** 归一化 sbk_method：任意标量转小写字符串，缺失返回空串。 */
-function normalizeMethod(value: unknown): string {
-  if (value === undefined || value === null) return ''
+function normalizeMethod(value: unknown): string {  if (value === undefined || value === null) return ''
   if (typeof value === 'string') return value.trim().toLowerCase()
   return ''
 }
@@ -208,6 +243,7 @@ export function extractProvenance(
           content: typeof input.content === 'string' ? input.content : '',
           blockIds,
           method: normalizeMethod(chunkMeta.sbk_method),
+          sentences: normalizeSentences(chunkMeta.sbk_sentences),
         }
       }
     }
@@ -225,6 +261,6 @@ export function extractProvenance(
       document ||
       { id: '', title: '', fileName: undefined, knowledgeBaseId: '' },
     pages: Array.from(pages).sort((a, b) => a - b),
-    chunk: chunk || { id: '', content: '', blockIds: [], method },
+    chunk: chunk || { id: '', content: '', blockIds: [], method, sentences: [] },
   }
 }

@@ -3750,7 +3750,9 @@ export default {
       method_failed: '对齐失败',
       chunkId: '片段 ID',
       excerpt: '内容摘录',
-      l5Pending: 'L5 表格行列溯源将在后续版本提供',
+      l5Pending: 'L5 表格行列溯源需生成期论断指针绑定，将在后续版本提供',
+      granularitySentence: '句级定位',
+      granularityBlock: '块级定位',
     },
     sandbox: {
         panelTitle: '沙箱可视化',

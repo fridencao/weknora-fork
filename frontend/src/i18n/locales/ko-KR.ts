@@ -3748,7 +3748,9 @@ export default {
       method_failed: '정렬 실패',
       chunkId: '청크 ID',
       excerpt: '내용 발췌',
-      l5Pending: 'L5 표 행/열 출처 추적은 이후 버전에서 제공될 예정입니다',
+      l5Pending: 'L5 표 행/열 출처 추적은 생성 시점 주장 포인터 바인딩이 필요하며 이후 버전에서 제공될 예정입니다',
+      granularitySentence: '문장 수준',
+      granularityBlock: '블록 수준',
     },
     sandbox: {
         panelTitle: '샌드박스',

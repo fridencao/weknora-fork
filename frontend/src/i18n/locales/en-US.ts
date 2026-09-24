@@ -3766,7 +3766,9 @@ export default {
       method_failed: 'Alignment failed',
       chunkId: 'Chunk ID',
       excerpt: 'Excerpt',
-      l5Pending: 'L5 table row/column provenance is coming in a later release',
+      l5Pending: 'L5 table row/column provenance requires generation-time claim pointers and is coming in a later release',
+      granularitySentence: 'Sentence-level',
+      granularityBlock: 'Block-level',
     },
     sandbox: {
         panelTitle: 'Sandbox',
