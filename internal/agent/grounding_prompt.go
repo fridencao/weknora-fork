@@ -50,6 +50,15 @@ func formatGroundingGuidance(names []string) string {
 			"With an explicit source selection, KB retrieval is complementary, not a prerequisite. " +
 			"Directory entries are routing hints, not retrieved evidence; do not exhaust unrelated " +
 			"bases. Choose an available search or reader appropriate to the scope.\n")
+		// 引用格式硬约束：检索结果中每条 chunk 都带 cN 句柄，回答中必须用
+		// <ref id="cN"/> 内联标注（系统会展开成可点击角标）；禁止 [source: ...]
+		// 之类的纯文本标注——用户实测模型自造格式导致前端无法渲染引用角标。
+		b.WriteString("- When a retrieved chunk supports a claim, cite it inline with exactly " +
+			"<ref id=\"cN\"/> using the handle shown on that chunk in the tool result (e.g. c3). " +
+			"Place the tag on the same line as the claim it supports. NEVER write textual " +
+			"attributions like [source: file.pdf] or (来源: 文档名) — those cannot be rendered " +
+			"as citations. These citation rules take precedence over any custom prompt that " +
+			"specifies a different citation syntax.\n")
 	}
 	if slices.Contains(names, tools.ToolWebSearch) {
 		b.WriteString("- web_search is available: use it when relevant local evidence is missing, " +
