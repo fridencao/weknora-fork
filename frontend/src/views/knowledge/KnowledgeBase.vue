@@ -59,7 +59,7 @@ import {
   knowledgeNeedsStatusPolling,
   shouldRefreshWikiStatusAfterKnowledgePoll,
 } from './wikiStatusRefresh';
-import { listMoveTargets, moveKnowledge, getKnowledgeMoveProgress } from '@/api/knowledge-base';
+import { listMoveTargets, moveKnowledge, getKnowledgeMoveProgress, getKnowledgeBaseGraphStatus } from '@/api/knowledge-base';
 import { resolveKnowledgeDownloadFileName } from './knowledgeDownloadFileName';
 import {
   buildUploadFileName,

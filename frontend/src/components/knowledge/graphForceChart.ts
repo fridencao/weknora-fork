@@ -150,6 +150,9 @@ export function buildGraphOption(input: GraphOptionInput): EChartsOption {
   return {
     tooltip: {
       confine: true,
+      // 长描述自动换行限宽 + 字号比正文小一号（默认 nowrap/14px 会溢出屏幕）
+      extraCssText: 'max-width: 380px; white-space: normal; word-break: break-word; ' +
+        'font-size: var(--app-text-sm, 13px); line-height: 1.6; padding: 10px 12px;',
       formatter: (p: any) => {
         if (p?.dataType === 'edge') {
           const e = edgeByKey.get(toEdgeKey(p.data?.source, p.data?.target))
