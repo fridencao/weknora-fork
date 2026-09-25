@@ -222,6 +222,9 @@ func RegisterKnowledgeBaseRoutes(r *gin.RouterGroup, handler *handler.KnowledgeB
 		// M6-1 WS1.2：图谱浏览器下钻（实体 + 邻居 + 回跳为 WeKnora 子 chunk 的证据）
 		kb.GET("/:id/graph/entity", g.Viewer(), g.KBAccessRead("id"),
 			handler.GetKnowledgeBaseGraphEntity)
+		// P0-1（图谱浏览器规划 2026-09-25）：实体搜索（搜索框 + 万物可达 pivot）
+		kb.GET("/:id/graph/entity/search", g.Viewer(), g.KBAccessRead("id"),
+			handler.GetKnowledgeBaseGraphEntitySearch)
 		// M6-1 WS1.2：点边下钻（该关系自己的证据，与实体下钻的合并证据集口径不同）
 		kb.GET("/:id/graph/edge", g.Viewer(), g.KBAccessRead("id"),
 			handler.GetKnowledgeBaseGraphEdge)

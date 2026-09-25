@@ -737,9 +737,26 @@ export function retryKnowledgeBaseGraphDocs(kbId: string, knowledgeIds: string[]
   });
 }
 
-/** M5-1：KB 图谱可视化数据（Go 代理 starkb-api /graph/view） */
-export function getKnowledgeBaseGraphView(kbId: string) {
-  return get(`/api/v1/knowledge-bases/${kbId}/graph/view`);
+/** M5-1：KB 图谱可视化数据（Go 代理 starkb-api /graph/view）。
+ * P0（图谱浏览器规划 2026-09-25）：支持 ego 子图（mode/center/depth）与
+ * entity_type 白名单（types，服务端过滤）。 */
+export function getKnowledgeBaseGraphView(
+  kbId: string,
+  params?: { mode?: 'overview' | 'ego'; center?: string; depth?: number; types?: string[] },
+) {
+  const query: Record<string, string | number> = {}
+  if (params?.mode) query.mode = params.mode
+  if (params?.center) query.center = params.center
+  if (params?.depth) query.depth = params.depth
+  if (params?.types?.length) query.types = params.types.join(',')
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/view`, { params: query });
+}
+
+/** P0-1（图谱浏览器规划 2026-09-25）：实体名搜索（搜索框 + 万物可达 pivot）。 */
+export function searchKnowledgeBaseGraphEntities(kbId: string, q: string, types?: string[]) {
+  const query: Record<string, string> = { q };
+  if (types?.length) query.types = types.join(',');
+  return get(`/api/v1/knowledge-bases/${kbId}/graph/entity/search`, { params: query });
 }
 
 /**

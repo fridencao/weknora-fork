@@ -14,11 +14,48 @@
         {{ t('knowledgeGraph.uncoveredDocs', { ready: coverageInfo.ready, eligible: coverageInfo.eligible }) }}
       </t-tag>
       <span class="graph-explorer__spacer" />
+      <!-- P0-1：实体搜索——命中后 pivot 成 ego 视图（万物可达） -->
+      <t-select
+        class="graph-explorer__search"
+        :value="searchValue"
+        filterable
+        clearable
+        :loading="searching"
+        :placeholder="t('knowledgeGraph.searchPlaceholder')"
+        :empty="searchEmpty ? t('knowledgeGraph.searchNoResults') : undefined"
+        :options="searchOptions"
+        @search="onSearch"
+        @change="onSearchSelect"
+        @clear="onSearchClear"
+      />
       <t-button variant="outline" size="small" :loading="loading" @click="reload">
         <template #icon><t-icon name="refresh" /></template>
         {{ t('knowledgeGraph.refresh') }}
       </t-button>
     </header>
+
+    <!-- P0-2/P0-4：ego 状态条 + 类型过滤条（所见即所滤，计数随当前子图联动） -->
+    <div class="graph-explorer__toolbar">
+      <div v-if="ego.isEgo" class="graph-explorer__ego">
+        <t-icon name="focus" size="var(--app-icon-sm)" />
+        <span>{{ t('knowledgeGraph.egoBanner', { center: ego.center, depth: ego.depth, n: scale.shownNodes }) }}</span>
+        <t-button variant="text" size="small" @click="exitEgo">{{ t('knowledgeGraph.backToOverview') }}</t-button>
+      </div>
+      <div class="graph-explorer__types">
+        <t-tag
+          v-for="tc in typeDistribution" :key="tc.type"
+          :variant="typeActive(tc.type) ? 'light' : 'outline'"
+          :style="typeActive(tc.type) ? { color: colorFor(tc.type, {}) } : {}"
+          class="graph-explorer__type-chip"
+          size="small"
+          @click="toggleType(tc.type)"
+        >
+          {{ tc.type }} · {{ tc.count }}
+        </t-tag>
+        <t-tag v-if="activeTypes.length" variant="outline" size="small" class="graph-explorer__type-chip"
+          @click="clearTypes">{{ t('knowledgeGraph.typeFilterClear') }}</t-tag>
+      </div>
+    </div>
 
     <div class="graph-explorer__body">
       <section class="graph-explorer__canvas">
@@ -77,6 +114,12 @@
               <dd>{{ detail.entity?.degree ?? 0 }}</dd>
             </div>
           </dl>
+          <t-button variant="outline" size="small" block class="graph-explorer__focus-btn"
+            :disabled="ego.isEgo && ego.center === selectedId"
+            @click="focusOnCenter(selectedId)">
+            <template #icon><t-icon name="focus" /></template>
+            {{ t('knowledgeGraph.focusCenter') }}
+          </t-button>
           <p v-for="(d, i) in entityDescriptions" :key="i" class="graph-explorer__description">
             {{ d }}
           </p>
@@ -190,20 +233,23 @@ import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 import ProvenancePanel from '@/components/ProvenancePanel.vue'
 import { coverageSummary, type GraphCoveragePayload } from '@/utils/graphCoverage'
 import { provideProvenancePanel } from '@/composables/useProvenancePanel'
-import { getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView } from '@/api/knowledge-base'
-import type { GraphEdgeDatum, GraphNodeDatum } from '@/components/knowledge/graphForceChart'
+import { getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView, searchKnowledgeBaseGraphEntities } from '@/api/knowledge-base'
+import { colorFor, type GraphEdgeDatum, type GraphNodeDatum } from '@/components/knowledge/graphForceChart'
 import {
   descriptionsOf,
   edgeParam,
+  egoSummary,
   evidenceToProvenanceInput,
   filterGraphByDoc,
   graphScale,
   neighborRows,
   parseEdgeParam,
   relationRows,
+  typeCounts,
   unwrapGraphPayload,
   type GraphEdgeDetail,
   type GraphEntityDetail,
+  type GraphEntitySearchPayload,
   type GraphEvidence,
   type GraphViewPayload,
 } from './graphExplorer'
@@ -234,6 +280,87 @@ const evidence = computed(() => detail.value?.evidence || [])
 const entityDescriptions = computed(() => descriptionsOf(detail.value?.entity))
 const relations = computed(() => relationRows(edgeDetail.value))
 const edgeEvidence = computed(() => edgeDetail.value?.evidence || [])
+
+// P0（图谱浏览器规划 2026-09-25）：ego 视图与类型过滤状态。视图参数变化都走
+// loadGraph 重取——过滤语义是"服务端重取"（wiki 图谱验证过的做法），不是客户端隐藏。
+const viewMode = ref<'overview' | 'ego'>('overview')
+const centerNode = ref('')
+const activeTypes = ref<string[]>([])
+const ego = computed(() => egoSummary(viewTotal.value))
+
+const typeDistribution = computed(() => typeCounts(nodes.value))
+function typeActive(type: string) {
+  return activeTypes.value.includes(type)
+}
+function toggleType(type: string) {
+  activeTypes.value = typeActive(type)
+    ? activeTypes.value.filter((t) => t !== type)
+    : [...activeTypes.value, type]
+  void loadGraph()
+}
+function clearTypes() {
+  activeTypes.value = []
+  void loadGraph()
+}
+
+// P0-1：实体搜索（远程搜索 → 选中 pivot 成 ego 视图 → 飞入 + 选中开面板）
+const searchValue = ref('')
+const searching = ref(false)
+const searchOptions = ref<{ label: string; value: string }[]>([])
+const searchEmpty = ref(false)
+
+async function onSearch(keyword: string) {
+  const q = String(keyword || '').trim()
+  searchEmpty.value = false
+  if (!q) {
+    searchOptions.value = []
+    return
+  }
+  searching.value = true
+  try {
+    const res = await searchKnowledgeBaseGraphEntities(kbId.value, q, activeTypes.value)
+    const payload = unwrapGraphPayload<GraphEntitySearchPayload>(res)
+    const results = payload?.results || []
+    searchOptions.value = results.map((r) => ({
+      label: `[${r.entity_type || '—'}] ${r.id}（${r.degree ?? 0}）`,
+      value: r.id,
+    }))
+    searchEmpty.value = results.length === 0
+  } catch {
+    searchOptions.value = []
+    searchEmpty.value = true
+  } finally {
+    searching.value = false
+  }
+}
+
+function onSearchSelect(value: unknown) {
+  const id = String(value || '').trim()
+  if (!id) return
+  focusOnCenter(id)
+  searchValue.value = ''
+  searchOptions.value = []
+}
+
+function onSearchClear() {
+  searchValue.value = ''
+  searchOptions.value = []
+}
+
+/** P0-2：以某实体为中心切入 ego 子图（depth=1），并选中开面板。 */
+async function focusOnCenter(id: string) {
+  if (!id) return
+  viewMode.value = 'ego'
+  centerNode.value = id
+  await loadGraph()
+  selectNode(id)
+}
+
+function exitEgo() {
+  viewMode.value = 'overview'
+  centerNode.value = ''
+  void loadGraph()
+}
 
 // WS1.1b：?doc=<knowledgeId> 按文档过滤子图。依据：节点/边 source_id 里的
 // LightRAG chunk key 前段就是 WeKnora doc id（A0 口径），纯前端可判定。
@@ -269,12 +396,18 @@ async function loadGraph() {
   loading.value = true
   viewError.value = ''
   try {
-    const res = await getKnowledgeBaseGraphView(kbId.value)
+    const params = viewMode.value === 'ego'
+      ? { mode: 'ego' as const, center: centerNode.value, depth: 1, types: activeTypes.value }
+      : { types: activeTypes.value.length ? activeTypes.value : undefined }
+    const res = await getKnowledgeBaseGraphView(kbId.value, params)
     const payload = unwrapGraphPayload<GraphViewPayload>(res)
     if (payload?.available) {
       nodes.value = payload.nodes || []
       edges.value = payload.edges || []
       viewTotal.value = payload
+      // ego-miss（中心实体不在可见范围）时数据面返回 available+reason+空集，
+      // 此时把 reason 显示出来而不是落进通用空态。
+      if (!nodes.value.length && payload.reason) viewError.value = payload.reason
     } else {
       nodes.value = []
       edges.value = []
@@ -448,6 +581,47 @@ watch(() => route.query.edge, (value) => {
   }
 
   &__spacer { flex: 1 1 auto; }
+
+  &__search {
+    width: 240px;
+  }
+
+  &__toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 0 8px;
+  }
+
+  &__ego {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--td-brand-color-4, #b5c7ff);
+    border-radius: 6px;
+    background: var(--td-brand-color-1, #ecf2ff);
+    color: var(--td-text-color-primary);
+    font-size: var(--app-text-sm, 13px);
+  }
+
+  &__types {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__type-chip {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  &__focus-btn {
+    margin-bottom: 10px;
+  }
 
   &__body {
     display: flex;

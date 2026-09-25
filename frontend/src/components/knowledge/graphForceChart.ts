@@ -14,6 +14,9 @@ export interface GraphNodeDatum {
   degree?: number
   description?: string
   source_id?: string
+  /** 抽取强度（LightRAG 边专属；节点当前无此字段，预留）。 */
+  weight?: number | null
+  created_at?: string
 }
 
 export interface GraphEdgeDatum {
@@ -21,6 +24,9 @@ export interface GraphEdgeDatum {
   target: string
   relation_type?: string
   description?: string
+  /** 关系强度：LightRAG 把同一条关系的多次抽取 weight 累加进 properties。 */
+  weight?: number | null
+  keywords?: string
 }
 
 export type GraphLayout = 'force' | 'circular'
@@ -73,6 +79,22 @@ export function symbolSizeFor(degree: number | undefined): number {
   return Math.min(10 + (degree || 0) * 1.5, 40)
 }
 
+/**
+ * 边的强度视觉编码（P0-5）：weight 归一到 [0,1]，映射为线宽 1→3、透明度 0.2→0.75。
+ * weight 缺省（旧数据面）退化为统一细线。同一次渲染内取最大 weight 做归一基准，
+ * 避免绝对值差异悬殊时全部贴地。
+ */
+export function edgeStyleFor(
+  weight: number | null | undefined,
+  maxWeight: number,
+): { width: number; opacity: number } {
+  if (!weight || weight <= 0 || !maxWeight || maxWeight <= 0) {
+    return { width: 1, opacity: 0.3 }
+  }
+  const norm = Math.min(weight / maxWeight, 1)
+  return { width: 1 + norm * 2, opacity: 0.2 + norm * 0.55 }
+}
+
 /** 边的稳定键。同一对节点间可能有同向重复边，取首个即可。 */
 export function toEdgeKey(source: string, target: string): string {
   return `${source}\u0000${target}`
@@ -112,11 +134,15 @@ export function buildGraphOption(input: GraphOptionInput): EChartsOption {
       : {}),
   }))
 
-  const links = edges.map((e) => ({
-    source: e.source,
-    target: e.target,
-    lineStyle: { width: 1, color: 'source' as const, opacity: 0.3 },
-  }))
+  const maxWeight = edges.reduce((m, e) => Math.max(m, e.weight || 0), 0)
+  const links = edges.map((e) => {
+    const style = edgeStyleFor(e.weight, maxWeight)
+    return {
+      source: e.source,
+      target: e.target,
+      lineStyle: { width: style.width, color: 'source' as const, opacity: style.opacity },
+    }
+  })
 
   const nodeById = new Map(nodes.map((n) => [n.id, n]))
   const edgeByKey = new Map(edges.map((e) => [toEdgeKey(e.source, e.target), e]))
@@ -128,7 +154,8 @@ export function buildGraphOption(input: GraphOptionInput): EChartsOption {
         if (p?.dataType === 'edge') {
           const e = edgeByKey.get(toEdgeKey(p.data?.source, p.data?.target))
           const rel = e?.relation_type ? `<b>${e.relation_type}</b><br/>` : ''
-          return `${rel}${e?.description || ''}`
+          const kw = e?.keywords ? `<span style="color:#999">${e.keywords}</span><br/>` : ''
+          return `${rel}${kw}${e?.description || ''}`
         }
         const n = nodeById.get(p?.data?.name)
         const type = n?.entity_type ? `[${n.entity_type}] ` : ''

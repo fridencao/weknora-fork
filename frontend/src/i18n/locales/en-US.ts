@@ -6170,6 +6170,11 @@ export default {
       inherit: 'Inherit deployment default',
       graphChannelLabel: 'Use graph retrieval',
       graphChannelDesc: 'Whether this agent queries the graph channel (LightRAG). Turning it off affects retrieval only, not whether the knowledge base is graphed',
+      on: 'On',
+      off: 'Off',
+      graphChannelInheritBadge: 'Inherited (current: {value})',
+      graphChannelCustomBadge: 'Customized (deployment default: {value})',
+      graphChannelRestore: 'Restore inherited value',
     },
     builtinHint: 'This is a built-in agent. Name and description cannot be modified, but configuration parameters can be adjusted.',
     navGroups: {

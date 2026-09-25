@@ -338,6 +338,21 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphView(c *gin.Context) {
 			viewURL += "&doc_ids=" + url.QueryEscape(strings.Join(ids, ","))
 		}
 	}
+	// P0（图谱浏览器规划 2026-09-25）：ego/types 参数透传。非法值直接忽略
+	// （starkb-api 侧亦兜底），这里只做枚举与长度边界控制防滥用。
+	if c.Query("mode") == "ego" {
+		viewURL += "&mode=ego"
+		if center := strings.TrimSpace(c.Query("center")); center != "" &&
+			len([]rune(center)) <= graphEntityNameMaxRunes {
+			viewURL += "&center=" + url.QueryEscape(center)
+		}
+		if d, err := strconv.Atoi(c.Query("depth")); err == nil && d >= 1 && d <= 3 {
+			viewURL += "&depth=" + strconv.Itoa(d)
+		}
+	}
+	if types := strings.TrimSpace(c.Query("types")); types != "" && len(types) <= 256 {
+		viewURL += "&types=" + url.QueryEscape(types)
+	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, viewURL, nil)
@@ -398,6 +413,63 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntity(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
+}
+
+// GetKnowledgeBaseGraphEntitySearch GET /knowledge-bases/:id/graph/entity/search?q=
+//
+// P0-1（图谱浏览器规划 2026-09-25）：实体名搜索——图谱浏览器搜索框与
+// 「万物可达 pivot」（搜索命中不在当前子图时自动切 ego 视图）的数据源。
+// 越权收口与 /graph/view 相同：shared 模式注入本 KB 文档清单，越权实体不可见。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntitySearch(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		_ = c.Error(apperrors.NewBadRequestError("q is required"))
+		return
+	}
+	if len([]rune(q)) > graphEntityNameMaxRunes {
+		_ = c.Error(apperrors.NewBadRequestError("q too long"))
+		return
+	}
+	starkbURL := os.Getenv("STARKB_API_URL")
+	if starkbURL == "" {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "STARKB_API_URL 未配置"}})
+		return
+	}
+	ws := graphWorkspaceForKBHandler(kb)
+	searchURL := starkbURL + "/graph/entity/search?workspace=" + ws +
+		"&q=" + url.QueryEscape(q) + "&limit=20"
+	if ws == "" {
+		if ids := h.ownedKBDocIDsForGraph(c.Request.Context(), kb.ID); len(ids) > 0 {
+			searchURL += "&doc_ids=" + url.QueryEscape(strings.Join(ids, ","))
+		}
+	}
+	if types := strings.TrimSpace(c.Query("types")); types != "" && len(types) <= 256 {
+		searchURL += "&types=" + url.QueryEscape(types)
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": err.Error()}})
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "starkb-api 不可达"}})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "reason": "starkb-api 返回异常"}})
+		return
+	}
+	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
 }
 
 // GetKnowledgeBaseGraphEdge GET /knowledge-bases/:id/graph/edge?source=&target=
@@ -490,6 +562,42 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCoverage(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
 		return
 	}
+
+	// starkb-api /graph/coverage：graph_doc_state 状态计数（ready/pending/
+	// building/failed），是前端覆盖进度条的 ready 分子。失败不阻断响应——
+	// 分子缺失时 coverageSummary 退化为「全部未覆盖」，分母（本侧已填）仍在。
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		starkbURL+"/graph/coverage?kb_id="+url.QueryEscape(kb.ID), nil)
+	if err != nil {
+		out["reason"] = err.Error()
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		out["reason"] = "starkb-api 不可达"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		out["reason"] = "starkb-api 返回异常"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	var cov map[string]any
+	if err := json.Unmarshal(body, &cov); err != nil {
+		out["reason"] = "响应解析失败"
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+		return
+	}
+	out["coverage"] = cov
+	out["available"] = true
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
+}
 
 // isStarkbConsistent 判断 KB 的 chunking_config.parser_engine_rules 是否
 // 一致锁定到 StarKB 引擎。docs/11 §3：仅 starkb 引擎才会写图谱契约；其它

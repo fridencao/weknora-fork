@@ -5,6 +5,7 @@
 // 而不是报错，所以值得用测试盯住。
 
 import type { GraphEdgeDatum, GraphNodeDatum } from '@/components/knowledge/graphForceChart'
+import { UNTYPED } from '@/components/knowledge/graphForceChart'
 import type { ProvenanceInput } from '@/utils/provenance'
 
 export type GraphViewPayload = {
@@ -16,6 +17,18 @@ export type GraphViewPayload = {
   total_nodes?: number
   total_edges?: number
   truncated?: boolean
+  /** P0-2（图谱浏览器规划 2026-09-25）：ego 子图回执。 */
+  mode?: 'overview' | 'ego'
+  center?: string | null
+  depth?: number | null
+  types?: string[]
+}
+
+export type GraphEntitySearchPayload = {
+  available?: boolean
+  reason?: string
+  query?: string
+  results?: { id: string; degree?: number; entity_type?: string; description?: string }[]
 }
 
 export type GraphEntityRef = {
@@ -252,5 +265,36 @@ export function filterGraphByDoc(
   const keptIds = new Set(kept.map((n) => n.id))
   const keptEdges = edges.filter((e) => keptIds.has(e.source) && keptIds.has(e.target))
   return { nodes: kept, edges: keptEdges, matched: kept.length }
+}
+
+/**
+ * 当前子图的实体类型分布（P0-4：类型图例过滤条）。
+ * 只统计展示中的节点——图例数字随 ego/搜索/文档过滤联动，所见即所滤。
+ */
+export function typeCounts(nodes: GraphNodeDatum[]): { type: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const n of nodes || []) {
+    const t = n?.entity_type || UNTYPED
+    counts.set(t, (counts.get(t) || 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count || (a.type < b.type ? -1 : 1))
+}
+
+/** ego 视图的状态摘要（状态条文案的数据形状；center 为空 = overview）。 */
+export function egoSummary(view: GraphViewPayload | null | undefined): {
+  isEgo: boolean
+  center: string
+  depth: number
+  visible: boolean
+} {
+  const isEgo = view?.mode === 'ego' && !!view?.center
+  return {
+    isEgo,
+    center: isEgo ? String(view?.center || '') : '',
+    depth: typeof view?.depth === 'number' ? view.depth : 1,
+    visible: isEgo,
+  }
 }
 
