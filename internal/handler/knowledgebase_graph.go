@@ -549,6 +549,96 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCharts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": true, "assets": assets}})
 }
 
+// GetKnowledgeBaseGraphEntityMerge POST /knowledge-bases/:id/graph/entity/merge
+//
+// P2-12（图谱浏览器规划 2026-09-25）：人工修图——实体合并/改名。写操作：
+// OwnedKBOrAdmin + KBAccessWrite（路由层挂）。shared 模式的图是全局的，
+// 归属校验（source/target 实体须有指向本 KB 文档的证据）在 starkb-api 侧做，
+// owned doc 清单由本层注入——与读路径的越权收口同一口径。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntityMerge(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	var in struct {
+		SourceIDs []string `json:"source_ids"`
+		TargetID  string   `json:"target_id"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		_ = c.Error(apperrors.NewBadRequestError("invalid body: " + err.Error()))
+		return
+	}
+	in.SourceIDs = trimGraphEntityNames(in.SourceIDs)
+	in.TargetID = strings.TrimSpace(in.TargetID)
+	if len(in.SourceIDs) == 0 || in.TargetID == "" {
+		_ = c.Error(apperrors.NewBadRequestError("source_ids and target_id are required"))
+		return
+	}
+	for _, n := range append(append([]string{}, in.SourceIDs...), in.TargetID) {
+		if len([]rune(n)) > graphEntityNameMaxRunes {
+			_ = c.Error(apperrors.NewBadRequestError("entity name too long"))
+			return
+		}
+	}
+	starkbURL := os.Getenv("STARKB_API_URL")
+	if starkbURL == "" {
+		c.JSON(http.StatusOK, gin.H{"available": false, "reason": "STARKB_API_URL 未配置"})
+		return
+	}
+	payload := map[string]any{
+		"tenant_id":  strconv.FormatUint(kb.TenantID, 10),
+		"kb_id":      kb.ID,
+		"workspace":  graphWorkspaceForKBHandler(kb),
+		"source_ids": in.SourceIDs,
+		"target_id":  in.TargetID,
+		"owned_doc_ids": func() []string {
+			ids := h.ownedKBDocIDsForGraph(c.Request.Context(), kb.ID)
+			if ids == nil {
+				ids = []string{}
+			}
+			return ids
+		}(),
+	}
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"available": false, "reason": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		starkbURL+"/graph/entity/merge", bytes.NewReader(buf))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"available": false, "reason": err.Error()})
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"available": false, "reason": "starkb-api 不可达"})
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusOK, gin.H{"available": false, "reason": "starkb-api 返回异常"})
+		return
+	}
+	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
+}
+
+// trimGraphEntityNames 去空白、丢空项（合并来源清单的入口归一）。
+func trimGraphEntityNames(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if s = strings.TrimSpace(s); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // GetKnowledgeBaseGraphEdge GET /knowledge-bases/:id/graph/edge?source=&target=
 // M6-1 WS1.2：点边下钻。实体的下钻证据是「节点 ∪ 全部邻居」的合并集，答不了
 // 「**这条**关系是从哪句话抽出来的」，所以边需要单独的入口。

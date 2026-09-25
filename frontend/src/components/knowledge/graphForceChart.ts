@@ -17,6 +17,8 @@ export interface GraphNodeDatum {
   /** 抽取强度（LightRAG 边专属；节点当前无此字段，预留）。 */
   weight?: number | null
   created_at?: string
+  /** P2-14：该实体的证据指向用户对话常引用的文档（familiar，渲染为描边）。 */
+  familiar?: boolean
 }
 
 export interface GraphEdgeDatum {
@@ -129,8 +131,13 @@ export function buildGraphOption(input: GraphOptionInput): EChartsOption {
     name: n.id,
     category: nodeType(n),
     symbolSize: symbolSizeFor(n.degree),
+    // P2-14：familiar 描边（金色环）——该实体的证据来自用户对话常引用的文档，
+    // 与 Wiki 图谱「熟悉环」同语义的个人化导航信号。
+    ...(n.familiar
+      ? { itemStyle: { borderColor: '#f0aF4f', borderWidth: 3 } }
+      : {}),
     ...(input.highlightId && input.highlightId !== n.id
-      ? { itemStyle: { opacity: 0.35 } }
+      ? { itemStyle: { ...(n.familiar ? { borderColor: '#f0aF4f', borderWidth: 3 } : {}), opacity: 0.35 } }
       : {}),
   }))
 

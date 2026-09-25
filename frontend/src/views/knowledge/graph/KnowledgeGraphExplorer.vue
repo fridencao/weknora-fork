@@ -14,6 +14,11 @@
         {{ t('knowledgeGraph.uncoveredDocs', { ready: coverageInfo.ready, eligible: coverageInfo.eligible }) }}
       </t-tag>
       <span class="graph-explorer__spacer" />
+      <!-- P2-11：数据健康——建图失败/孤儿证据计数入口（drawer 展示明细） -->
+      <t-tag v-if="healthIssues > 0" theme="danger" variant="outline" size="small"
+        class="graph-explorer__health-tag" @click="healthVisible = true">
+        {{ t('knowledgeGraph.healthIssues', { n: healthIssues }) }}
+      </t-tag>
       <!-- P0-1：实体搜索——命中后 pivot 成 ego 视图（万物可达） -->
       <t-select
         class="graph-explorer__search"
@@ -133,6 +138,11 @@
             <template #icon><t-icon name="chat" /></template>
             {{ t('knowledgeGraph.askEntity') }}
           </t-button>
+          <t-button variant="outline" size="small" block class="graph-explorer__focus-btn"
+            theme="danger" @click="openMergeDialog()">
+            <template #icon><t-icon name="merge" /></template>
+            {{ t('knowledgeGraph.mergeInto') }}
+          </t-button>
           <p v-for="(d, i) in entityDescriptions" :key="i" class="graph-explorer__description">
             {{ d }}
           </p>
@@ -245,6 +255,51 @@
       </aside>
     </div>
 
+    <!-- P2-12：实体合并确认（不可逆，需二次确认） -->
+    <t-dialog
+      v-model:visible="mergeVisible"
+      :header="t('knowledgeGraph.mergeTitle', { name: selectedId })"
+      :confirm-btn="{ content: t('knowledgeGraph.mergeConfirm'), theme: 'danger', loading: merging }"
+      width="480px"
+      @confirm="confirmMerge"
+    >
+      <p class="graph-explorer__merge-warning">{{ t('knowledgeGraph.mergeWarning') }}</p>
+      <t-select
+        v-model="mergeTarget"
+        filterable
+        allow-create
+        clearable
+        :loading="mergeSearching"
+        :placeholder="t('knowledgeGraph.mergeTargetPlaceholder')"
+        :options="mergeOptions"
+        class="graph-explorer__merge-target"
+        @search="onMergeSearch"
+      />
+    </t-dialog>
+
+    <!-- P2-11：数据健康 drawer -->
+    <t-drawer v-model:visible="healthVisible" :header="t('knowledgeGraph.healthTitle')" size="420px">
+      <div v-if="healthLoading" class="graph-explorer__panel-hint">{{ t('knowledgeGraph.loading') }}</div>
+      <template v-else>
+        <h4 class="graph-explorer__section">{{ t('knowledgeGraph.healthFailed', { n: failedDocs.length }) }}</h4>
+        <ul v-if="failedDocs.length" class="graph-explorer__list">
+          <li v-for="f in failedDocs" :key="f.knowledge_id" class="graph-explorer__evidence">
+            <div class="graph-explorer__evidence-head">
+              <span class="graph-explorer__evidence-title">{{ f.file_name || f.knowledge_id }}</span>
+              <t-button variant="text" size="small" @click="retryGraphBuild(f.knowledge_id)">
+                {{ t('knowledgeGraph.healthRetry') }}
+              </t-button>
+            </div>
+            <p class="graph-explorer__evidence-snippet">{{ f.last_error || '—' }}</p>
+          </li>
+        </ul>
+        <p v-else class="graph-explorer__muted">{{ t('knowledgeGraph.healthNone') }}</p>
+
+        <h4 class="graph-explorer__section">{{ t('knowledgeGraph.healthOrphans') }}</h4>
+        <p class="graph-explorer__evidence-snippet">{{ orphanSummary }}</p>
+      </template>
+    </t-drawer>
+
     <ProvenancePanel />
   </div>
 </template>
@@ -268,7 +323,20 @@ import ProvenancePanel from '@/components/ProvenancePanel.vue'
 import { coverageSummary, type GraphCoveragePayload } from '@/utils/graphCoverage'
 import { provideProvenancePanel } from '@/composables/useProvenancePanel'
 import { useMenuStore } from '@/stores/menu'
-import { getKnowledgeBaseGraphCharts, getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphDocStatus, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView, listKnowledgeFiles, searchKnowledgeBaseGraphEntities } from '@/api/knowledge-base'
+import {
+  getKnowledgeBaseGraphCharts,
+  getKnowledgeBaseGraphCoverage,
+  getKnowledgeBaseGraphDocStatus,
+  getKnowledgeBaseGraphEdge,
+  getKnowledgeBaseGraphEntity,
+  getKnowledgeBaseGraphStatus,
+  getKnowledgeBaseGraphView,
+  listKnowledgeFiles,
+  mergeKnowledgeBaseGraphEntities,
+  retryKnowledgeBaseGraphDocs,
+  searchKnowledgeBaseGraphEntities,
+} from '@/api/knowledge-base'
+import { listMemoryDocuments } from '@/api/memory'
 import { colorFor, type GraphEdgeDatum, type GraphNodeDatum } from '@/components/knowledge/graphForceChart'
 import {
   descriptionsOf,
@@ -410,14 +478,136 @@ function askEntity(id: string) {
   void router.push('/platform/creatChat')
 }
 
+// ---------------- P2（图谱浏览器规划 2026-09-25） ----------------
+
+// P2-14：familiar——本 KB 内用户对话常引用文档（memory doc affinity）的实体
+// 打金色描边。前端直连 /memory/documents（已有端点），按 source_id 交集判定。
+const familiarDocIds = ref<string[]>([])
+
+async function loadFamiliar() {
+  try {
+    const res = await listMemoryDocuments({ limit: 200 })
+    const body = res as { data?: { knowledge_id?: string; knowledge_base_id?: string }[] }
+    familiarDocIds.value = (body?.data || [])
+      .filter((d) => d?.knowledge_id && d.knowledge_base_id === kbId.value)
+      .map((d) => String(d.knowledge_id))
+  } catch {
+    familiarDocIds.value = []
+  }
+}
+
+const FAMILIAR_SUFFIX = '-chunk-'
+const familiarApplied = computed(() => {
+  if (!familiarDocIds.value.length) return nodes.value
+  const markers = familiarDocIds.value.map((id) => `${id}${FAMILIAR_SUFFIX}`)
+  return nodes.value.map((n) => ({
+    ...n,
+    familiar: markers.some((m) => String(n.source_id || '').includes(m)),
+  }))
+})
+
+// P2-11：数据健康（复用 /graph/status 代理：failed_docs + orphans）
+const healthVisible = ref(false)
+const healthLoading = ref(false)
+const failedDocs = ref<{ knowledge_id: string; file_name?: string; last_error?: string }[]>([])
+const orphans = ref<Record<string, any> | null>(null)
+
+const healthIssues = computed(() => failedDocs.value.length)
+const orphanSummary = computed(() => {
+  const o = orphans.value
+  if (!o) return t('knowledgeGraph.healthNone')
+  return t('knowledgeGraph.healthOrphanSummary', {
+    keys: Number(o.keys_total ?? o.dangling_keys ?? 0),
+    docs: (o.dangling_docs || []).length,
+  })
+})
+
+async function loadHealth() {
+  healthLoading.value = true
+  try {
+    const res = await getKnowledgeBaseGraphStatus(kbId.value)
+    const payload = unwrapGraphPayload<Record<string, any>>(res)
+    failedDocs.value = payload?.failed_docs || []
+    orphans.value = (payload?.graph as any)?.orphans || payload?.orphans || null
+  } catch {
+    failedDocs.value = []
+    orphans.value = null
+  } finally {
+    healthLoading.value = false
+  }
+}
+
+async function retryGraphBuild(knowledgeId: string) {
+  if (!knowledgeId) return
+  try {
+    await retryKnowledgeBaseGraphDocs(kbId.value, [knowledgeId])
+    void loadHealth()
+  } catch {
+    /* 失败保持原状，drawer 仍是失败清单 */
+  }
+}
+
+// P2-12：实体合并（人工修图，不可逆）
+const mergeVisible = ref(false)
+const merging = ref(false)
+const mergeTarget = ref('')
+const mergeSearching = ref(false)
+const mergeOptions = ref<{ label: string; value: string }[]>([])
+
+function openMergeDialog() {
+  if (!selectedId.value) return
+  mergeTarget.value = ''
+  mergeOptions.value = []
+  mergeVisible.value = true
+}
+
+async function onMergeSearch(keyword: string) {
+  const q = String(keyword || '').trim()
+  if (!q) {
+    mergeOptions.value = []
+    return
+  }
+  mergeSearching.value = true
+  try {
+    const res = await searchKnowledgeBaseGraphEntities(kbId.value, q)
+    const payload = unwrapGraphPayload<{ results?: { id: string; degree?: number }[] }>(res)
+    mergeOptions.value = (payload?.results || [])
+      .filter((r) => r.id !== selectedId.value)
+      .map((r) => ({ label: `${r.id}（${r.degree ?? 0}）`, value: r.id }))
+  } catch {
+    mergeOptions.value = []
+  } finally {
+    mergeSearching.value = false
+  }
+}
+
+async function confirmMerge() {
+  const target = String(mergeTarget.value || '').trim()
+  if (!target || target === selectedId.value) return
+  merging.value = true
+  try {
+    const res = await mergeKnowledgeBaseGraphEntities(kbId.value, [selectedId.value], target)
+    const payload = unwrapGraphPayload<{ available?: boolean; reason?: string }>(res)
+    if (payload?.available === false) {
+      throw new Error(payload.reason || 'merge failed')
+    }
+    mergeVisible.value = false
+    clearSelection()
+    await loadGraph()
+  } finally {
+    merging.value = false
+  }
+}
+
 // WS1.1b：?doc=<knowledgeId> 按文档过滤子图。依据：节点/边 source_id 里的
 // LightRAG chunk key 前段就是 WeKnora doc id（A0 口径），纯前端可判定。
 const docFilterId = computed(() => String(route.query.doc || '').trim())
 const filteredGraph = computed(() =>
   filterGraphByDoc(nodes.value, edges.value, docFilterId.value))
-const shownNodes = computed(() => filteredGraph.value.nodes)
-const shownEdges = computed(() => filteredGraph.value.edges)
 const docFilterMatched = computed(() => filteredGraph.value.matched)
+// P2-14：familiar 标记在进入过滤管线之前叠加到节点上
+const familiarNodes = computed(() => familiarApplied.value)
+const shownNodes = computed(() => familiarNodes.value)
 
 function clearDocFilter() {
   const query = { ...route.query }
@@ -625,6 +815,8 @@ function goBack() {
 onMounted(async () => {
   void loadCoverage()
   void loadGraphedDocs()
+  void loadFamiliar()
+  void loadHealth()
   await loadGraph()
   // 深链：?node= 或 ?edge=（二选一，node 优先）
   const deepLink = String(route.query.node || '')
@@ -724,6 +916,21 @@ watch(() => route.query.edge, (value) => {
 
   &__focus-btn {
     margin-bottom: 10px;
+  }
+
+  &__health-tag {
+    cursor: pointer;
+  }
+
+  &__merge-warning {
+    margin: 0 0 10px;
+    color: var(--td-text-color-secondary);
+    font-size: var(--app-text-sm, 13px);
+    line-height: 1.6;
+  }
+
+  &__merge-target {
+    width: 100%;
   }
 
   &__body {

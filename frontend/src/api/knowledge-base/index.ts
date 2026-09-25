@@ -766,6 +766,14 @@ export function getKnowledgeBaseGraphCharts(kbId: string, docIds: string[]) {
   });
 }
 
+/** P2-12（图谱浏览器规划 2026-09-25）：实体合并/改名（不可逆，需确认）。 */
+export function mergeKnowledgeBaseGraphEntities(kbId: string, sourceIds: string[], targetId: string) {
+  return post(`/api/v1/knowledge-bases/${kbId}/graph/entity/merge`, {
+    source_ids: sourceIds,
+    target_id: targetId,
+  });
+}
+
 /**
  * M6-1 WS1.2：图谱实体下钻（实体 + 邻居 + 已回跳为 WeKnora 子 chunk 的证据）。
  * 证据侧带 chunk_metadata，可直接喂给 ProvenancePanel（L3 页码 / L4 区块锚点）。
