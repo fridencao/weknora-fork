@@ -146,6 +146,11 @@
                 </t-button>
               </div>
               <p class="graph-explorer__evidence-snippet">{{ e.snippet }}</p>
+              <!-- P1-6：图谱原文上下文——LLM 抽取时看到的段落，解释「为什么抽到这条关系」 -->
+              <details v-if="e.source_context" class="graph-explorer__context">
+                <summary>{{ t('knowledgeGraph.sourceContext') }}</summary>
+                <p class="graph-explorer__evidence-snippet graph-explorer__context-body">{{ e.source_context }}</p>
+              </details>
             </li>
           </ul>
           <p v-else class="graph-explorer__muted">{{ t('knowledgeGraph.evidenceEmpty') }}</p>
@@ -198,6 +203,10 @@
                 </t-button>
               </div>
               <p class="graph-explorer__evidence-snippet">{{ e.snippet }}</p>
+              <details v-if="e.source_context" class="graph-explorer__context">
+                <summary>{{ t('knowledgeGraph.sourceContext') }}</summary>
+                <p class="graph-explorer__evidence-snippet graph-explorer__context-body">{{ e.source_context }}</p>
+              </details>
             </li>
           </ul>
           <p v-else class="graph-explorer__muted">{{ t('knowledgeGraph.edgeEvidenceEmpty') }}</p>
@@ -790,6 +799,26 @@ watch(() => route.query.edge, (value) => {
     font-size: var(--app-text-xs, 12px);
     line-height: 1.5;
     color: var(--td-text-color-secondary);
+  }
+
+  &__context {
+    margin-top: 4px;
+
+    summary {
+      cursor: pointer;
+      color: var(--td-brand-color);
+      font-size: var(--app-text-xs, 12px);
+      user-select: none;
+    }
+  }
+
+  &__context-body {
+    margin: 4px 0 0;
+    padding: 6px 8px;
+    border-left: 2px solid var(--td-component-stroke);
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
   }
 
   &__muted {

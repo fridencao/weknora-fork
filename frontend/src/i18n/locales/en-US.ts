@@ -2356,6 +2356,13 @@ export default {
     docFilterEmpty: 'Entities of this document have not entered the graph yet',
     docFilterClear: 'View all',
     uncoveredDocs: 'Graph covers {ready}/{eligible} documents',
+    searchPlaceholder: 'Search an entity to locate it',
+    searchNoResults: 'No matching entity',
+    focusCenter: 'Focus on this entity',
+    egoBanner: 'Focused: {center} ({n} entities within {depth} hop)',
+    backToOverview: 'Back to full graph',
+    typeFilterClear: 'Clear type filter',
+    sourceContext: 'Show extraction source',
   },
   graphSettings: {
     lightragTitle: 'LightRAG Knowledge Graph',

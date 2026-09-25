@@ -79,8 +79,8 @@ func (s *knowledgeBaseService) GraphEdgeDetail(
 		return graphUnavailable(reason), nil
 	}
 
-	refs, dropped := buildGraphEvidenceRefs(payload.Chunks, allowed)
-	evidence := s.resolveGraphEvidence(ctx, tenantID, refs, titleByDoc)
+	refs, dropped, contextByKey := buildGraphEvidenceRefs(payload.Chunks, allowed)
+	evidence := s.resolveGraphEvidence(ctx, tenantID, refs, titleByDoc, contextByKey)
 
 	relations := make([]map[string]any, 0, len(payload.Relations))
 	for _, r := range payload.Relations {

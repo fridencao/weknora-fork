@@ -102,7 +102,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 		logger.Infof(ctx, "graph recall: 图谱证据均在 KB 范围外或键非法")
 		return nil, entityNames
 	}
-	chunks, err := chatpipeline.ResolveGraphEvidence(
+	chunks, _, err := chatpipeline.ResolveGraphEvidence(
 		ctx, s.chunkRepo, tenantID, refs, s.graphChunksPerHit(ctx), topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: chunk 回跳失败: %v", err)

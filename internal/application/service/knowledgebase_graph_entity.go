@@ -89,8 +89,8 @@ func (s *knowledgeBaseService) GraphEntityDetail(
 		return graphUnavailable(reason), nil
 	}
 
-	refs, dropped := buildGraphEvidenceRefs(payload.Chunks, allowed)
-	evidence := s.resolveGraphEvidence(ctx, tenantID, refs, titleByDoc)
+	refs, dropped, contextByKey := buildGraphEvidenceRefs(payload.Chunks, allowed)
+	evidence := s.resolveGraphEvidence(ctx, tenantID, refs, titleByDoc, contextByKey)
 
 	neighbors := make([]map[string]any, 0, len(payload.Neighbors))
 	for _, n := range payload.Neighbors {

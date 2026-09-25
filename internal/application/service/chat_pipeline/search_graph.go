@@ -129,7 +129,7 @@ func (p *PluginSearchGraph) OnEvent(
 		logger.Infof(ctx, "graph search: 无可回跳证据（查询词域外或全部被过滤）")
 		return next()
 	}
-	chunks, err := ResolveGraphEvidence(ctx, p.chunkRepo, tenantID, refs, graphChunksPerHit, graphTopK)
+	chunks, _, err := ResolveGraphEvidence(ctx, p.chunkRepo, tenantID, refs, graphChunksPerHit, graphTopK)
 	if err != nil {
 		logger.Errorf(ctx, "graph search: chunk 回跳失败: %v", err)
 		return next()

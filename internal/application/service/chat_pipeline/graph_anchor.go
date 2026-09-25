@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/types"
@@ -69,6 +70,16 @@ func ParseGraphChunkAnchors(content string) []string {
 	return out
 }
 
+// StripGraphChunkAnchors 把契约锚点注释从正文剥掉（P1-6：图谱 chunk 原文要
+// 作为「为什么抽到这条关系」的上下文展示给用户，`<!--sbk:…-->` 是机器定位
+// 标记，对人只有噪音）。保序保留其余文本。
+func StripGraphChunkAnchors(content string) string {
+	if !strings.Contains(content, "<!--sbk:") {
+		return content
+	}
+	return strings.TrimSpace(sbkAnchorRe.ReplaceAllString(content, ""))
+}
+
 // CollectGraphEvidence 把 /query/data 的证据 chunk 解析为可回跳引用。
 // allowed 为 KB 范围内允许回跳的文档 ID 集合；范围外的证据直接丢弃。
 func CollectGraphEvidence(data *LightragQueryData, allowed map[string]struct{}) []GraphEvidenceRef {
@@ -110,6 +121,8 @@ type sbkChunkMeta struct {
 }
 
 // ResolveGraphEvidence 把图谱证据回跳为 WeKnora 子 chunk（chunk_type=text）。
+// 返回值二 sourceByChunk：子 chunk ID → 产出它的图谱 chunk key（P1-6 证据原文
+// 上下文跟随展示用）；不需要的调用方用 `_` 忽略。
 //
 // 排序与配额：单个图谱 chunk 平均覆盖 ~11 个子 chunk，若全量返回会淹没向量/关键词
 // 通道（图谱权重最低但条数最多，RRF 会失衡）。因此按「轮转」取用——先保证每个图谱
@@ -126,9 +139,9 @@ func ResolveGraphEvidence(
 	tenantID uint64,
 	refs []GraphEvidenceRef,
 	perHit, total int,
-) ([]*types.Chunk, error) {
+) ([]*types.Chunk, map[string]string, error) {
 	if len(refs) == 0 || repo == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if perHit <= 0 {
 		perHit = DefaultGraphChunksPerHit
@@ -218,12 +231,14 @@ func ResolveGraphEvidence(
 		hits = append(hits, ordered)
 	}
 
-	// 轮转取用，全局去重
+	// 轮转取用，全局去重。sourceByChunk 记录每个子 chunk 由哪条图谱证据
+	// （refs 下标对应的 Key）选出——P1-6 图谱原文上下文要跟随证据展示。
 	result := make([]*types.Chunk, 0, total)
+	sourceByChunk := make(map[string]string, total)
 	seen := make(map[string]struct{}, total)
 	for round := 0; round < perHit && len(result) < total; round++ {
 		progressed := false
-		for _, cands := range hits {
+		for ri, cands := range hits {
 			if len(result) >= total {
 				break
 			}
@@ -236,6 +251,7 @@ func ResolveGraphEvidence(
 			}
 			seen[c.ID] = struct{}{}
 			result = append(result, c)
+			sourceByChunk[c.ID] = refs[ri].Key
 			progressed = true
 		}
 		if !progressed {
@@ -246,7 +262,7 @@ func ResolveGraphEvidence(
 		logger.Infof(ctx, "graph 回跳: %d/%d 条图谱证据无契约锚点，无法定位（已跳过）",
 			noAnchor, len(refs))
 	}
-	return result, nil
+	return result, sourceByChunk, nil
 }
 
 // scoredChunk 子 chunk 及其对某个契约块的覆盖度。

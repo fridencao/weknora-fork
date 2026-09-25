@@ -67,6 +67,8 @@ export type GraphEvidence = {
   title?: string
   snippet?: string
   chunk_metadata?: unknown
+  /** P1-6：产出该证据的图谱 chunk 原文（锚点已剥、截断），解释关系从什么上下文抽出。 */
+  source_context?: string
 }
 
 export type GraphEntityDetail = {

@@ -30,6 +30,9 @@ const graphDrillTimeout = 10 * time.Second
 const (
 	graphDrillEvidencePerHit = 3
 	graphDrillEvidenceTotal  = 15
+	// graphDrillContextChars 图谱原文上下文的展示上限。它是「LLM 抽取时看到的
+	// 原文段落」，通常 1-3k 字符；截到 1200 够读出上下文且不淹没面板。
+	graphDrillContextChars = 1200
 )
 
 // graphDrillMaxDocIds shared 模式传给数据面的归属过滤文档数上限（与 Python 侧
@@ -134,10 +137,15 @@ func (s *knowledgeBaseService) graphAllowedDocs(
 //   - 键非法，或文档不在本 KB 范围内（共享图谱空间下会真实出现别的 KB 的证据，
 //     而路由只校验了当前 KB 的读权限——不过滤就能顺着图点到别人的文档）；
 //   - 正文里没有契约锚点（实测约 3%，多为纯表格/图片区域），无法定位到子 chunk。
+//
+// 返回值二 contextByKey：图谱 chunk key → 剥离锚点后的原文（P1-6：作为
+// 「这条关系/实体是从什么上下文抽出来的」跟随证据展示）。上限见
+// graphDrillContextChars。
 func buildGraphEvidenceRefs(
 	chunks []graphEvidenceChunk, allowed map[string]struct{},
-) ([]chatpipeline.GraphEvidenceRef, int) {
+) ([]chatpipeline.GraphEvidenceRef, int, map[string]string) {
 	refs := make([]chatpipeline.GraphEvidenceRef, 0, len(chunks))
+	contextByKey := make(map[string]string, len(chunks))
 	dropped := 0
 	for _, c := range chunks {
 		docID, _, err := chatpipeline.ParseLightragChunkKey(c.Key)
@@ -157,20 +165,25 @@ func buildGraphEvidenceRefs(
 		refs = append(refs, chatpipeline.GraphEvidenceRef{
 			Key: c.Key, DocID: docID, BlockIDs: blocks,
 		})
+		contextByKey[c.Key] = snippet(
+			chatpipeline.StripGraphChunkAnchors(c.Content), graphDrillContextChars)
 	}
-	return refs, dropped
+	return refs, dropped, contextByKey
 }
 
 // resolveGraphEvidence 回跳为 WeKnora 子 chunk，并组装成前端可直接喂溯源面板的形状。
+// contextByKey（P1-6）把图谱原文上下文挂到对应证据条目上：子 chunk 片段回答
+// 「定位在哪」，图谱原文回答「关系是从什么上下文抽出来的」。
 func (s *knowledgeBaseService) resolveGraphEvidence(
 	ctx context.Context, tenantID uint64,
 	refs []chatpipeline.GraphEvidenceRef, titleByDoc map[string]string,
+	contextByKey map[string]string,
 ) []map[string]any {
 	evidence := make([]map[string]any, 0, len(refs))
 	if len(refs) == 0 {
 		return evidence
 	}
-	chunks, err := chatpipeline.ResolveGraphEvidence(
+	chunks, sourceByChunk, err := chatpipeline.ResolveGraphEvidence(
 		ctx, s.chunkRepo, tenantID, refs, graphDrillEvidencePerHit, graphDrillEvidenceTotal)
 	if err != nil {
 		logger.Warnf(ctx, "graph drill: 证据回跳失败（前端仅展示图谱侧信息）: %v", err)
@@ -186,6 +199,11 @@ func (s *knowledgeBaseService) resolveGraphEvidence(
 		// 这里读 sbk_pages / sbk_blocks，不透出就只能给到文档级、点不到具体位置。
 		if len(c.Metadata) > 0 {
 			item["chunk_metadata"] = c.Metadata
+		}
+		if ctx2 := sourceByChunk[c.ID]; ctx2 != "" {
+			if raw, ok := contextByKey[ctx2]; ok && raw != "" {
+				item["source_context"] = raw
+			}
 		}
 		evidence = append(evidence, item)
 	}
