@@ -59,16 +59,24 @@
 
     <div class="graph-explorer__body">
       <section class="graph-explorer__canvas">
-        <!-- WS1.1b：文档列表徽标深链过来时按文档过滤子图（?doc=） -->
-        <div v-if="docFilterId" class="graph-explorer__docfilter">
+        <!-- P1-7：文档切换器——已建图文档下拉，?doc= 过滤子图（文档徽标深链也落在这里） -->
+        <div v-if="graphedDocs.length || docFilterId" class="graph-explorer__docfilter">
           <t-icon name="filter" size="var(--app-icon-sm)" />
-          <span v-if="docFilterMatched > 0">
-            {{ t('knowledgeGraph.docFilterBanner', { n: docFilterMatched }) }}
+          <t-select
+            class="graph-explorer__docselect"
+            :value="docFilterId || ''"
+            size="small"
+            clearable
+            filterable
+            :placeholder="t('knowledgeGraph.docSwitcherAll')"
+            :options="docOptions"
+            @change="onDocSelect"
+          />
+          <span v-if="docFilterId && docFilterMatched >= 0" class="graph-explorer__muted">
+            {{ docFilterMatched > 0
+              ? t('knowledgeGraph.docFilterBanner', { n: docFilterMatched })
+              : t('knowledgeGraph.docFilterEmpty') }}
           </span>
-          <span v-else>{{ t('knowledgeGraph.docFilterEmpty') }}</span>
-          <t-button variant="text" size="small" @click="clearDocFilter">
-            {{ t('knowledgeGraph.docFilterClear') }}
-          </t-button>
         </div>
         <div v-if="loading && !nodes.length" class="graph-explorer__hint">
           {{ t('knowledgeGraph.loading') }}
@@ -120,6 +128,11 @@
             <template #icon><t-icon name="focus" /></template>
             {{ t('knowledgeGraph.focusCenter') }}
           </t-button>
+          <t-button variant="outline" size="small" block class="graph-explorer__focus-btn"
+            @click="askEntity(selectedId)">
+            <template #icon><t-icon name="chat" /></template>
+            {{ t('knowledgeGraph.askEntity') }}
+          </t-button>
           <p v-for="(d, i) in entityDescriptions" :key="i" class="graph-explorer__description">
             {{ d }}
           </p>
@@ -157,6 +170,18 @@
           <p v-if="detail.dropped_chunks" class="graph-explorer__muted">
             {{ t('knowledgeGraph.droppedEvidence', { count: detail.dropped_chunks }) }}
           </p>
+
+          <!-- P1-8：证据文档的图表资产（空/失败时整段隐藏） -->
+          <template v-if="chartAssets.length">
+            <h4 class="graph-explorer__section">{{ t('knowledgeGraph.chartAssets') }}</h4>
+            <ul class="graph-explorer__list">
+              <li v-for="a in chartAssets" :key="a.asset_id" class="graph-explorer__chart">
+                <span class="graph-explorer__neighbor-name">{{ a.title || a.chart_ref }}</span>
+                <t-tag v-if="a.chart_type" variant="outline" size="small">{{ a.chart_type }}</t-tag>
+                <span v-if="a.page_no" class="graph-explorer__muted">P{{ a.page_no }}</span>
+              </li>
+            </ul>
+          </template>
         </template>
         <p v-else class="graph-explorer__panel-hint">
           {{ detail?.reason || t('knowledgeGraph.unavailable') }}
@@ -242,7 +267,8 @@ import GraphForceChart from '@/components/knowledge/GraphForceChart.vue'
 import ProvenancePanel from '@/components/ProvenancePanel.vue'
 import { coverageSummary, type GraphCoveragePayload } from '@/utils/graphCoverage'
 import { provideProvenancePanel } from '@/composables/useProvenancePanel'
-import { getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView, searchKnowledgeBaseGraphEntities } from '@/api/knowledge-base'
+import { useMenuStore } from '@/stores/menu'
+import { getKnowledgeBaseGraphCharts, getKnowledgeBaseGraphCoverage, getKnowledgeBaseGraphDocStatus, getKnowledgeBaseGraphEdge, getKnowledgeBaseGraphEntity, getKnowledgeBaseGraphView, listKnowledgeFiles, searchKnowledgeBaseGraphEntities } from '@/api/knowledge-base'
 import { colorFor, type GraphEdgeDatum, type GraphNodeDatum } from '@/components/knowledge/graphForceChart'
 import {
   descriptionsOf,
@@ -371,6 +397,19 @@ function exitEgo() {
   void loadGraph()
 }
 
+// P1-9：问这个实体——经 menuStore 预填队列跳新建对话（S3 场景：
+// 图→问→答（带 C2 图谱召回与溯源）→证据→图）。问题带类型引导语，
+// 让图谱通道有机会召回该实体的邻域。
+function askEntity(id: string) {
+  if (!id) return
+  const type = detail.value?.entity?.entity_type || ''
+  const question = type
+    ? `请结合知识库介绍「${id}」（类型：${type}）及其关联关系`
+    : `请结合知识库介绍「${id}」及其关联关系`
+  useMenuStore().setPrefillQuery(question)
+  void router.push('/platform/creatChat')
+}
+
 // WS1.1b：?doc=<knowledgeId> 按文档过滤子图。依据：节点/边 source_id 里的
 // LightRAG chunk key 前段就是 WeKnora doc id（A0 口径），纯前端可判定。
 const docFilterId = computed(() => String(route.query.doc || '').trim())
@@ -384,6 +423,40 @@ function clearDocFilter() {
   const query = { ...route.query }
   delete query.doc
   void router.replace({ query })
+}
+
+// P1-7：文档切换器。已建图（doc-status=ready）文档清单是下拉的数据源；
+// 列表一次拉全（page_size 200 对单 KB 足够），失败静默——切换器是辅助入口。
+const graphedDocs = ref<{ id: string; title: string }[]>([])
+const docOptions = computed(() => graphedDocs.value.map((d) => ({ label: d.title, value: d.id })))
+
+async function loadGraphedDocs() {
+  if (!kbId.value) return
+  try {
+    const res = await listKnowledgeFiles(kbId.value, { page: 1, page_size: 200 })
+    const body = res as { data?: unknown }
+    const items = Array.isArray(body?.data) ? body.data : []
+    const docs = items
+      .map((d: any) => ({ id: String(d?.id || ''), title: String(d?.file_name || d?.title || d?.id || '') }))
+      .filter((d) => d.id)
+    if (!docs.length) return
+    const st = await getKnowledgeBaseGraphDocStatus(kbId.value, docs.map((d) => d.id))
+    const states = (unwrapGraphPayload<{ states?: Record<string, string> }>(st))?.states || {}
+    graphedDocs.value = docs.filter((d) => states[d.id] === 'ready')
+  } catch {
+    graphedDocs.value = []
+  }
+}
+
+function onDocSelect(value: unknown) {
+  const id = String(value || '').trim()
+  const query = { ...route.query }
+  if (id) {
+    void router.replace({ query: { ...query, doc: id } })
+  } else {
+    delete query.doc
+    void router.replace({ query })
+  }
 }
 
 // M6-1 D3 口径：覆盖率标注（失败静默——它是补充信息，不是面板的主体）
@@ -442,6 +515,10 @@ async function loadEntity(name: string) {
   } finally {
     detailLoading.value = false
   }
+  // P1-8：证据文档的图表资产跟随实体下钻加载（失败静默）
+  const docIds = [...new Set((detail.value?.evidence || [])
+    .map((e) => e.knowledge_id).filter(Boolean))] as string[]
+  void loadChartsFor(docIds.slice(0, 5))
 }
 
 async function loadEdge(source: string, target: string) {
@@ -454,6 +531,22 @@ async function loadEdge(source: string, target: string) {
     edgeDetail.value = { available: false }
   } finally {
     edgeLoading.value = false
+  }
+}
+
+// P1-8：实体证据涉及的文档 → 图表资产（解析管线注册；表为空或代理不可达时
+// 恒为空数组、区块隐藏）。loadEntity 成功后触发。
+const chartAssets = ref<Record<string, any>[]>([])
+
+async function loadChartsFor(docIds: string[]) {
+  chartAssets.value = []
+  if (!kbId.value || !docIds.length) return
+  try {
+    const res = await getKnowledgeBaseGraphCharts(kbId.value, docIds)
+    const payload = unwrapGraphPayload<{ available?: boolean; assets?: Record<string, any>[] }>(res)
+    if (payload?.available) chartAssets.value = payload.assets || []
+  } catch {
+    chartAssets.value = []
   }
 }
 
@@ -531,6 +624,7 @@ function goBack() {
 
 onMounted(async () => {
   void loadCoverage()
+  void loadGraphedDocs()
   await loadGraph()
   // 深链：?node= 或 ?edge=（二选一，node 优先）
   const deepLink = String(route.query.node || '')
@@ -660,6 +754,10 @@ watch(() => route.query.edge, (value) => {
     background: var(--td-bg-color-container);
     color: var(--td-text-color-secondary);
     font-size: var(--app-text-sm, 13px);
+  }
+
+  &__docselect {
+    width: 260px;
   }
 
   &__hint {

@@ -225,6 +225,9 @@ func RegisterKnowledgeBaseRoutes(r *gin.RouterGroup, handler *handler.KnowledgeB
 		// P0-1（图谱浏览器规划 2026-09-25）：实体搜索（搜索框 + 万物可达 pivot）
 		kb.GET("/:id/graph/entity/search", g.Viewer(), g.KBAccessRead("id"),
 			handler.GetKnowledgeBaseGraphEntitySearch)
+		// P1-8（图谱浏览器规划 2026-09-25）：证据文档的图表资产联动
+		kb.GET("/:id/graph/charts", g.Viewer(), g.KBAccessRead("id"),
+			handler.GetKnowledgeBaseGraphCharts)
 		// M6-1 WS1.2：点边下钻（该关系自己的证据，与实体下钻的合并证据集口径不同）
 		kb.GET("/:id/graph/edge", g.Viewer(), g.KBAccessRead("id"),
 			handler.GetKnowledgeBaseGraphEdge)

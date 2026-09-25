@@ -5245,7 +5245,10 @@ export default {
     egoBanner: '中心视图：{center}（{depth} 跳内 {n} 个实体）',
     backToOverview: '返回全图',
     typeFilterClear: '清除类型过滤',
-    sourceContext: '展开抽取原文'
+    sourceContext: '展开抽取原文',
+    docSwitcherAll: '全部实体（按文档过滤）',
+    askEntity: '问这个实体',
+        chartAssets: '关联图表资产',
   },
   graphSettings: {
     lightragTitle: 'LightRAG 图谱',

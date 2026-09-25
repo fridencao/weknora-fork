@@ -2363,6 +2363,9 @@ export default {
     backToOverview: 'Back to full graph',
     typeFilterClear: 'Clear type filter',
     sourceContext: 'Show extraction source',
+    docSwitcherAll: 'All entities (filter by document)',
+    askEntity: 'Ask about this entity',
+        chartAssets: 'Related chart assets',
   },
   graphSettings: {
     lightragTitle: 'LightRAG Knowledge Graph',

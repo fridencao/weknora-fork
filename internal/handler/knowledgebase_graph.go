@@ -472,8 +472,84 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEntitySearch(c *gin.Context)
 	c.Data(http.StatusOK, "application/json; charset=utf-8", body)
 }
 
-// GetKnowledgeBaseGraphEdge GET /knowledge-bases/:id/graph/edge?source=&target=
+// GetKnowledgeBaseGraphCharts GET /knowledge-bases/:id/graph/charts?doc_ids=a,b
 //
+// P1-8（图谱浏览器规划 2026-09-25）：实体/证据下钻面板的图表资产联动。
+// 图表资产在 starkb-api chart_assets 表（解析管线注册），starkb-api 无认证且
+// 只监听内网，必须经本代理：先校验每个 doc_id 归属本 KB（shared 图谱空间下
+// doc_id 可伪造，图表标题/数据点也是不能越权泄漏的信息），再逐 doc 转发
+// starkb-api /charts/assets。任一 doc 失败降级跳过，不阻断整体。
+func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphCharts(c *gin.Context) {
+	kb, _, _, _, err := h.validateAndGetKnowledgeBase(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	starkbURL := os.Getenv("STARKB_API_URL")
+	if starkbURL == "" {
+		c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": false, "assets": []any{}}})
+		return
+	}
+	requested := strings.Split(c.Query("doc_ids"), ",")
+	owned := h.ownedKBDocIDsForGraph(c.Request.Context(), kb.ID)
+	ownedSet := make(map[string]struct{}, len(owned))
+	for _, id := range owned {
+		ownedSet[id] = struct{}{}
+	}
+	// 保持请求顺序、去重、越权丢弃，上限与图浏览器的证据量级对齐。
+	docIDs := make([]string, 0, len(requested))
+	seen := make(map[string]struct{}, len(requested))
+	for _, id := range requested {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		if _, ok := ownedSet[id]; !ok {
+			continue
+		}
+		docIDs = append(docIDs, id)
+		if len(docIDs) >= 10 {
+			break
+		}
+	}
+	assets := make([]map[string]any, 0)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+	for _, docID := range docIDs {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+			starkbURL+"/charts/assets?tenant_id="+url.QueryEscape(strconv.FormatUint(kb.TenantID, 10))+
+				"&doc_id="+url.QueryEscape(docID)+"&limit=20", nil)
+		if err != nil {
+			continue
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			continue
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		_ = resp.Body.Close()
+		if err != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+		var parsed struct {
+			Assets []map[string]any `json:"assets"`
+		}
+		if json.Unmarshal(body, &parsed) != nil {
+			continue
+		}
+		for _, a := range parsed.Assets {
+			a["doc_id"] = docID
+			assets = append(assets, a)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"available": true, "assets": assets}})
+}
+
+// GetKnowledgeBaseGraphEdge GET /knowledge-bases/:id/graph/edge?source=&target=
 // M6-1 WS1.2：点边下钻。实体的下钻证据是「节点 ∪ 全部邻居」的合并集，答不了
 // 「**这条**关系是从哪句话抽出来的」，所以边需要单独的入口。
 func (h *KnowledgeBaseHandler) GetKnowledgeBaseGraphEdge(c *gin.Context) {
