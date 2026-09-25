@@ -347,8 +347,13 @@ func TestDefaultParserEnginePrefersRegisteredEngineForFallbackTypes(t *testing.T
 	if got := DefaultParserEngine("docx"); got != "anydoc" {
 		t.Fatalf("DefaultParserEngine(docx) = %q, want anydoc", got)
 	}
-	if got := DefaultParserEngine("txt"); got != "" {
-		t.Fatalf("DefaultParserEngine(txt) = %q, want empty", got)
+	// md/markdown/txt 默认走 starkb（markdown 直通契约，可进图谱）——
+	// 优先钩子返回空时回落到 defaultParserEngineByType 的显式条目。
+	if got := DefaultParserEngine("txt"); got != "starkb" {
+		t.Fatalf("DefaultParserEngine(txt) = %q, want starkb", got)
+	}
+	if got := DefaultParserEngine("md"); got != "starkb" {
+		t.Fatalf("DefaultParserEngine(md) = %q, want starkb", got)
 	}
 }
 

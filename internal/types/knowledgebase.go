@@ -856,8 +856,10 @@ func (kb *KnowledgeBase) Capabilities() KBCapabilities {
 		Vector:  kb.IsVectorEnabled(),
 		Keyword: kb.IsKeywordEnabled(),
 		Wiki:    kb.IsWikiEnabled(),
-		Graph:   kb.IsGraphEnabled(),
-		FAQ:     kb.Type == KnowledgeBaseTypeFAQ,
+		// 图谱可查询 = 旧内置抽取 或 LightRAG 建图开关（ADR-008）——
+		// 只看已废弃的 ExtractConfig 会让 LightRAG KB 的图谱工具永远灰显
+		Graph: kb.IsGraphQueryEnabled(),
+		FAQ:   kb.Type == KnowledgeBaseTypeFAQ,
 	}
 }
 
@@ -911,6 +913,25 @@ func (kb *KnowledgeBase) IsKeywordEnabled() bool {
 func (kb *KnowledgeBase) IsGraphEnabled() bool {
 	return kb != nil && kb.IndexingStrategy.GraphEnabled &&
 		kb.ExtractConfig != nil && kb.ExtractConfig.Enabled
+}
+
+// IsGraphQueryEnabled reports whether this KB exposes a queryable knowledge
+// graph. Two sources count: the legacy built-in extraction flags
+// (IsGraphEnabled) and the LightRAG graph build switch
+// (graph_config.auto_build, ADR-008). D2 made LightRAG the only live graph
+// channel, so the KB capability flag (agent editor tool gating) and the
+// runtime agent graph-tool gate must reflect it — a KB whose graph was built
+// by LightRAG has neither GraphEnabled nor ExtractConfig set, which left the
+// 查询知识图谱 tool permanently greyed out (user-reported 2026-09-25).
+// Note: pipeline-side legacy extraction keeps using IsGraphEnabled.
+func (kb *KnowledgeBase) IsGraphQueryEnabled() bool {
+	if kb == nil {
+		return false
+	}
+	if kb.IsGraphEnabled() {
+		return true
+	}
+	return kb.GraphConfig != nil && kb.GraphConfig.AutoBuild
 }
 
 // NeedsEmbeddingModel returns true if any enabled pipeline requires an embedding model.

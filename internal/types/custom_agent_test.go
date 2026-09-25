@@ -9,7 +9,7 @@ func TestCustomAgentConfigResolveChatParserEngine(t *testing.T) {
 	}}
 	for input, expected := range map[string]string{
 		"PDF": "mineru", ".pptx": "mineru", "png": "paddleocr_vl",
-		"txt": "", "ppt": "markitdown",
+		"txt": "starkb", "ppt": "markitdown",
 	} {
 		if actual := config.ResolveChatParserEngine(input); actual != expected {
 			t.Fatalf("ResolveChatParserEngine(%q) = %q, want %q", input, actual, expected)

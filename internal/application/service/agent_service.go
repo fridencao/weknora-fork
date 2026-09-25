@@ -914,7 +914,7 @@ func (s *agentService) registerTools(
 		if kb.IsVectorEnabled() || kb.IsKeywordEnabled() {
 			hasVectorKB = true
 		}
-		if kb.IsGraphEnabled() {
+		if kb.IsGraphQueryEnabled() {
 			hasGraphKB = true
 		}
 		if kb.IsWikiEnabled() {
