@@ -21,6 +21,9 @@ var persistStripFieldsByTool = map[string][]string{
 	LegacyToolReadSandboxFile: {"content", "content_base64"},
 	ToolWriteSandboxFile:      {"content", "content_base64"},
 	ToolEditSandboxFile:       {"content", "content_base64"},
+	// search_knowledge 的 _search_results（原始 SearchResult）仅供引擎转
+	// references 事件；tool_result 落库/SSE 带它会把 payload 翻倍。
+	ToolSearchKnowledge: {"_search_results"},
 }
 
 // clientStripFieldsByTool is the lighter omit list for live SSE. The UI

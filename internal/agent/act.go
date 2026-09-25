@@ -373,6 +373,23 @@ func (e *AgentEngine) emitToolOutcome(
 			Duration:   toolCall.Duration,
 		},
 	})
+
+	// 检索工具的原始结果转 references 事件：agent_stream_handler 据此把
+	// knowledge_references 写进 assistant 消息并持久化——缺失则溯源面板
+	// 恒为空（普通 RAG 链路由 session_knowledge_qa 发同一事件）。原始
+	// SearchResult 只在内存流转；tool_result 落库/SSE 已被 strip 清单剥除。
+	if result.Success && toolCall.Name == agenttools.ToolSearchKnowledge {
+		if raw, ok := result.Data["_search_results"].([]*types.SearchResult); ok && len(raw) > 0 {
+			e.eventBus.Emit(ctx, event.Event{
+				ID:        toolCall.ID + "-references",
+				Type:      event.EventAgentReferences,
+				SessionID: sessionID,
+				Data: event.AgentReferencesData{
+					References: raw,
+				},
+			})
+		}
+	}
 }
 
 // executeSingleToolCall runs one tool call sequentially (original behavior).

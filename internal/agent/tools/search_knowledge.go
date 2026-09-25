@@ -946,6 +946,16 @@ func (t *SearchKnowledgeTool) formatOutput(
 			"query_type":          result.QueryType,
 			"knowledge_base_type": result.KnowledgeBaseType,
 		}
+		// chunk 级溯源元数据（sbk_* 锚点）必须透传：handleReferences 经
+		// searchResultFromMap 重建 SearchResult 时读 chunk_metadata 字段，
+		// 缺失则溯源面板永远空（普通 RAG 链路经 HybridSearch 自带该字段，
+		// 工具链路此前被丢——用户实测智能体回答有引用但面板空）。
+		if len(result.ChunkMetadata) > 0 {
+			var cm map[string]interface{}
+			if err := json.Unmarshal(result.ChunkMetadata, &cm); err == nil && len(cm) > 0 {
+				row["chunk_metadata"] = cm
+			}
+		}
 		if images := chunkImageList(result.ImageInfo); len(images) > 0 {
 			row["images"] = images
 		}
@@ -970,6 +980,16 @@ func (t *SearchKnowledgeTool) formatOutput(
 	data["results"] = formattedResults
 	data["count"] = len(formattedResults)
 	data["kb_counts"] = kbCounts
+	// 原始 SearchResult 随 Data 交回引擎：引擎据此 emit references 事件，
+	// 智能体消息才能持久化 knowledge_references（含 sbk_* 溯源锚点）。
+	// 该键会被 persist.go 的 strip 清单从 SSE/DB 的 tool_result 中剥除。
+	origs := make([]*types.SearchResult, 0, len(results))
+	for _, r := range results {
+		if r != nil && r.SearchResult != nil {
+			origs = append(origs, r.SearchResult)
+		}
+	}
+	data["_search_results"] = origs
 	return &types.ToolResult{Success: true, Output: ob.String(), Data: data}
 }
 
