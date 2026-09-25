@@ -130,12 +130,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Then switch to mirror if specified and install other packages
+# Then install runtime packages（官方源；镜像源替换曾致 libssl 版本错配/源行损坏）
 ARG PIP_INDEX_ARG
-RUN if [ -n "$APK_MIRROR_ARG" ]; then \
-        sed -i "s@deb.debian.org@${APK_MIRROR_ARG}@g" /etc/apt/sources.list.d/debian.sources; \
-    fi && \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential postgresql-client default-mysql-client tzdata sed curl bash vim wget \
         libsqlite3-0 \
