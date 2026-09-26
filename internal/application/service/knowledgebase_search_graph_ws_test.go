@@ -115,7 +115,7 @@ func TestGraphQueryMergedSharedModeIsSinglePassthrough(t *testing.T) {
 	})
 	s := &knowledgeBaseService{}
 	out, err := s.graphQueryMerged(context.Background(), client,
-		[]string{"kb-a", "kb-b"}, "q", 10)
+		map[string]string{"kb-a": "", "kb-b": ""}, "q", 10)
 	require.NoError(t, err)
 	require.Len(t, out.Data.Chunks, 1)
 	f.mu.Lock()
@@ -133,7 +133,7 @@ func TestGraphQueryMergedKbModeParallelAndDedup(t *testing.T) {
 	})
 	s := &knowledgeBaseService{}
 	out, err := s.graphQueryMerged(context.Background(), client,
-		[]string{"kb-a", "kb-b"}, "q", 10)
+		map[string]string{"kb-a": "kb-a", "kb-b": "kb-b"}, "q", 10)
 	require.NoError(t, err)
 
 	ids := make([]string, 0, len(out.Data.Chunks))
@@ -167,7 +167,7 @@ func TestGraphQueryMergedToleratesPartialFailure(t *testing.T) {
 	})
 	s := &knowledgeBaseService{}
 	out, err := s.graphQueryMerged(context.Background(), client,
-		[]string{"kb-broken", "kb-ok"}, "q", 10)
+		map[string]string{"kb-broken": "", "kb-ok": "kb-ok"}, "q", 10)
 	require.NoError(t, err, "单空间故障是降级不是错误（不阻断其它空间结果）")
 	require.Len(t, out.Data.Chunks, 1)
 	require.Equal(t, "c9", out.Data.Chunks[0].ChunkID)

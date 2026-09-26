@@ -10,7 +10,6 @@ package service
 
 import (
 	"context"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +50,25 @@ func (s *knowledgeBaseService) graphChannelEnvDefault(ctx context.Context) bool 
 //
 // 第二个返回值是本次图谱召回命中的实体名清单（M6-1 WS1.3），查询级——调用方把它
 // 盖到 Channels 含 graph 的最终结果上，前端引用抽屉据此深链图谱浏览器。
+// resolveGraphWorkspaces 解析各 KB 的查询空间（M6-4 WS4.3 per-KB 策略）：
+// KB 设置 kb 隔离 → 查 kbID 空间；未设/shared → 全局空间（''）。
+func (s *knowledgeBaseService) resolveGraphWorkspaces(
+	ctx context.Context, kbIDs []string,
+) map[string]string {
+	wsByKB := make(map[string]string, len(kbIDs))
+	for _, kbID := range kbIDs {
+		wsByKB[kbID] = ""
+		kb, err := s.repo.GetKnowledgeBaseByID(ctx, kbID)
+		if err != nil || kb == nil {
+			continue
+		}
+		if kb.GraphConfig != nil && kb.GraphConfig.WorkspaceMode == "kb" {
+			wsByKB[kbID] = kb.ID
+		}
+	}
+	return wsByKB
+}
+
 func (s *knowledgeBaseService) graphRecallForSearch(
 	ctx context.Context, kbIDs []string, query string, topK int,
 	retrievalCfg *types.RetrievalConfig,
@@ -87,7 +105,7 @@ func (s *knowledgeBaseService) graphRecallForSearch(
 	}
 	gctx, cancel := context.WithTimeout(ctx, s.graphRecallTimeout(ctx))
 	defer cancel()
-	data, err := s.graphQueryMerged(gctx, client, kbIDs, query, topK)
+	data, err := s.graphQueryMerged(gctx, client, s.resolveGraphWorkspaces(ctx, kbIDs), query, topK)
 	if err != nil {
 		logger.Warnf(ctx, "graph recall: 查询失败（降级二通道）: %v", err)
 		return nil, nil
@@ -179,27 +197,29 @@ func (s *knowledgeBaseService) graphChunksPerHit(ctx context.Context) int {
 	return int(n)
 }
 
-// graphQueryMerged 图谱查询（WS6.2）：shared 模式单次查询默认空间；kb 模式按
-// 用户可访问 KB 各自的图谱空间并行查询（docs/03 §4「不可达的图直接不查」），
-// 证据 chunk 按 chunk_id 去重合并后交给统一的 KB 范围过滤与锚点回跳。
+// graphQueryMerged 图谱查询（WS6.2）：按「每个 KB 的有效图谱空间」并行查询
+// （docs/03 §4「不可达的图直接不查」），证据 chunk 按 chunk_id 去重合并后交给
+// 统一的 KB 范围过滤与锚点回跳。wsByKB：kbID → 查询空间（'' = 全局空间）。
 func (s *knowledgeBaseService) graphQueryMerged(
 	ctx context.Context, client *chatpipeline.LightragClient,
-	kbIDs []string, query string, topK int,
+	wsByKB map[string]string, query string, topK int,
 ) (*chatpipeline.LightragQueryData, error) {
-	if os.Getenv("STARKB_GRAPH_WORKSPACE_MODE") != "kb" {
-		return client.QueryDataInWorkspace(ctx, query, topK, "")
-	}
 	merged := &chatpipeline.LightragQueryData{}
 	seen := make(map[string]struct{})
+	// 同一空间的多个 KB 共享一次空间查询（查询本身不分 KB）
+	wsSet := make(map[string]struct{}, len(wsByKB))
+	for _, ws := range wsByKB {
+		wsSet[ws] = struct{}{}
+	}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	for _, kbID := range kbIDs {
+	for ws := range wsSet {
 		wg.Add(1)
-		go func(kbID string) {
+		go func(ws string) {
 			defer wg.Done()
-			d, err := client.QueryDataInWorkspace(ctx, query, topK, kbID)
+			d, err := client.QueryDataInWorkspace(ctx, query, topK, ws)
 			if err != nil {
-				logger.Warnf(ctx, "graph recall: 空间 %s 查询失败（跳过）: %v", kbID, err)
+				logger.Warnf(ctx, "graph recall: 空间 %s 查询失败（跳过）: %v", ws, err)
 				return
 			}
 			mu.Lock()
@@ -213,7 +233,7 @@ func (s *knowledgeBaseService) graphQueryMerged(
 			}
 			merged.Data.Entities = append(merged.Data.Entities, d.Data.Entities...)
 			merged.Data.Relationships = append(merged.Data.Relationships, d.Data.Relationships...)
-		}(kbID)
+		}(ws)
 	}
 	wg.Wait()
 	return merged, nil
