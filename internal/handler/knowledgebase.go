@@ -404,6 +404,12 @@ func (h *KnowledgeBaseHandler) CreateKnowledgeBase(c *gin.Context) {
 		c.Error(apperrors.NewBadRequestError("Invalid request parameters").WithDetails(err.Error()))
 		return
 	}
+	// P-14（E2E 模块18 N3）：name 为空会被静默创建成无名库，列表/图谱页展示为空。
+	// 与前端必填口径对齐，在 handler 层拒绝（服务层不动，导入/克隆内部路径不受影响）。
+	if strings.TrimSpace(req.Name) == "" {
+		c.Error(apperrors.NewBadRequestError("知识库名称不能为空"))
+		return
+	}
 	if err := validateExtractConfig(req.ExtractConfig); err != nil {
 		logger.Error(ctx, "Invalid extract configuration", err)
 		c.Error(err)

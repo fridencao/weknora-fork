@@ -418,3 +418,36 @@ func TestKnowledgeBase_MarshalJSONWithholdsInlineCredentials(t *testing.T) {
 		t.Fatalf("VLM column lost its key: %v %s", err, vlmColumn)
 	}
 }
+
+// P-15（E2E 模块19 Q5 发现）：FAQ KB 建库时不带 faq_config，EnsureDefaults 的
+// FAQConfig==nil 分支曾提前 return，跳过 IndexingStrategy 兜底 → FAQ KB 以
+// 全关策略入库，条目向量已写但检索被「No retrievable indexing pipelines」
+// 拦死，FAQ 语义检索恒 0 命中。
+func TestKnowledgeBase_EnsureDefaults_FAQWithoutConfig_EnablesVector(t *testing.T) {
+	kb := &KnowledgeBase{Type: KnowledgeBaseTypeFAQ, Name: "p15"}
+	kb.EnsureDefaults()
+	if kb.FAQConfig == nil {
+		t.Fatal("FAQConfig 默认值未落")
+	}
+	if kb.FAQConfig.IndexMode != FAQIndexModeQuestionAnswer {
+		t.Fatalf("FAQConfig.IndexMode = %q, want %q", kb.FAQConfig.IndexMode, FAQIndexModeQuestionAnswer)
+	}
+	if !kb.IndexingStrategy.VectorEnabled {
+		t.Fatalf("FAQ KB（未显式传 indexing_strategy）应为 vector 默认开启，实际 %+v", kb.IndexingStrategy)
+	}
+	if !kb.IndexingStrategy.HasAnyIndexing() {
+		t.Fatalf("FAQ KB 索引策略不得全关，实际 %+v", kb.IndexingStrategy)
+	}
+}
+
+func TestKnowledgeBase_EnsureDefaults_FAQWithConfig_KeepsExplicitStrategy(t *testing.T) {
+	kb := &KnowledgeBase{
+		Type:             KnowledgeBaseTypeFAQ,
+		Name:             "p15-explicit",
+		IndexingStrategy: IndexingStrategy{VectorEnabled: true, KeywordEnabled: false},
+	}
+	kb.EnsureDefaults()
+	if !kb.IndexingStrategy.VectorEnabled || kb.IndexingStrategy.KeywordEnabled {
+		t.Fatalf("显式策略被改写: %+v", kb.IndexingStrategy)
+	}
+}

@@ -800,13 +800,15 @@ func (kb *KnowledgeBase) EnsureDefaults() {
 		kb.AutoTagConfig.Normalize()
 	}
 	// Set defaults for FAQ
+	// P-15：FAQConfig==nil 分支不得提前 return——提前返回会跳过下方
+	// IndexingStrategy 兜底，FAQ KB 以全关策略入库（向量写了但检索闸门
+	// 恒拒，FAQ 语义检索恒 0 命中，E2E 模块19 Q5 实证）。
 	if kb.Type == KnowledgeBaseTypeFAQ {
 		if kb.FAQConfig == nil {
 			kb.FAQConfig = &FAQConfig{
 				IndexMode:         FAQIndexModeQuestionAnswer,
 				QuestionIndexMode: FAQQuestionIndexModeCombined,
 			}
-			return
 		}
 		if kb.FAQConfig.IndexMode == "" {
 			kb.FAQConfig.IndexMode = FAQIndexModeQuestionAnswer

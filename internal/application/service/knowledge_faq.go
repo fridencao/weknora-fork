@@ -133,6 +133,14 @@ func (s *knowledgeService) CreateFAQEntry(ctx context.Context,
 		return nil, err
 	}
 
+	// P-15b（E2E 实测）：未配置 Embedding 模型的 FAQ KB 建条目会走到
+	// GetEmbeddingModel 拿到裸错误 → 500。这里提前以 400 拒绝，且不落
+	// FAQ 容器知识行（无半创建状态）。
+	if kb.IndexingStrategy.NeedsEmbedding() && kb.EmbeddingModelID == "" {
+		return nil, werrors.NewBadRequestError(
+			"FAQ 知识库未配置 Embedding 模型，无法索引条目；请先绑定 Embedding 模型")
+	}
+
 	// 解析 TagID
 	tagID, err := s.resolveTagID(ctx, kbID, payload)
 	if err != nil {
