@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/Tencent/WeKnora/internal/application/repository"
 	apperrors "github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/logger"
 	"github.com/Tencent/WeKnora/internal/models/asr"
@@ -91,6 +93,7 @@ func (s *modelService) CreateModel(ctx context.Context, model *types.Model) erro
 		}
 
 		logger.Infof(ctx, "Remote model created successfully: %s", model.ID)
+		s.bindBuiltinAgentsToChatModel(ctx, model)
 		return nil
 	}
 
@@ -107,6 +110,8 @@ func (s *modelService) CreateModel(ctx context.Context, model *types.Model) erro
 		})
 		return err
 	}
+
+	s.bindBuiltinAgentsToChatModel(ctx, model)
 
 	// Start asynchronous model download
 	logger.Infof(ctx, "Starting background download for model: %s", model.Name)
@@ -129,6 +134,78 @@ func (s *modelService) CreateModel(ctx context.Context, model *types.Model) erro
 
 	logger.Infof(ctx, "Model creation initiated successfully: %s", model.ID)
 	return nil
+}
+
+// bindBuiltinAgentsToChatModel fills the chat-model slot of the tenant's
+// built-in agents that were never configured, right after a KnowledgeQA model
+// is created.
+//
+// Built-in agents ship with an empty model_id (config/builtin_agents.yaml) and
+// nothing else ever assigns one, so a brand-new workspace's default agent
+// stays "not ready": the composer refuses to send (agent-readiness) and
+// resolveChatModelID hard-errors, leaving chat dead until every built-in agent
+// is edited by hand. Only empty slots are filled — a model the user explicitly
+// picked is never replaced. Non-chat model types are ignored.
+func (s *modelService) bindBuiltinAgentsToChatModel(ctx context.Context, model *types.Model) {
+	if model == nil || model.ID == "" || model.Type != types.ModelTypeKnowledgeQA {
+		return
+	}
+	if s.agentRepo == nil {
+		return
+	}
+	tenantID, ok := types.TenantIDFromContext(ctx)
+	if !ok || tenantID == 0 {
+		logger.Warn(ctx, "No tenant in context; skipping built-in agent chat-model binding")
+		return
+	}
+
+	for _, id := range types.GetBuiltinAgentIDs() {
+		builtin := types.GetBuiltinAgentWithContext(ctx, id, tenantID)
+		if builtin == nil || strings.TrimSpace(builtin.Config.ModelID) != "" {
+			continue
+		}
+
+		existing, err := s.agentRepo.GetAgentByID(ctx, id, tenantID)
+		switch {
+		case err == nil && existing != nil:
+			if strings.TrimSpace(existing.Config.ModelID) != "" {
+				continue
+			}
+			existing.Config.ModelID = model.ID
+			existing.UpdatedAt = time.Now()
+			existing.EnsureDefaults()
+			if err := s.agentRepo.UpdateAgent(ctx, existing); err != nil {
+				logger.Warnf(ctx, "Failed to bind built-in agent %s (tenant %d) to model %s: %v",
+					id, tenantID, model.ID, err)
+				continue
+			}
+		case errors.Is(err, repository.ErrCustomAgentNotFound), err == nil && existing == nil:
+			agent := &types.CustomAgent{
+				ID:          builtin.ID,
+				Name:        builtin.Name,
+				Description: builtin.Description,
+				Avatar:      builtin.Avatar,
+				IsBuiltin:   true,
+				TenantID:    tenantID,
+				Config:      builtin.Config,
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+			}
+			agent.Config.ModelID = model.ID
+			agent.EnsureDefaults()
+			if err := s.agentRepo.CreateAgent(ctx, agent); err != nil {
+				logger.Warnf(ctx, "Failed to persist built-in agent %s (tenant %d) with model %s: %v",
+					id, tenantID, model.ID, err)
+				continue
+			}
+		default:
+			logger.Warnf(ctx, "Failed to read built-in agent %s (tenant %d) for model binding: %v",
+				id, tenantID, err)
+			continue
+		}
+
+		logger.Infof(ctx, "Bound built-in agent %s to new chat model %s", id, model.ID)
+	}
 }
 
 // GetModelByID retrieves a model by its ID
