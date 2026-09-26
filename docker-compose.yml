@@ -568,7 +568,7 @@ services:
       # 环境变量不再是模型参数来源（SiliconFlow 默认值曾致 402 余额不足事故）。
       - STARKB_GRAPH_LLM_INTERVAL_S=${STARKB_GRAPH_LLM_INTERVAL_S:-2.0}
       # 补齐限速：2026-09-24 存量图谱重建期临时提到 12 篇/小时，稳态可调回 3
-      - STARKB_GRAPH_BACKFILL_PER_HOUR=${STARKB_GRAPH_BACKFILL_PER_HOUR:-12}
+      - STARKB_GRAPH_BACKFILL_PER_HOUR=${STARKB_GRAPH_BACKFILL_PER_HOUR:-60}
       - STARKB_GRAPH_MAX_ASYNC=${STARKB_GRAPH_MAX_ASYNC:-2}
       # ========== StarKB (A4) 建图存储 PostgreSQL 化：与 lightrag-server 同库 ==========
       - STARKB_GRAPH_STORAGE_BACKEND=${STARKB_GRAPH_STORAGE_BACKEND:-pg}
@@ -584,6 +584,8 @@ services:
       - ../../data:/data
     ports:
       - "127.0.0.1:8300:8300"
+    cap_add:
+      - SYS_PTRACE
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8300/healthz')"]
       interval: 30s
