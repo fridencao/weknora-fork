@@ -51,9 +51,27 @@
       - 按 KB 隔离（独立 workspace=X-Workspace: kb-id）
       切档后需触发 starkb-api 重抽取（其它 KB 看不到了）；共享切到隔离需
       重抽取（空间数据已分裂）。切换对前端而言是设置项，立刻生效。 -->
-    <!-- 图谱空间切档入口已移除（2026-09-25 用户决议）：切档需全库重建图谱，
-      且跨空间残留会静默丢失——空间策略统一由系统环境决定，不作为 KB 设置项。
-      图谱空间的数据分布：全局空间（shared）+ 各 KB 隔离空间按需并存。 -->
+    <!-- 图谱空间策略：建库时选定后锁定（切档需全库重建图谱且跨空间残留
+      会静默丢失——2026-09-25 用户决议）。创建模式可选；编辑模式只读展示，
+      变更需删除知识库重建。 -->
+    <div class="setting-row">
+      <div class="setting-info">
+        <label>{{ t('graphSettings.workspaceModeLabel') }}</label>
+        <p class="desc">{{ t('graphSettings.workspaceModeDescription') }}</p>
+      </div>
+      <div class="setting-control">
+        <t-radio-group
+          :value="localGraphConfig.workspaceMode || ''"
+          :disabled="lockWorkspace"
+          @change="(v: unknown) => handleWorkspaceModeChange(String(v) as '' | 'shared' | 'kb')"
+        >
+          <t-radio value="">{{ t('graphSettings.workspaceModeDefault') }}</t-radio>
+          <t-radio value="shared">{{ t('graphSettings.workspaceModeShared') }}</t-radio>
+          <t-radio value="kb">{{ t('graphSettings.workspaceModeKb') }}</t-radio>
+        </t-radio-group>
+      </div>
+    </div>
+
 
     <!-- M6-4：解析引擎提示。仅 StarKB 引擎 (starkb) 解析的文档会写图谱契约包；
       其它引擎（builtin / simple / anydoc / mineru / mineru_cloud / paddleocr_vl
@@ -245,6 +263,7 @@ interface GraphConfig {
   // - 缺省：跟随系统默认（STARKB_GRAPH_WORKSPACE_MODE env，未设即 shared）
   // - 'shared'：强制共享（旧 default 形态，多 KB 图谱合并）
   // - 'kb'：按 KB 隔离（X-Workspace 路由到 kb_id，新 KB 切档形态）
+  workspaceMode?: '' | 'shared' | 'kb'
 }
 
 interface Props {
@@ -254,6 +273,8 @@ interface Props {
   embedded?: boolean
   kbId?: string
   graphConfig?: GraphConfig
+  /** 编辑模式锁定空间策略（建库时已定，切档需全库重建） */
+  lockWorkspace?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -273,6 +294,15 @@ const localGraphConfig = ref<GraphConfig>({ ...props.graphConfig })
 watch(() => props.graphConfig, (v) => {
   localGraphConfig.value = { ...(v || { autoBuild: false }) }
 }, { deep: true })
+
+const handleWorkspaceModeChange = (v: '' | 'shared' | 'kb') => {
+  localGraphConfig.value = {
+    autoBuild: localGraphConfig.value.autoBuild,
+    buildModelId: localGraphConfig.value.buildModelId || '',
+    workspaceMode: v,
+  }
+  emit('update:graphConfig', { ...localGraphConfig.value })
+}
 
 const handleGraphConfigChange = (v: boolean) => {
   // 切换开关不得清掉已选的建图模型
