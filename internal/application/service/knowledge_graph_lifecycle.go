@@ -109,18 +109,22 @@ func (s *knowledgeService) GraphCleanupOnDelete(ctx context.Context, knowledgeLi
 	}
 
 	for kbID, docIDs := range byKB {
-		out := postStarkbGraph(ctx, "/graph/docs/delete", map[string]any{
-			"tenant_id": strconv.FormatUint(tenantInfo.ID, 10),
-			"kb_id":     kbID,
-			"workspace": graphWorkspaceForKBID(kbID),
-			"doc_ids":   docIDs,
-		})
-		if out == nil {
-			logger.Warnf(ctx, "graph cleanup: 文档 %v 的图谱清理未登记（starkb-api 不可达）", docIDs)
-			continue
+		// 数据可能横跨两个空间（切档前在全局、切档后在 KB 隔离空间），
+		// 两个空间都投墓碑：starkb-api 侧按空间删，不存在的空间是空操作。
+		for _, ws := range []string{kbID, ""} {
+			out := postStarkbGraph(ctx, "/graph/docs/delete", map[string]any{
+				"tenant_id": strconv.FormatUint(tenantInfo.ID, 10),
+				"kb_id":     kbID,
+				"workspace": ws,
+				"doc_ids":   docIDs,
+			})
+			if out == nil {
+				logger.Warnf(ctx, "graph cleanup: 文档 %v 的图谱清理未登记（starkb-api 不可达）", docIDs)
+				continue
+			}
+			logger.Infof(ctx, "graph cleanup: KB %s 的 %d 篇文档已登记图谱清理（空间 %s，待清理 %v）",
+				kbID, len(docIDs), ws, out["pending"])
 		}
-		logger.Infof(ctx, "graph cleanup: KB %s 的 %d 篇文档已登记图谱清理（待清理 %v）",
-			kbID, len(docIDs), out["pending"])
 	}
 }
 
@@ -146,18 +150,21 @@ func GraphCleanupOnKBDelete(ctx context.Context, tenantID uint64, kbID string,
 	if len(docIDs) == 0 {
 		return
 	}
-	out := postStarkbGraph(ctx, "/graph/docs/delete", map[string]any{
-		"tenant_id": strconv.FormatUint(tenantID, 10),
-		"kb_id":     kbID,
-		"workspace": graphWorkspaceForKBID(kbID),
-		"doc_ids":   docIDs,
-	})
-	if out == nil {
-		logger.Warnf(ctx, "graph cleanup: KB %s 整库清理未登记（starkb-api 不可达，%d 篇）",
-			kbID, len(docIDs))
-		return
+	for _, ws := range []string{kbID, ""} {
+		out := postStarkbGraph(ctx, "/graph/docs/delete", map[string]any{
+			"tenant_id": strconv.FormatUint(tenantID, 10),
+			"kb_id":     kbID,
+			"workspace": ws,
+			"doc_ids":   docIDs,
+		})
+		if out == nil {
+			logger.Warnf(ctx, "graph cleanup: KB %s 整库清理未登记（starkb-api 不可达，%d 篇）",
+				kbID, len(docIDs))
+			continue
+		}
+		logger.Infof(ctx, "graph cleanup: KB %s 整库删除已登记 %d 篇图谱清理（空间 %s）",
+			kbID, len(docIDs), ws)
 	}
-	logger.Infof(ctx, "graph cleanup: KB %s 整库删除已登记 %d 篇图谱清理", kbID, len(docIDs))
 }
 
 // graphAutoBuildTurnedOn 判断图谱自动建图开关是否发生 off→on 边沿。

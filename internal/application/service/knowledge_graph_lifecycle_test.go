@@ -149,11 +149,17 @@ func TestGraphCleanupOnDeletePostsTombstone(t *testing.T) {
 		{ID: "doc-b", KnowledgeBaseID: "kb-1", FileName: "b.pdf"},
 	})
 
-	require.Len(t, *got, 1)
-	require.Equal(t, "/graph/docs/delete", (*got)[0].path)
-	require.Equal(t, "10011", (*got)[0].body["tenant_id"])
-	require.Equal(t, "kb-1", (*got)[0].body["kb_id"])
-	require.ElementsMatch(t, []any{"doc-a", "doc-b"}, (*got)[0].body["doc_ids"])
+	// 双空间墓碑：kb 隔离空间 + 全局空间各一条（数据可能横跨切档前后）
+	require.Len(t, *got, 2)
+	wsSeen := map[string]bool{}
+	for _, c := range *got {
+		require.Equal(t, "/graph/docs/delete", c.path)
+		require.Equal(t, "10011", c.body["tenant_id"])
+		require.Equal(t, "kb-1", c.body["kb_id"])
+		require.ElementsMatch(t, []any{"doc-a", "doc-b"}, c.body["doc_ids"])
+		wsSeen[c.body["workspace"].(string)] = true
+	}
+	require.Len(t, wsSeen, 2, "隔离空间与全局空间各一条墓碑")
 }
 
 func TestGraphCleanupOnDeleteGroupsByKnowledgeBase(t *testing.T) {
@@ -165,7 +171,8 @@ func TestGraphCleanupOnDeleteGroupsByKnowledgeBase(t *testing.T) {
 		{ID: "b", KnowledgeBaseID: "kb-2", FileName: "b.pdf"},
 	})
 
-	require.Len(t, *got, 2, "workspace 是 KB 维度的，一次请求只能对应一个 KB")
+	// 每个 KB 两条墓碑（隔离空间 + 全局空间），跨 KB 分组仍成立
+	require.Len(t, *got, 4, "两个 KB 各投隔离+全局两条墓碑")
 	kbs := map[string]bool{}
 	for _, c := range *got {
 		kbs[c.body["kb_id"].(string)] = true
