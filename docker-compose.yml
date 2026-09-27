@@ -106,6 +106,10 @@ services:
       - LIGHT_RAG_API_KEY=${LIGHTRAG_API_KEY:-}
       # 图谱通道的开关/回跳配额/软超时已迁到系统设置（graph.channel.*，界面可改、
       # 改后即生效，无需重启）：graph.channel.enabled / chunks_per_hit / timeout_s。
+      # ========== StarKB (M6-3, docs/16 RW1) 图谱独有证据 top-k 保底名额 ==========
+      # RRF 权重(0.2)几乎抬不动 graph-only chunk，保底名额把最强候选换进队尾。
+      # 租户检索设置 rrf_graph_min_slots（显式值）> 本 env > 0（默认关）。
+      - STARKB_RRF_GRAPH_MIN_SLOTS=${STARKB_RRF_GRAPH_MIN_SLOTS:-}
       # ========== 日志 ==========
       # 日志级别，默认debug
       - LOG_LEVEL=${LOG_LEVEL:-debug}

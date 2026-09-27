@@ -199,3 +199,85 @@ func TestRetrievalConfig_GraphChannelEnabled(t *testing.T) {
 	require.True(t, (&types.RetrievalConfig{GraphChannelEnabled: &on}).GetGraphChannelEnabled(false),
 		"UI 显式 true 应覆盖 env 默认 false")
 }
+
+// ---- M6-3（docs/16 RW1）：图谱独有结果 top-k 保底名额 ----
+
+func TestEnsureGraphOnlySlots_PromotesGraphOnlyIntoTail(t *testing.T) {
+	t.Parallel()
+
+	fused := []*types.IndexWithScore{
+		{ChunkID: "v1", Score: 0.02, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+		{ChunkID: "v2", Score: 0.018, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+		{ChunkID: "vk", Score: 0.016, Channels: []types.RetrieverType{types.VectorRetrieverType, types.KeywordsRetrieverType}},
+		{ChunkID: "k1", Score: 0.010, Channels: []types.RetrieverType{types.KeywordsRetrieverType}},
+		{ChunkID: "g1", Score: 0.004, Channels: []types.RetrieverType{types.GraphRetrieverType}},
+		{ChunkID: "g2", Score: 0.003, Channels: []types.RetrieverType{types.GraphRetrieverType}},
+	}
+
+	out := ensureGraphOnlySlots(context.Background(), fused, 4, 2)
+	require.Len(t, out, 4, "保底名额替换队尾，不扩容 top-k")
+	got := map[string]bool{}
+	for _, r := range out {
+		got[r.ChunkID] = true
+	}
+	require.True(t, got["g1"] && got["g2"], "两个 graph-only 都应进 top-k")
+	require.False(t, got["k1"], "队尾最弱的 keyword-only 被替换")
+}
+
+func TestEnsureGraphOnlySlots_RespectsExistingGraphOnly(t *testing.T) {
+	t.Parallel()
+
+	fused := []*types.IndexWithScore{
+		{ChunkID: "g1", Score: 0.9, Channels: []types.RetrieverType{types.GraphRetrieverType}},
+		{ChunkID: "g2", Score: 0.8, Channels: []types.RetrieverType{types.GraphRetrieverType}},
+		{ChunkID: "v1", Score: 0.7, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+		{ChunkID: "v2", Score: 0.6, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+	}
+	out := ensureGraphOnlySlots(context.Background(), fused, 4, 2)
+	require.Len(t, out, 4)
+	require.Equal(t, "g1", out[0].ChunkID, "已满足名额时不动排序")
+}
+
+func TestEnsureGraphOnlySlots_OffOrNoCandidates(t *testing.T) {
+	t.Parallel()
+
+	fused := []*types.IndexWithScore{
+		{ChunkID: "v1", Score: 0.9, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+		{ChunkID: "v2", Score: 0.8, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+	}
+	// slots=0（功能关）直接截断
+	out := ensureGraphOnlySlots(context.Background(), fused, 1, 0)
+	require.Len(t, out, 1)
+	require.Equal(t, "v1", out[0].ChunkID)
+
+	// 无 graph-only 候补时不扩容不替换
+	withGraph := []*types.IndexWithScore{
+		{ChunkID: "vg", Score: 0.9, Channels: []types.RetrieverType{types.VectorRetrieverType, types.GraphRetrieverType}},
+		{ChunkID: "v2", Score: 0.8, Channels: []types.RetrieverType{types.VectorRetrieverType}},
+	}
+	out2 := ensureGraphOnlySlots(context.Background(), withGraph, 2, 2)
+	require.Len(t, out2, 2)
+	require.Equal(t, "vg", out2[0].ChunkID, "vg 是多通道命中不算 graph-only")
+}
+
+func TestRetrievalConfig_GraphSlotsResolution(t *testing.T) {
+	// t.Setenv 与 t.Parallel 互斥（env 是进程级状态），本组不并行
+	t.Run("off by default", func(t *testing.T) {
+		require.Equal(t, 0, (*types.RetrievalConfig)(nil).GetEffectiveRRFGraphSlots())
+		require.Equal(t, 0, (&types.RetrievalConfig{}).GetEffectiveRRFGraphSlots())
+	})
+
+	t.Run("explicit setting wins over env", func(t *testing.T) {
+		t.Setenv("STARKB_RRF_GRAPH_MIN_SLOTS", "1")
+		n := 3
+		cfg := &types.RetrievalConfig{RRFGraphMinSlots: &n}
+		require.Equal(t, 3, cfg.GetEffectiveRRFGraphSlots())
+	})
+
+	t.Run("env fallback", func(t *testing.T) {
+		t.Setenv("STARKB_RRF_GRAPH_MIN_SLOTS", "2")
+		require.Equal(t, 2, (&types.RetrievalConfig{}).GetEffectiveRRFGraphSlots())
+		t.Setenv("STARKB_RRF_GRAPH_MIN_SLOTS", "not-a-number")
+		require.Equal(t, 0, (&types.RetrievalConfig{}).GetEffectiveRRFGraphSlots())
+	})
+}

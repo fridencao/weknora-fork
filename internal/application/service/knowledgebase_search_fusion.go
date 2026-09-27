@@ -226,3 +226,69 @@ func fuseWithRRF(ctx context.Context, vectorResults, keywordResults, graphResult
 
 	return result
 }
+
+// ensureGraphOnlySlots (M6-3, docs/16 RW1) guarantees a minimum number of
+// graph-only chunks inside the final top-k. Pure RRF with the additive graph
+// weight (0.2 vs 0.7/0.3) almost never lifts chunks that ONLY the graph
+// channel found past vector/keyword hits — the graph ends up merely
+// re-ranking evidence the other channels already had (A0 残留③).
+//
+// fused must be the full RRF-sorted candidate list (channels already stamped);
+// topK is the caller's primary-match cap. The guarantee REPLACES the weakest
+// tail entries of top-k with the highest-ranked graph-only chunks beyond the
+// cut, so the result count stays at top-k and upstream callers keep their
+// contract. slots <= 0 (feature off) or no graph-only candidates → no-op.
+func ensureGraphOnlySlots(ctx context.Context, fused []*types.IndexWithScore,
+	topK, slots int) []*types.IndexWithScore {
+	if topK <= 0 || len(fused) == 0 {
+		return fused
+	}
+	k := topK
+	if k > len(fused) {
+		k = len(fused)
+	}
+	top := fused[:k]
+	if slots <= 0 {
+		return top
+	}
+
+	inTop := 0
+	topIDs := make(map[string]struct{}, len(top))
+	for _, r := range top {
+		topIDs[r.ChunkID] = struct{}{}
+		if len(r.Channels) == 1 && r.Channels[0] == types.GraphRetrieverType {
+			inTop++
+		}
+	}
+	if inTop >= slots {
+		return top
+	}
+
+	var backups []*types.IndexWithScore
+	for _, r := range fused {
+		if _, ok := topIDs[r.ChunkID]; ok {
+			continue
+		}
+		if len(r.Channels) == 1 && r.Channels[0] == types.GraphRetrieverType {
+			backups = append(backups, r)
+			if len(backups) >= slots-inTop {
+				break
+			}
+		}
+	}
+	if len(backups) == 0 {
+		return top
+	}
+
+	out := append([]*types.IndexWithScore{}, top...)
+	for i, b := range backups {
+		pos := len(out) - 1 - i
+		if pos < 0 {
+			break
+		}
+		logger.Infof(ctx, "graph-only slot %d/%d: chunk %s promoted into top-%d",
+			i+1, slots, b.ChunkID, k)
+		out[pos] = b
+	}
+	return out
+}

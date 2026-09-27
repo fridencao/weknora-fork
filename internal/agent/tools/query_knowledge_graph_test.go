@@ -90,6 +90,14 @@ func (s *stubKnowledgeBaseService) DuplicateKnowledgeBase(
 	return nil, nil
 }
 
+func (s *stubKnowledgeBaseService) GraphEntityDetail(context.Context, string, string) (map[string]any, error) {
+	return nil, nil
+}
+
+func (s *stubKnowledgeBaseService) GraphEdgeDetail(context.Context, string, string, string) (map[string]any, error) {
+	return nil, nil
+}
+
 func (s *stubKnowledgeBaseService) GetRepository() interfaces.KnowledgeBaseRepository {
 	return nil
 }

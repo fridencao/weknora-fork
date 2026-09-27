@@ -296,7 +296,14 @@ func (s *knowledgeBaseService) HybridSearch(ctx context.Context,
 	// Truncate to the primary-match cap. MatchCount is guaranteed positive by
 	// the normalization at the top of this function; the slice bound below
 	// depends on that.
-	if len(deduplicatedChunks) > params.MatchCount {
+	//
+	// M6-3（docs/16 RW1）：slots > 0 时由保底名额函数完成「截断 + 图谱独有
+	// 结果替尾」，纯 RRF 排序永远抬不动 graph-only chunk（权重 0.2 vs
+	// 0.7/0.3），图谱通道就只剩给别的通道加权这一个作用。
+	if slots := retrievalCfg.GetEffectiveRRFGraphSlots(); slots > 0 {
+		deduplicatedChunks = ensureGraphOnlySlots(ctx, deduplicatedChunks,
+			params.MatchCount, slots)
+	} else if len(deduplicatedChunks) > params.MatchCount {
 		deduplicatedChunks = deduplicatedChunks[:params.MatchCount]
 	}
 

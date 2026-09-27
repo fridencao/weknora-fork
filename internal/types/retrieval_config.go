@@ -3,6 +3,8 @@ package types
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"os"
+	"strconv"
 )
 
 // RetrievalConfig holds the global retrieval/search configuration for a tenant.
@@ -39,6 +41,14 @@ type RetrievalConfig struct {
 	// docs/07 G3). The graph channel is additive — vector/keyword keep their
 	// defaults so the graph acts as a supplement, not a dilution. Default: 0.2.
 	RRFGraphWeight float64 `json:"rrf_graph_weight,omitempty"`
+	// RRFGraphMinSlots guarantees this many graph-only chunks inside the final
+	// top-k (M6-3, docs/16 RW1). RRF weight 0.2 rarely lifts graph-only chunks
+	// past vector/keyword hits, so the graph's unique evidence usually never
+	// reaches the answer context. The guarantee swaps the weakest tail entries
+	// for the highest-ranked graph-only chunks beyond the cut — total count
+	// stays at top-k. Pointer so "unset" (nil) stays distinct from 0.
+	// Resolution order: explicit value > STARKB_RRF_GRAPH_MIN_SLOTS env > 0 (off).
+	RRFGraphMinSlots *int `json:"rrf_graph_min_slots,omitempty"`
 	// GraphChannelEnabled toggles the LightRAG graph recall channel (docs/07
 	// G3). Nil means "not configured in the UI": the deployment default
 	// (GRAPH_CHANNEL_ENABLED env) applies, so existing deployments keep their
@@ -126,6 +136,23 @@ func (c *RetrievalConfig) GetEffectiveRRFGraphWeight() float64 {
 		return 0.2
 	}
 	return c.RRFGraphWeight
+}
+
+// GetEffectiveRRFGraphSlots returns the graph-only guaranteed-slot count
+// (M6-3). Resolution order: explicit tenant setting > deployment env
+// STARKB_RRF_GRAPH_MIN_SLOTS > 0 (feature off). Returning 0 keeps the legacy
+// pure-RRF ordering, so existing deployments see zero behavior change until
+// the operator opts in.
+func (c *RetrievalConfig) GetEffectiveRRFGraphSlots() int {
+	if c != nil && c.RRFGraphMinSlots != nil && *c.RRFGraphMinSlots > 0 {
+		return *c.RRFGraphMinSlots
+	}
+	if v := os.Getenv("STARKB_RRF_GRAPH_MIN_SLOTS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 0
 }
 
 // GetGraphChannelEnabled resolves the graph channel switch: an explicit UI
