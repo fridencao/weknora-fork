@@ -1,0 +1,7 @@
+{
+  "env": [
+    "WEKNORA_PG_DSN",
+    "OJK_TENANT_ID",
+    "OJK_RUN_ID"
+  ]
+}
