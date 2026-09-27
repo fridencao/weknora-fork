@@ -1668,6 +1668,15 @@ const doSubmit = async () => {
           graph_enabled: formData.value.indexingStrategy?.graphEnabled ?? false,
         }
       }
+      // P-14（docs/16 RW4）：graph_config 必须嵌在 config 里——
+      // UpdateKnowledgeBaseRequest 只收 name/description/config，
+      // 顶层 graph_config 会被 Go 静默丢弃（自动建图开关保存不生效）
+      if (formData.value.graphConfig) {
+        updateConfig.graph_config = {
+          auto_build: !!formData.value.graphConfig.autoBuild,
+          build_model_id: formData.value.graphConfig.buildModelId || '',
+        }
+      }
       await updateKnowledgeBase(kbId, {
         name: data.name,
         description: data.description,
