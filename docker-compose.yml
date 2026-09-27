@@ -665,6 +665,59 @@ services:
       - WeKnora-network
     restart: unless-stopped
 
+  # StarKB (RW2, docs/16)：本地模型栈容器化——bge-m3 嵌入与 bge-reranker 重排入栈，
+  # 取代宿主机 nohup + LAN IP 硬编（192.168.5.2 随网络拓扑失效，2026-09-27 实证：
+  # 换网段后 lightrag 嵌入不可达、图查询挂起 30s）。权重从宿主 models/ 只读挂载
+  # （不入镜像），容器间一律走服务名 embed-local / rerank-local，宿主工具走
+  # 127.0.0.1 端口映射。两服务共用 starkb-local-models 镜像（embed-local 构建）。
+  embed-local:
+    build:
+      context: ../../services
+      dockerfile: local-models/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: starkb-local-models:local
+    container_name: WeKnora-embed-local
+    command: ["python", "embed_server.py"]
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - BGE_M3_PATH=/models/bge-m3
+    volumes:
+      - ../../models/bge-m3:/models/bge-m3:ro
+    ports:
+      - "127.0.0.1:8311:8311"
+    healthcheck:
+      # /health 会触发懒加载（~4.3G 权重，CPU 首载数分钟），start_period 放宽
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8311/health', timeout=8)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 300s
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
+  rerank-local:
+    image: starkb-local-models:local
+    container_name: WeKnora-rerank-local
+    command: ["python", "rerank_server.py"]
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - BGE_RERANKER_PATH=/models/bge-reranker-v2-m3
+    volumes:
+      - ../../models/bge-reranker-v2-m3:/models/bge-reranker-v2-m3:ro
+    ports:
+      - "127.0.0.1:8312:8312"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8312/health', timeout=8)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 300s
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
   # OpenDataLoader hybrid backend (optional). Default --no-ocr (no EasyOCR/libGL).
   # Local build only — not published to Docker Hub; use --profile odl-hybrid --build.
   odl-hybrid:
