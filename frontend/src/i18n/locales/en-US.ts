@@ -7534,5 +7534,33 @@ export default {
     capabilityRequired: 'Select at least one capability',
     loadFailed: 'Failed to load platform API keys',
     createFailed: 'Failed to create platform API key'
-  }
+  },
+
+  ojk: {
+    ruleExtractor: {
+      title: 'Rule Checklist Generator',
+      desc: 'Extract testable compliance requirements from OJK regulation KBs and generate a draft checklist for human review.',
+      createRun: 'Generate Checklist',
+      recentRuns: 'Recent Runs',
+      noRuns: 'No runs yet',
+      review: 'Review',
+      refresh: 'Refresh',
+    },
+    reviewWorkflow: {
+      title: 'Checklist Review',
+      refresh: 'Refresh',
+      back: 'Back',
+      runId: 'Run ID',
+      version: 'Version',
+      items: 'Total Items',
+      flagged: 'Flagged',
+      createdAt: 'Created',
+      error: 'Error',
+      itemsTitle: 'Checklist Items',
+      confirm: 'Confirm',
+      reject: 'Reject',
+      rejectTitle: 'Reject Item',
+      reason: 'Reason',
+    },
+  },
 }
