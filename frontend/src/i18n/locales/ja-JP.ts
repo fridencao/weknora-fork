@@ -6170,6 +6170,11 @@ export default {
       inherit: 'デプロイ既定値を継承',
       graphChannelLabel: 'グラフ検索を使用',
       graphChannelDesc: 'このエージェントがグラフチャネル（LightRAG）を検索するかどうか。オフにしても検索のみに影響し、ナレッジベースのグラフ構築には影響しません',
+      on: 'オン',
+      off: 'オフ',
+      graphChannelInheritBadge: '継承中（現在値：{value}）',
+      graphChannelCustomBadge: 'カスタム設定（デプロイ既定：{value}）',
+      graphChannelRestore: '継承に戻す',
     },
     builtinHint: 'これは組み込みエージェントです。名前と説明は変更できませんが、設定パラメータは調整できます。',
     navGroups: {

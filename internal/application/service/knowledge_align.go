@@ -132,8 +132,13 @@ func (s *KnowledgePostProcessService) AlignProvenanceOnIngest(ctx context.Contex
 		chunk.Metadata = types.JSON(raw)
 		updated = append(updated, chunk)
 	}
-	if len(updated) > 0 {
-		if err := chunkRepo.UpdateChunks(ctx, updated); err != nil {
+	// 必须走 UpdateChunk（整行 Save，含 metadata）：UpdateChunks 的批量 SQL
+	// 只写 content/is_enabled/tag_id/flags/status（见 repository 注释），metadata
+	// 列被静默丢弃——入库钩子写回曾是 no-op，锚点只能等 starkb-api 的
+	// anchor_reconcile（5 分钟一轮）兜底，入库后检索窗口内图谱通道 0 命中
+	// （2026-09-26 smoke 实证）。chunk 行刚从库里完整读出，整行 Save 安全。
+	for _, chunk := range updated {
+		if err := chunkRepo.UpdateChunk(ctx, chunk); err != nil {
 			logger.Warnf(ctx, "align on ingest: 写回 chunk metadata 失败: %v", err)
 			return
 		}

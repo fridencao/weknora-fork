@@ -1080,6 +1080,11 @@ export default {
       inherit: '배포 기본값 상속',
       graphChannelLabel: '그래프 검색 사용',
       graphChannelDesc: '이 에이전트가 그래프 채널(LightRAG)을 조회할지 여부입니다. 끄더라도 검색에만 영향을 주고 지식베이스의 그래프 구축에는 영향을 주지 않습니다',
+      on: '켜짐',
+      off: '꺼짐',
+      graphChannelInheritBadge: '상속 중(현재값: {value})',
+      graphChannelCustomBadge: '사용자 지정(배포 기본값: {value})',
+      graphChannelRestore: '상속으로 복원',
     },
     builtinHint: '내장 에이전트입니다. 이름과 설명은 수정할 수 없지만, 설정 매개변수는 조정할 수 있습니다.',
     fileTypes: {

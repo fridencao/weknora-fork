@@ -557,6 +557,10 @@ func (s *knowledgeBaseService) UpdateKnowledgeBase(ctx context.Context,
 		}
 		// ADR-008 决策 3：KB 级 LightRAG 建图开关（nil = 不变）
 		if config.GraphConfig != nil {
+			// 图谱空间策略建库时锁定（用户决议 2026-09-25）：切换需全库
+			// 重建图谱且跨空间残留静默丢失，Update 不接受 workspace_mode
+			// 变更（auto_build / build_model_id 仍可改）。
+			config.GraphConfig.WorkspaceMode = kb.GraphConfig.WorkspaceMode
 			kb.GraphConfig = config.GraphConfig
 		}
 		if config.ProfileConfig != nil {

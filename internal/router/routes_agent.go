@@ -32,6 +32,9 @@ func RegisterCustomAgentRoutes(r *gin.RouterGroup, agentHandler *handler.CustomA
 	{
 		// Get placeholder definitions (must be before /:id to avoid conflict) — Viewer+
 		agentsRead.GET("/placeholders", g.Viewer(), agentHandler.GetPlaceholders)
+		// Deployment-level retrieval defaults (ADR-008 决策 2 的"继承"态实际值，
+		// 编辑器"继承中（当前值：X）"徽标用)。必须挂在 /:id 之前 — Viewer+
+		agentsRead.GET("/retrieval-defaults", g.Viewer(), agentHandler.GetRetrievalDefaults)
 		// List smart-reasoning agent type presets (rag-qa / wiki-qa / hybrid / custom) — Viewer+
 		agentsRead.GET("/type-presets", g.Viewer(), agentHandler.GetAgentTypePresets)
 		// Create custom agent — Contributor+

@@ -262,6 +262,24 @@ export function getPlaceholders() {
   return get<{ data: PlaceholdersResponse }>('/api/v1/agents/placeholders');
 }
 
+// ===== 部署级检索策略缺省值（ADR-008 决策 2 的"继承"态实际值） =====
+
+// 智能体检索字段留空（undefined/null）时实际生效的部署默认值。
+// 图谱通道按 DB(system_settings) > ENV > true 解析；其余字段经 GetEffective* 回落。
+export interface AgentRetrievalDefaults {
+  embedding_top_k: number;
+  keyword_threshold: number;
+  vector_threshold: number;
+  rerank_top_k: number;
+  rerank_threshold: number;
+  graph_channel_enabled: boolean;
+}
+
+// 获取部署级检索策略缺省值（编辑器"继承中（当前值：X）"徽标用）
+export function getRetrievalDefaults() {
+  return get<{ data: AgentRetrievalDefaults }>('/api/v1/agents/retrieval-defaults');
+}
+
 // ===== 智能体类型预设 =====
 
 // 后端 kb_filter 结构（见 internal/types/agent_type_preset.go）

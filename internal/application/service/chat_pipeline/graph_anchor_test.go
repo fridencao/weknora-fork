@@ -144,7 +144,7 @@ func TestResolveGraphEvidence_RanksByCoverage(t *testing.T) {
 	refs := []GraphEvidenceRef{{
 		Key: realKey, DocID: realDocID, BlockIDs: []string{"p001-b002", "p001-b001"},
 	}}
-	got, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
+	got, _, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	require.Equal(t, "c1", got[0].ID, "coverage 高者优先")
@@ -167,14 +167,14 @@ func TestResolveGraphEvidence_RoundRobinsAndCaps(t *testing.T) {
 		{Key: "k3", DocID: realDocID, BlockIDs: []string{"b4"}},
 	}
 
-	got, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
+	got, _, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
 	require.NoError(t, err)
 	require.Equal(t, []string{"c1", "c3", "c4", "c2"}, ids(got),
 		"轮转取用：先保证每个图谱命中贡献 1 条，再取第 2 条")
 	require.Equal(t, 1, repo.calls, "同一文档只查一次全量子 chunk")
 
 	// 整体配额截断
-	got, err = ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 2)
+	got, _, err = ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 2)
 	require.NoError(t, err)
 	require.Equal(t, []string{"c1", "c3"}, ids(got))
 }
@@ -190,7 +190,7 @@ func TestResolveGraphEvidence_DedupesAcrossHits(t *testing.T) {
 		{Key: "k2", DocID: realDocID, BlockIDs: []string{"b1", "b2"}},
 	}
 
-	got, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
+	got, _, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 2, 20)
 	require.NoError(t, err)
 	require.Equal(t, []string{"shared", "only2"}, ids(got))
 }
@@ -203,13 +203,13 @@ func TestResolveGraphEvidence_NoAnchorOrError(t *testing.T) {
 	}}
 
 	// 无锚点（实测 173 条图谱 chunk 中 5 条，纯表格/图片区域）→ 跳过而非报错
-	got, err := ResolveGraphEvidence(context.Background(), repo, 1,
+	got, _, err := ResolveGraphEvidence(context.Background(), repo, 1,
 		[]GraphEvidenceRef{{Key: realKey, DocID: realDocID}}, 2, 20)
 	require.NoError(t, err)
 	require.Empty(t, got)
 
 	// 锚点存在但库里没有对应子 chunk → 空结果，不报错
-	got, err = ResolveGraphEvidence(context.Background(), repo, 1,
+	got, _, err = ResolveGraphEvidence(context.Background(), repo, 1,
 		[]GraphEvidenceRef{{Key: realKey, DocID: realDocID, BlockIDs: []string{"nope"}}}, 2, 20)
 	require.NoError(t, err)
 	require.Empty(t, got)
@@ -219,13 +219,13 @@ func TestResolveGraphEvidence_NoAnchorOrError(t *testing.T) {
 		byDoc: map[string][]*types.Chunk{},
 		errOn: map[string]bool{realDocID: true},
 	}
-	got, err = ResolveGraphEvidence(context.Background(), errRepo, 1,
+	got, _, err = ResolveGraphEvidence(context.Background(), errRepo, 1,
 		[]GraphEvidenceRef{{Key: realKey, DocID: realDocID, BlockIDs: []string{"b1"}}}, 2, 20)
 	require.NoError(t, err)
 	require.Empty(t, got)
 
 	// 空输入短路
-	got, err = ResolveGraphEvidence(context.Background(), repo, 1, nil, 2, 20)
+	got, _, err = ResolveGraphEvidence(context.Background(), repo, 1, nil, 2, 20)
 	require.NoError(t, err)
 	require.Empty(t, got)
 }
@@ -244,7 +244,7 @@ func TestResolveGraphEvidence_DefaultQuota(t *testing.T) {
 	}
 
 	// perHit/total <= 0 时回落默认（2 / 20）
-	got, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 0, 0)
+	got, _, err := ResolveGraphEvidence(context.Background(), repo, 1, refs, 0, 0)
 	require.NoError(t, err)
 	require.Len(t, got, DefaultGraphChunksPerHit)
 }

@@ -1756,19 +1756,29 @@
           </div>
 
           <!-- 图谱召回通道（读侧，ADR-008 决策 1/3.1）：建图是 KB 的属性，
-               用图是智能体的属性。关闭 = 本次检索不走向图谱通道。 -->
+               用图是智能体的属性。单开关直接表达实际生效值；继承态以徽标说明
+               （当前值 = 部署默认），覆盖态提供"恢复继承"。 -->
           <div class="setting-row">
             <div class="setting-info">
               <label>{{ $t('agentEditor.retrieval.graphChannelLabel') }}</label>
               <p class="desc">{{ $t('agentEditor.retrieval.graphChannelDesc') }}</p>
             </div>
             <div class="setting-control">
-              <div class="override-control">
-                <t-switch size="small" :model-value="hasRetrievalOverride('graph_channel_enabled')"
-                  @change="(v: boolean) => setRetrievalOverride('graph_channel_enabled', v)" />
-                <t-switch v-if="hasRetrievalOverride('graph_channel_enabled')"
-                  v-model="formData.config.graph_channel_enabled" />
-                <span v-else class="inherit-hint">{{ t('agentEditor.retrieval.inherit') }}</span>
+              <div class="graph-channel-control">
+                <t-switch :model-value="graphChannelEffective" @change="onGraphChannelToggle" />
+                <span v-if="!hasRetrievalOverride('graph_channel_enabled')"
+                  class="graph-channel-badge">
+                  {{ $t('agentEditor.retrieval.graphChannelInheritBadge', { value: graphChannelOnOff(graphChannelInheritedValue) }) }}
+                </span>
+                <template v-else>
+                  <span class="graph-channel-badge graph-channel-badge--custom">
+                    {{ $t('agentEditor.retrieval.graphChannelCustomBadge', { value: graphChannelOnOff(graphChannelInheritedValue) }) }}
+                  </span>
+                  <t-button variant="text" size="small" class="graph-channel-restore"
+                    @click="restoreGraphChannelInherit">
+                    {{ $t('agentEditor.retrieval.graphChannelRestore') }}
+                  </t-button>
+                </template>
               </div>
             </div>
           </div>
@@ -1896,12 +1906,14 @@ import {
   createAgent,
   updateAgent,
   listIMChannels,
+  getRetrievalDefaults,
   type CustomAgent,
   type PlaceholderDefinition,
   type AgentTypePreset,
   type AgentType,
   type AgentTypeKBFilter,
   type KBCapabilities,
+  type AgentRetrievalDefaults,
 } from '@/api/agent';
 import { type ModelConfig } from '@/api/model';
 import { type AgentNotReadyReasonKey, agentRequiresRerankModel } from '@/utils/agent-readiness';
@@ -2928,8 +2940,9 @@ const defaultFormData = {
 const formData = ref(JSON.parse(JSON.stringify(defaultFormData)));
 
 // ===== 检索策略的三态覆盖（ADR-008 决策 2）=====
-// undefined / null = **继承部署缺省**（后端 config.ConversationConfig.RetrievalDefaults，
-// 由部署 YAML 决定，前端不持有该值）；显式值 = 本智能体覆盖。
+// undefined / null = **继承部署缺省**（config.ConversationConfig.RetrievalDefaults
+// + GetEffective* 回落；实际值经 GET /agents/retrieval-defaults 拉取，图谱行徽标展示）；
+// 显式值 = 本智能体覆盖。数值行沿用"覆盖开关 + 值控件"，图谱行用单开关 + 徽标。
 // 改造前这些字段是普通数值，配合后端 `if x > 0` 判断 + EnsureDefaults 补非 0 值，
 // 智能体永远覆盖上层且无法表达"关闭/继承"。
 type RetrievalOverrideKey =
@@ -2964,6 +2977,35 @@ function setRetrievalOverride(key: RetrievalOverrideKey, on: boolean): void {
     delete cfg[key];
   }
 }
+
+// ===== 图谱召回通道行：单开关 + 继承徽标 =====
+// 布尔型设置套用数值行的"覆盖开关 + 值控件"模式会出现两颗开关并排、语义难辨，
+// 这里改为：开关直接表达**实际生效值**（继承态显示部署默认），徽标说明状态来源，
+// "恢复继承"按钮清除覆盖回到继承态。数值行仍保留原 override 模式。
+const retrievalDefaults = ref<AgentRetrievalDefaults | null>(null);
+
+const graphChannelInheritedValue = computed<boolean>(
+  () => retrievalDefaults.value?.graph_channel_enabled ?? true,
+);
+
+// 开关展示的实际生效值：覆盖态用显式值，继承态用部署默认。
+const graphChannelEffective = computed<boolean>(() => {
+  if (hasRetrievalOverride('graph_channel_enabled')) {
+    return formData.value.config.graph_channel_enabled === true;
+  }
+  return graphChannelInheritedValue.value;
+});
+
+// 继承态点击开关 = 以点击后的值建立显式覆盖（与继承值同向时等效、但标记为自定义）。
+function onGraphChannelToggle(v: boolean): void {
+  formData.value.config.graph_channel_enabled = v;
+}
+
+function restoreGraphChannelInherit(): void {
+  delete formData.value.config.graph_channel_enabled;
+}
+
+const graphChannelOnOff = (v: boolean) => (v ? t('agentEditor.retrieval.on') : t('agentEditor.retrieval.off'));
 
 const starterSuggestionModeOptions = computed(() => [
   { value: 'curated', label: t('agentEditor.questionSuggestions.modeCurated') },
@@ -4090,8 +4132,16 @@ const loadDependencies = async () => {
       placeholderData.value = editorResources.placeholders;
     }
 
-    // 租户级检索设置已退休（ADR-008 决策 2），不再有可回填的缺省值：
-    // 检索字段留空 = 继承部署配置，前端不需要也不持有该值。
+    // 部署级检索缺省值：图谱行的"继承中（当前值：X）"徽标需要显示继承到的
+    // 实际值（ADR-008 决策 2 的"继承"态）。拉取失败时回落 true（与后端
+    // graphChannelEnvDefault 的 fallback 一致），仅影响徽标文案。
+    try {
+      const defaultsResp = await getRetrievalDefaults();
+      retrievalDefaults.value = (defaultsResp as any)?.data ?? null;
+    } catch (e) {
+      console.warn('Failed to load retrieval defaults', e);
+      retrievalDefaults.value = null;
+    }
   } catch (e) {
     console.error('Failed to load dependencies', e);
   }
@@ -5662,6 +5712,33 @@ const handleSave = async () => {
   font-size: var(--app-text-base);
   color: var(--td-text-color-placeholder);
   white-space: nowrap;
+}
+
+// 图谱召回通道行：单开关 + 状态徽标（继承中/已自定义）
+.graph-channel-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.graph-channel-badge {
+  font-size: var(--app-text-base);
+  color: var(--td-text-color-secondary);
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--td-bg-color-component);
+
+  &--custom {
+    color: var(--td-brand-color);
+    background: var(--td-brand-color-light);
+  }
+}
+
+.graph-channel-restore {
+  flex-shrink: 0;
 }
 
 .retrieval-override-hint {

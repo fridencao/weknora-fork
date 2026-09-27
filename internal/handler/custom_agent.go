@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Tencent/WeKnora/internal/application/service"
+	"github.com/Tencent/WeKnora/internal/config"
 	"github.com/Tencent/WeKnora/internal/errors"
 	"github.com/Tencent/WeKnora/internal/im"
 	"github.com/Tencent/WeKnora/internal/logger"
@@ -37,6 +38,11 @@ type CustomAgentHandler struct {
 	// sandboxConfigs validates an agent's sandbox backend selection. Optional —
 	// nil in partially-wired unit tests, where the selection is left unchecked.
 	sandboxConfigs sandboxConfigLookup
+	// cfg / settings 支撑部署级检索缺省值的读取（GET /agents/retrieval-defaults，
+	// ADR-008 决策 2：编辑器"继承中（当前值：X）"徽标需要该值）。settings 可为
+	// nil（部分单测），此时图谱通道回落 true，与检索路径的 fallback 一致。
+	cfg      *config.Config
+	settings interfaces.SystemSettingService
 }
 
 // NewCustomAgentHandler creates a new custom agent handler instance
@@ -46,6 +52,8 @@ func NewCustomAgentHandler(
 	disabledRepo interfaces.TenantDisabledSharedAgentRepository,
 	userService interfaces.UserService,
 	sandboxConfigs *service.TenantSandboxConfigService,
+	cfg *config.Config,
+	settings interfaces.SystemSettingService,
 ) *CustomAgentHandler {
 	return &CustomAgentHandler{
 		service:        service,
@@ -53,6 +61,8 @@ func NewCustomAgentHandler(
 		disabledRepo:   disabledRepo,
 		userService:    userService,
 		sandboxConfigs: sandboxConfigs,
+		cfg:            cfg,
+		settings:       settings,
 	}
 }
 
@@ -613,6 +623,38 @@ func (h *CustomAgentHandler) GetPlaceholders(c *gin.Context) {
 			"rewrite_system_prompt": types.PlaceholdersByField(types.PromptFieldRewriteSystemPrompt),
 			"rewrite_prompt":        types.PlaceholdersByField(types.PromptFieldRewritePrompt),
 			"fallback_prompt":       types.PlaceholdersByField(types.PromptFieldFallbackPrompt),
+		},
+	})
+}
+
+// GetRetrievalDefaults godoc
+// @Summary      获取部署级检索策略缺省值
+// @Description  返回智能体未显式覆盖（ADR-008 决策 2 的"继承"态）时实际生效的检索参数。
+//               图谱通道按 DB(system_settings) > ENV > true 解析，与检索路径的
+//               graphChannelEnvDefault 同口径；其余字段经 GetEffective* 回落内置默认。
+// @Tags         智能体
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "检索策略缺省值"
+// @Security     Bearer
+// @Security     ApiKeyAuth
+// @Router       /agents/retrieval-defaults [get]
+func (h *CustomAgentHandler) GetRetrievalDefaults(c *gin.Context) {
+	defaults := h.cfg.RetrievalDefaults()
+	graphEnabled := true
+	if h.settings != nil {
+		graphEnabled = h.settings.GetBool(c.Request.Context(),
+			types.SettingKeyGraphChannelEnabled, types.SettingEnvGraphChannelEnabled, true)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"embedding_top_k":       defaults.GetEffectiveEmbeddingTopK(),
+			"keyword_threshold":     defaults.GetEffectiveKeywordThreshold(),
+			"vector_threshold":      defaults.GetEffectiveVectorThreshold(),
+			"rerank_top_k":          defaults.GetEffectiveRerankTopK(),
+			"rerank_threshold":      defaults.GetEffectiveRerankThreshold(),
+			"graph_channel_enabled": graphEnabled,
 		},
 	})
 }

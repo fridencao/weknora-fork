@@ -87,7 +87,7 @@ func TestLiveGraphAnchorResolve(t *testing.T) {
 
 	// 锚点回跳 → WeKnora 子 chunk
 	repo := &liveChunkRepo{db: db}
-	chunks, err := ResolveGraphEvidence(ctx, repo, tenantID, refs, DefaultGraphChunksPerHit, 20)
+	chunks, _, err := ResolveGraphEvidence(ctx, repo, tenantID, refs, DefaultGraphChunksPerHit, 20)
 	require.NoError(t, err)
 	t.Logf("回跳得到 WeKnora 子 chunk: %d 条（修复前恒为 0）", len(chunks))
 	require.NotEmpty(t, chunks, "锚点回跳未命中任何 chunk")

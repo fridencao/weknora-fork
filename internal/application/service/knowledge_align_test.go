@@ -14,11 +14,17 @@ import (
 
 type stubChunkRepo struct {
 	interfaces.ChunkRepository
-	updated []*types.Chunk
+	updated []*types.Chunk // UpdateChunks（批量，不写 metadata 列）
+	saved   []*types.Chunk // UpdateChunk（整行 Save，含 metadata）
 }
 
 func (s *stubChunkRepo) UpdateChunks(_ context.Context, chunks []*types.Chunk) error {
 	s.updated = append(s.updated, chunks...)
+	return nil
+}
+
+func (s *stubChunkRepo) UpdateChunk(_ context.Context, chunk *types.Chunk) error {
+	s.saved = append(s.saved, chunk)
 	return nil
 }
 
@@ -52,11 +58,15 @@ func TestAlignProvenanceOnIngest_WritesBackMetadata(t *testing.T) {
 
 	svc := &KnowledgePostProcessService{settings: newEnvOnlySettings()}
 	svc.AlignProvenanceOnIngest(context.Background(), repo, 1, knowledge, chunks)
-	require.Len(t, repo.updated, 2)
+	// 回归（2026-09-26 冒烟实证）：UpdateChunks 批量 SQL 不含 metadata 列，
+	// 锚点写回曾是 no-op（全靠 starkb-api 5 分钟一轮的 anchor_reconcile 兜底，
+	// 入库后检索窗口内图谱通道 0 命中）。对齐必须走 UpdateChunk（整行 Save）。
+	require.Len(t, repo.saved, 2)
+	require.Empty(t, repo.updated, "对齐不得走 UpdateChunks（不写 metadata）")
 	require.Equal(t, "报告.pdf", gotBody.FileName)
 	require.Len(t, gotBody.Chunks, 2)
 	var meta map[string]any
-	require.NoError(t, json.Unmarshal(repo.updated[0].Metadata, &meta))
+	require.NoError(t, json.Unmarshal(repo.saved[0].Metadata, &meta))
 	require.Contains(t, meta, "sbk_blocks")
 	require.Contains(t, meta, "sbk_method")
 }
