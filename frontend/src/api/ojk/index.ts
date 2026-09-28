@@ -51,11 +51,11 @@ export interface OJKItemListResponse {
 }
 
 export function createOJKRun(kbId: string, skillVersion = '1.0.0'): Promise<OJKRun> {
-  return post<OJKRun>('/ojk/runs', { kb_id: kbId, skill_version: skillVersion })
+  return post<OJKRun>('/api/v1/ojk/runs', { kb_id: kbId, skill_version: skillVersion })
 }
 
 export function listOJKRuns(limit = 20): Promise<{ runs: OJKRun[]; total: number }> {
-  return get<OJKRunsResponse>(`/ojk/runs?limit=${limit}`)
+  return get<OJKRunsResponse>(`/api/v1/ojk/runs?limit=${limit}`)
 }
 
 export interface OJKRunsResponse {
@@ -64,19 +64,19 @@ export interface OJKRunsResponse {
 }
 
 export function getOJKRun(runId: string): Promise<OJKRun> {
-  return get<OJKRun>(`/ojk/runs/${runId}`)
+  return get<OJKRun>(`/api/v1/ojk/runs/${runId}`)
 }
 
 export function listOJKItems(runId: string, status?: string, page = 1, pageSize = 20): Promise<OJKItemListResponse> {
   const params = new URLSearchParams({ run_id: runId, page: String(page), page_size: String(pageSize) })
   if (status) params.append('status', status)
-  return get<OJKItemListResponse>(`/ojk/items?${params}`)
+  return get<OJKItemListResponse>(`/api/v1/ojk/items?${params}`)
 }
 
 export function resolveOJKItem(itemId: string, status: 'confirmed' | 'rejected', note = '') {
-  return patch(`/ojk/items/${itemId}/resolve`, { status, note })
+  return patch(`/api/v1/ojk/items/${itemId}/resolve`, { status, note })
 }
 
 export function getOJKItemStats(runId: string): Promise<OJKItemStats> {
-  return get<OJKItemStats>(`/ojk/runs/${runId}/stats`)
+  return get<OJKItemStats>(`/api/v1/ojk/runs/${runId}/stats`)
 }
