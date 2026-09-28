@@ -7563,6 +7563,13 @@ export default {
 
   ojk: {
     wizard: {
+    step1Hint: "Stage 1 extracts checkable requirements from a REGULATION knowledge base. Candidate-material KBs are used later, at the review stage (AI check) — they are shown below as not applicable.",
+    regulationKbTitle: "Regulation knowledge bases (selectable)",
+    regulationTag: "Regulation · {sections} Pasal / {docs} docs",
+    noRegulationKb: "No regulation knowledge base detected in this workspace — upload regulation PDFs into a KB first.",
+    otherKbsTitle: "Other knowledge bases (not applicable to this stage)",
+    notApplicableTag: "Not applicable",
+    notApplicableTip: "No regulation structure (Pasal) — used as review-stage material, not extraction source.",
     preflightOk: "Detected {sections} Pasal sections across {docs} parsed documents — ready to extract.",
     preflightNone: "No regulation structure (Pasal) in this KB. Pick the KB holding regulation full texts — candidate materials (CVs, forms) are review subjects, not extraction sources.",
     stepKb: "Choose knowledge base",

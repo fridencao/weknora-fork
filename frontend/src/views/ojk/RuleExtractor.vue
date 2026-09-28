@@ -11,20 +11,43 @@
 
     <!-- Step 1 · 选择知识库 -->
     <t-card v-show="currentStep === 0" :title="$t('ojk.wizard.stepKb')" :bordered="false" class="wizard-card">
-      <t-alert theme="info" :message="$t('ojk.ruleExtractor.desc')" class="wizard-alert" />
+      <t-alert theme="info" :message="$t('ojk.wizard.step1Hint')" class="wizard-alert" />
       <t-loading :loading="kbLoading">
-        <div v-if="kbs.length" class="kb-grid">
-          <div
-            v-for="kb in kbs"
-            :key="kb.id"
-            class="kb-card"
-            :class="{ active: selectedKbId === kb.id }"
-            @click="selectedKbId = kb.id"
-          >
-            <div class="kb-name">{{ kb.name }}</div>
-            <div class="kb-desc">{{ kb.description || $t('ojk.wizard.noDesc') }}</div>
+        <template v-if="kbs.length">
+          <div class="kb-group-title">{{ $t('ojk.wizard.regulationKbTitle') }}</div>
+          <div v-if="regulationKbs.length" class="kb-grid">
+            <div
+              v-for="kb in regulationKbs"
+              :key="kb.id"
+              class="kb-card"
+              :class="{ active: selectedKbId === kb.id }"
+              @click="selectedKbId = kb.id"
+            >
+              <div class="kb-card-head">
+                <div class="kb-name">{{ kb.name }}</div>
+                <t-tag theme="success" variant="light" size="small">
+                  {{ $t('ojk.wizard.regulationTag', { sections: kbMeta[kb.id]?.pasal_sections ?? '…', docs: kbMeta[kb.id]?.docs ?? '…' }) }}
+                </t-tag>
+              </div>
+              <div class="kb-desc">{{ kb.description || $t('ojk.wizard.noDesc') }}</div>
+            </div>
           </div>
-        </div>
+          <t-empty v-else :description="$t('ojk.wizard.noRegulationKb')" />
+          <template v-if="otherKbs.length">
+            <div class="kb-group-title kb-group-title--muted">{{ $t('ojk.wizard.otherKbsTitle') }}</div>
+            <div class="kb-grid">
+              <t-tooltip v-for="kb in otherKbs" :key="kb.id" :content="$t('ojk.wizard.notApplicableTip')">
+                <div class="kb-card kb-card--disabled">
+                  <div class="kb-card-head">
+                    <div class="kb-name">{{ kb.name }}</div>
+                    <t-tag theme="default" variant="light" size="small">{{ $t('ojk.wizard.notApplicableTag') }}</t-tag>
+                  </div>
+                  <div class="kb-desc">{{ kb.description || $t('ojk.wizard.noDesc') }}</div>
+                </div>
+              </t-tooltip>
+            </div>
+          </template>
+        </template>
         <t-empty v-else :description="$t('ojk.wizard.noKb')" />
       </t-loading>
       <template #footer>
@@ -189,6 +212,12 @@ const creating = ref(false)
 const activeRun = ref<OJKRun | null>(null)
 let pollTimer: number | null = null
 
+// 第一步的角色分拣（2026-09-28）：逐库预检，法规库可选、其余置灰展示。
+// 之前把全空间 KB 平铺，用户无法分辨本步骤只与法规库有关。
+const kbMeta = ref<Record<string, OJKPreflight>>({})
+const regulationKbs = computed(() => kbs.value.filter(kb => (kbMeta.value[kb.id]?.pasal_sections ?? 0) > 0))
+const otherKbs = computed(() => kbs.value.filter(kb => (kbMeta.value[kb.id]?.pasal_sections ?? 0) <= 0))
+
 const preflight = ref<OJKPreflight | null>(null)
 const preflightLoading = ref(false)
 const preflightError = ref('')
@@ -272,6 +301,18 @@ async function fetchKbs() {
     kbs.value = Array.isArray(payload) ? payload : (payload?.items || payload?.list || [])
     if (selectedKbId.value && !kbs.value.some(k => k.id === selectedKbId.value)) {
       selectedKbId.value = ''
+    }
+    // 逐库预检（并行；失败按 0 段处理 → 归入「不适用」组）
+    await Promise.all(kbs.value.map(async kb => {
+      try {
+        kbMeta.value[kb.id] = await preflightOJK(kb.id)
+      } catch {
+        kbMeta.value[kb.id] = { kb_id: kb.id, kb_name: kb.name, docs: 0, pasal_sections: 0 }
+      }
+    }))
+    // 唯一法规库时自动选中，省一次点击
+    if (!selectedKbId.value && regulationKbs.value.length === 1) {
+      selectedKbId.value = regulationKbs.value[0].id
     }
   } catch (e: any) {
     MessagePlugin.error(e?.message || 'Failed to load knowledge bases')
@@ -382,9 +423,27 @@ onUnmounted(stopPolling)
   border-color: var(--td-brand-color);
   background: color-mix(in srgb, var(--td-brand-color) 6%, transparent);
 }
+.kb-group-title {
+  font-size: var(--app-text-sm, 12px);
+  color: var(--td-text-color-secondary);
+  margin: var(--app-space-sm, 8px) 0;
+}
+.kb-group-title--muted {
+  margin-top: var(--app-space-md, 16px);
+}
+.kb-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs, 4px);
+}
 .kb-name {
   font-size: var(--app-text-base, 14px);
   font-weight: 600;
+}
+.kb-card--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .kb-desc {
   font-size: var(--app-text-sm, 12px);

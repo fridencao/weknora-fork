@@ -7562,6 +7562,13 @@ export default {
   },
   ojk: {
     wizard: {
+    step1Hint: "이 단계는「法规 지식베이스」에서 검증 가능한 요건을 추출합니다. 피검증자 자료 KB는 대상이 아닙니다——검토 단계(AI 검증)에서 사용됩니다(아래 회색 항목).",
+    regulationKbTitle: "法规 지식베이스(선택 가능)",
+    regulationTag: "法规库 · {sections} 구역 / {docs} 문서",
+    noRegulationKb: "워크스페이스에法规 지식베이스가 없습니다——法规 PDF를 업로드하고 파싱을 완료하세요.",
+    otherKbsTitle: "기타 지식베이스(이 단계와 무관)",
+    notApplicableTag: "해당 없음",
+    notApplicableTip: "法规 구조(Pasal)가 없습니다——검토 단계의 검증 자료이며 추출 원본이 아닙니다.",
     preflightOk: "파싱된 {docs}개 문서에서 {sections}개 Pasal 구역을 감지했습니다——추출 가능합니다.",
     preflightNone: "이 지식베이스에는法规 구조(Pasal)가 없습니다. 규제 본문을 담은 지식베이스를 선택하세요. 피검증자 자료(이력서, 양식 등)는 검토 대상이며 추출 원본이 아닙니다.",
     stepKb: "지식베이스 선택",

@@ -7564,6 +7564,13 @@ export default {
   },
   ojk: {
     wizard: {
+    step1Hint: "本阶段从「法规知识库」抽取可检验的合规要求；申请人材料库不属于本步骤——它将在复核阶段作为 AI 核验的对象使用（见下方置灰列表）。",
+    regulationKbTitle: "法规知识库（可选取）",
+    regulationTag: "法规库 · {sections} 段 / {docs} 篇",
+    noRegulationKb: "工作空间内没有检测到法规知识库——请先把法规 PDF 上传到某个知识库并完成解析。",
+    otherKbsTitle: "其他知识库（与本步骤无关）",
+    notApplicableTag: "不适用",
+    notApplicableTip: "没有法规结构（Pasal 段）——这类库是复核阶段的核验材料，不是抽取来源。",
     preflightOk: "检测到 {sections} 个 Pasal 段 / {docs} 篇已解析文档——可以抽取。",
     preflightNone: "该知识库没有法规结构（Pasal 段）。请选择存放法规原文的知识库；申请人材料（简历、表格等）是复核阶段核验的对象，不是抽取来源。",
     stepKb: "选择知识库",

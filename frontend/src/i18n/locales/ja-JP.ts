@@ -7562,6 +7562,13 @@ export default {
   },
   ojk: {
     wizard: {
+    step1Hint: "このステップでは「法规ナレッジベース」から検証可能な要件を抽出します。候補者資料の KB は対象外です——レビューステージ（AI 検証）で使用します（下のグレーアウト項目）。",
+    regulationKbTitle: "法规ナレッジベース（選択可）",
+    regulationTag: "法规庫 · {sections} 段落 / {docs} 件",
+    noRegulationKb: "ワークスペースに法规ナレッジベースが見つかりません——法规 PDF をアップロードして解析してください。",
+    otherKbsTitle: "その他のナレッジベース（このステップには無関係）",
+    notApplicableTag: "対象外",
+    notApplicableTip: "法规構造（Pasal）がありません——レビュー段階の検証資料であり、抽出源ではありません。",
     preflightOk: "{docs} 件の解析済みドキュメントから {sections} 個の Pasal 段落を検出——抽出可能です。",
     preflightNone: "このナレッジベースには法规構造（Pasal）がありません。規制本文を保管するナレッジベースを選択してください。候補者資料（履歴書・様式等）はレビュー対象であり、抽出源ではありません。",
     stepKb: "ナレッジベース選択",
