@@ -271,10 +271,11 @@ func (s *OJKService) ListRuns(ctx context.Context, tenantID uint64, limit int) (
 
 // PreflightResult 是向导确认步的预检结论。
 type PreflightResult struct {
-	KBID          string `json:"kb_id"`
-	KBName        string `json:"kb_name"`
-	Docs          int64  `json:"docs"`
-	PasalSections int    `json:"pasal_sections"`
+	KBID          string   `json:"kb_id"`
+	KBName        string   `json:"kb_name"`
+	Docs          int64    `json:"docs"`
+	PasalSections int      `json:"pasal_sections"`
+	Titles        []string `json:"titles,omitempty"`
 }
 
 // Preflight 对指定 KB 做轻量预检：文档数 + Pasal 段数。
@@ -305,6 +306,11 @@ func (s *OJKService) Preflight(ctx context.Context, tenantID uint64, kbID string
 		return nil, fmt.Errorf("rebuild regulation text: %w", err)
 	}
 	out.PasalSections = len(slicePasal(text, kb.Name, kb.Name))
+	var titles []string
+	s.db.WithContext(ctx).Raw(
+		"SELECT title FROM knowledges WHERE knowledge_base_id = ? AND deleted_at IS NULL ORDER BY title",
+		kbID).Scan(&titles)
+	out.Titles = titles
 	return out, nil
 }
 
