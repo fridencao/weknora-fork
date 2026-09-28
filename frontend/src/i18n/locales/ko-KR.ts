@@ -7533,7 +7533,7 @@ export default {
   menu: {
     sessionInProgress: '대화 진행 중',
     knowledgeBase: '지식베이스',
-    ojk: 'OJK 컴플라이언스',
+    ojk: 'OJK 컴플라이언스 감사',
     agents: '에이전트',
     artifacts: '산출물',
     organizations: '공유 공간',
@@ -7562,6 +7562,7 @@ export default {
   },
   ojk: {
     stage1: {
+    stageReport: "보고서 생성 및 이중 검토",
     stageKb: "KB 및 法规 버전",
     stageMaterial: "자료 수집 및 규칙 설정",
     stageAiCheck: "AI 검증 및 교차 점검",

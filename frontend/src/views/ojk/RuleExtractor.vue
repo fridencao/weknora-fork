@@ -2,7 +2,7 @@
   <div class="ojk-stage1">
     <!-- 四阶段 Tab 导航（原型样式：编号圆点 + 选中态下划线） -->
     <nav class="stage-tabs">
-      <div class="stage-crumb">StarKB / Fit &amp; Proper</div>
+      <div class="stage-crumb">StarKB / {{ $t('menu.ojk') }}</div>
       <div class="stage-tab active">
         <span class="stage-num">1</span>{{ $t('ojk.stage1.stageKb') }}
       </div>
@@ -14,6 +14,9 @@
       </div>
       <div class="stage-tab" :class="{ disabled: !currentDoneRun }" @click="goReview(currentDoneRun?.run_id)">
         <span class="stage-num">4</span>{{ $t('ojk.stage1.stageWorkbench') }}
+      </div>
+      <div class="stage-tab todo" @click="stageTodo">
+        <span class="stage-num">5</span>{{ $t('ojk.stage1.stageReport') }}
       </div>
     </nav>
 

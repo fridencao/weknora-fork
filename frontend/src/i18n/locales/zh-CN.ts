@@ -7535,7 +7535,7 @@ export default {
   menu: {
     sessionInProgress: '会话进行中',
     knowledgeBase: '知识库',
-    ojk: 'OJK 合规清单',
+    ojk: 'OJK 合规审计',
     agents: '智能体',
     artifacts: '产物',
     organizations: '共享空间',
@@ -7564,6 +7564,7 @@ export default {
   },
   ojk: {
     stage1: {
+    stageReport: "报告生成与双人复核",
     stageKb: "知识库与法规版本",
     stageMaterial: "材料摄入与规则配置",
     stageAiCheck: "智能核验与交叉排查",

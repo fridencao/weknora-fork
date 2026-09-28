@@ -7533,7 +7533,7 @@ export default {
   menu: {
     sessionInProgress: 'Диалог выполняется',
     knowledgeBase: 'База знаний',
-    ojk: 'OJK комплаенс',
+    ojk: 'OJK комплаенс-аудит',
     agents: 'Агенты',
     artifacts: 'Артефакты',
     organizations: 'Общие пространства',
@@ -7562,6 +7562,7 @@ export default {
   },
   ojk: {
     stage1: {
+    stageReport: "Генерация отчёта и двойная проверка",
     stageKb: "База знаний и версия нормативки",
     stageMaterial: "Загрузка материалов и настройка правил",
     stageAiCheck: "AI-проверка и перекрёстный контроль",

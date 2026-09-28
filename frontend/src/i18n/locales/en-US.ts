@@ -166,7 +166,7 @@ export default {
   menu: {
     sessionInProgress: 'Conversation in progress',
     knowledgeBase: 'Knowledge Base',
-    ojk: 'OJK Compliance',
+    ojk: 'OJK Compliance Audit',
     agents: 'Agents',
     artifacts: 'Artifacts',
     organizations: 'Shared Spaces',
@@ -7563,6 +7563,7 @@ export default {
 
   ojk: {
     stage1: {
+    stageReport: "Report Generation & Dual Review",
     stageKb: "KB & Regulation Version",
     stageMaterial: "Material Ingest & Rule Config",
     stageAiCheck: "AI Verify & Cross-check",

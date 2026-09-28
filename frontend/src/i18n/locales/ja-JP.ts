@@ -166,7 +166,7 @@ export default {
   menu: {
     sessionInProgress: '会話中',
     knowledgeBase: 'ナレッジベース',
-    ojk: 'OJK コンプライアンス',
+    ojk: 'OJK コンプライアンス監査',
     agents: 'エージェント',
     artifacts: '成果物',
     organizations: '共有スペース',
@@ -7562,6 +7562,7 @@ export default {
   },
   ojk: {
     stage1: {
+    stageReport: "レポート生成と二人レビュー",
     stageKb: "KBと法规バージョン",
     stageMaterial: "資料取込とルール設定",
     stageAiCheck: "AI検証とクロスチェック",
