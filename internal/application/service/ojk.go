@@ -182,6 +182,9 @@ type RunStatus struct {
 var (
 	ErrOJKKBNotFound = errors.New("knowledge base not found in this workspace")
 	ErrOJKKBNoDocs   = errors.New("knowledge base has no parsed documents to extract from")
+	// ErrOJKRunActive：互斥（2026-09-28 用户需求）——同一时刻只允许一个
+	// 抽取任务。并发 run 会叠加 LLM 调用并让 STAGING 卡无法如实展示。
+	ErrOJKRunActive = errors.New("another extraction run is already active")
 )
 
 // CreateRun 校验 KB 后落一条 pending run，并异步启动执行器
@@ -211,6 +214,14 @@ func (s *OJKService) CreateRun(ctx context.Context, tenantID uint64, kbID, skill
 	}
 	if docCount == 0 {
 		return nil, ErrOJKKBNoDocs
+	}
+	var activeRuns int64
+	if err := s.db.WithContext(ctx).Raw(
+		"SELECT count(*) FROM ojk_runs WHERE status IN ('pending','running')").Scan(&activeRuns).Error; err != nil {
+		return nil, fmt.Errorf("check active runs: %w", err)
+	}
+	if activeRuns > 0 {
+		return nil, ErrOJKRunActive
 	}
 
 	runID := fmt.Sprintf("ojk-%d-%d", tenantID, time.Now().UnixNano())

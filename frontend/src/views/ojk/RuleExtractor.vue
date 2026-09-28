@@ -70,9 +70,14 @@
         </div>
       </template>
       <template #actions>
-        <t-button theme="primary" @click="openDraft">
-          {{ $t('ojk.stage1.newDraft') }}
-        </t-button>
+        <t-tooltip
+          :content="$t('ojk.stage1.draftLocked', { done: stagingRun?.slices_done ?? 0, total: stagingRun?.slices_total ?? 0 })"
+          :disabled="!stagingRun"
+        >
+          <t-button theme="primary" :disabled="!!stagingRun" @click="openDraft">
+            {{ $t('ojk.stage1.newDraft') }}
+          </t-button>
+        </t-tooltip>
       </template>
       <t-loading :loading="runsLoading">
         <t-row :gutter="16">
@@ -129,6 +134,20 @@
             </div>
           </t-col>
         </t-row>
+        <div v-if="doneRunsHistory.length > 1" class="ver-history">
+          <span class="ver-history-title">{{ $t('ojk.stage1.versionHistory') }}</span>
+          <t-tag
+            v-for="r in doneRunsHistory"
+            :key="r.run_id"
+            :theme="viewRunId === r.run_id ? 'primary' : 'default'"
+            variant="light"
+            size="medium"
+            class="ver-history-chip"
+            @click="viewRunId = r.run_id"
+          >
+            v{{ r.skill_version }} · {{ formatTime(r.updated_at) }} · {{ r.total_items }}
+          </t-tag>
+        </div>
       </t-loading>
     </t-card>
 
@@ -250,6 +269,7 @@ const runsLoading = ref(false)
 let pollTimer: number | null = null
 
 const currentDoneRun = computed(() => runs.value.find(r => r.status === 'done') || null)
+const doneRunsHistory = computed(() => runs.value.filter(r => r.status === 'done'))
 const stagingRun = computed(() =>
   runs.value.find(r => r.status === 'running' || r.status === 'pending') || null)
 const currentVersionLabel = computed(() => {
@@ -445,7 +465,11 @@ async function createDraft() {
     viewRunId.value = run.run_id
     await fetchRuns()
   } catch (e: any) {
-    MessagePlugin.error(e?.message || 'Failed to create run')
+    if (e?.status === 409 || /already active/i.test(e?.error || e?.message || '')) {
+      MessagePlugin.warning(t('ojk.stage1.runActiveMsg'))
+    } else {
+      MessagePlugin.error(e?.error || e?.message || 'Failed to create run')
+    }
   } finally {
     creating.value = false
   }
@@ -518,7 +542,6 @@ onUnmounted(stopPolling)
   display: flex;
   flex-direction: column;
   gap: var(--app-space-md, 16px);
-  padding-bottom: 72px;
 }
 
 /* 四阶段 Tab 栏（原型样式）：负 margin 出血到容器两侧，贴住页面顶 */
@@ -618,17 +641,31 @@ onUnmounted(stopPolling)
 .total-chip { font-size: var(--app-text-sm, 12px); color: var(--td-text-color-secondary); white-space: nowrap; }
 
 .footer-bar {
-  position: fixed;
-  left: 232px;
-  right: 0;
-  bottom: 0;
+  position: sticky;
+  bottom: calc(-1 * var(--app-space-md, 16px));
   z-index: 20;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin: 0 calc(-1 * var(--app-space-md, 16px)) calc(-1 * var(--app-space-md, 16px));
   padding: var(--app-space-sm, 10px) var(--app-space-lg, 20px);
   background: var(--td-bg-color-container);
   border-top: 1px solid var(--td-component-stroke);
+}
+.ver-history {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs, 6px);
+  margin-top: var(--app-space-md, 12px);
+}
+.ver-history-title {
+  font-size: var(--app-text-sm, 12px);
+  color: var(--td-text-color-secondary);
+  margin-right: var(--app-space-xs, 4px);
+}
+.ver-history-chip {
+  cursor: pointer;
 }
 .footer-current { display: flex; align-items: center; gap: var(--app-space-xs, 6px); font-size: var(--app-text-sm, 12px); color: var(--td-text-color-secondary); }
 .draft-kb-list { display: flex; flex-direction: column; gap: var(--app-space-xs, 4px); }

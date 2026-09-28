@@ -182,6 +182,49 @@ func TestOJKCreateRunValidatesKB(t *testing.T) {
 	assert.Equal(t, "OJK 法规", st.KBName)
 }
 
+func TestOJKCreateRunMutualExclusion(t *testing.T) {
+	db := openTestDB(t)
+	svc := service.NewOJKService(db)
+	svc.InvokeLLMFn = func(ctx context.Context, cfg service.LLMConfig, system, user string) (string, error) {
+		return `{"items":[]}`, nil
+	}
+	svc.LoadRegulationTextFn = func(ctx context.Context, tenantID uint64, kbID string) (string, error) {
+		return "## Pasal 1\n" + strings.Repeat("银行应当建立稳健的公司治理结构。", 10), nil
+	}
+	svc.LoadModelConfigFn = func(ctx context.Context, tenantID uint64) (service.LLMConfig, error) {
+		return service.LLMConfig{APIKey: "k", BaseURL: "http://mock", Model: "glm"}, nil
+	}
+	require.NoError(t, db.Exec("CREATE TABLE knowledge_bases (id text primary key, name text, tenant_id integer, deleted_at integer)").Error)
+	require.NoError(t, db.Exec("CREATE TABLE knowledges (id text primary key, knowledge_base_id text, deleted_at integer, parse_status text)").Error)
+	require.NoError(t, db.Exec("INSERT INTO knowledge_bases VALUES ('kb-1','法规库','10011',NULL)").Error)
+	require.NoError(t, db.Exec("INSERT INTO knowledges VALUES ('d1','kb-1',NULL,'completed')").Error)
+
+	// 第一条正常创建（后台执行器把 LLM mock 住，瞬间 done）
+	st1, err := svc.CreateRun(context.Background(), 10011, "kb-1", "")
+	require.NoError(t, err)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		st1, _ = svc.GetRun(context.Background(), 10011, st1.RunID)
+		if st1.Status != "pending" && st1.Status != "running" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("run1 not finished: %+v", st1)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	// 终态后可再创建
+	_, err = svc.CreateRun(context.Background(), 10011, "kb-1", "")
+	require.NoError(t, err)
+
+	// 手工插一条 running → 新建被 409 语义拒绝
+	require.NoError(t, db.Exec(
+		"INSERT INTO ojk_runs (run_id,tenant_id,kb_id,skill_version,status,created_at,updated_at) "+
+			"VALUES ('ojk-x','10011','kb-1','1.0.0','running',1,1)").Error)
+	_, err = svc.CreateRun(context.Background(), 10011, "kb-1", "")
+	require.ErrorIs(t, err, service.ErrOJKRunActive)
+}
+
 func TestOJKExecutorEndToEnd(t *testing.T) {
 	db := openTestDB(t)
 	svc := service.NewOJKService(db)
