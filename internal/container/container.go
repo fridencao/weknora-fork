@@ -533,7 +533,15 @@ func BuildContainer(container *dig.Container) *dig.Container {
 	must(container.Provide(handler.NewFAQHandler))
 	must(container.Provide(handler.NewTagHandler))
 	// OJK Fit & Proper plugin
-	must(container.Provide(service.NewOJKService))
+	must(container.Provide(func(db *gorm.DB) *service.OJKService {
+		// 建表（AutoMigrate 兜底迁移 000112）+ 启动续跑/清障
+		svc := service.NewOJKService(db)
+		if err := svc.EnsureTables(db); err != nil {
+			panic(fmt.Sprintf("ojk ensure tables: %v", err))
+		}
+		svc.ResumeInterrupted(context.Background())
+		return svc
+	}))
 	must(container.Provide(handler.NewOJKRunHandler))
 	must(container.Provide(handler.NewOJKItemsHandler))
 	must(container.Provide(session.NewHandler))

@@ -3,8 +3,12 @@ import { get, post, patch } from '@/utils/request'
 export interface OJKRun {
   run_id: string
   tenant_id: number
+  kb_id: string
+  kb_name?: string
   skill_version: string
   status: 'pending' | 'running' | 'done' | 'failed'
+  slices_total?: number
+  slices_done?: number
   total_slices?: number
   total_items: number
   flagged_items: number
@@ -46,8 +50,17 @@ export interface OJKItemListResponse {
   page_size: number
 }
 
-export function createOJKRun(skillVersion = '1.0.0') {
-  return post<{ run_id: string }>('/ojk/runs', { skill_version: skillVersion })
+export function createOJKRun(kbId: string, skillVersion = '1.0.0'): Promise<OJKRun> {
+  return post<OJKRun>('/ojk/runs', { kb_id: kbId, skill_version: skillVersion })
+}
+
+export function listOJKRuns(limit = 20): Promise<{ runs: OJKRun[]; total: number }> {
+  return get<OJKRunsResponse>(`/ojk/runs?limit=${limit}`)
+}
+
+export interface OJKRunsResponse {
+  runs: OJKRun[]
+  total: number
 }
 
 export function getOJKRun(runId: string): Promise<OJKRun> {

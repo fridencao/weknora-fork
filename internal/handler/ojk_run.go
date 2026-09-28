@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
+
 
 	"github.com/gin-gonic/gin"
 
@@ -21,7 +24,8 @@ func NewOJKRunHandler(svc *service.OJKService) *OJKRunHandler {
 
 // CreateRunRequest is the request body for starting a new extraction run.
 type CreateRunRequest struct {
-	SkillVersion string `json:"skill_version" binding:"required,max=64"`
+	KBID         string `json:"kb_id" binding:"required,uuid"`
+	SkillVersion string `json:"skill_version" binding:"omitempty,max=64"`
 }
 
 // CreateRun starts a new OJK rule extraction run.
@@ -42,16 +46,39 @@ func (h *OJKRunHandler) CreateRun(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if req.SkillVersion == "" {
-		req.SkillVersion = "1.0.0"
+	status, err := h.svc.CreateRun(c.Request.Context(), tenantID, req.KBID, req.SkillVersion)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOJKKBNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, service.ErrOJKKBNoDocs):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
 	}
+	c.JSON(http.StatusCreated, status)
+}
 
-	runID, err := h.svc.CreateRun(c.Request.Context(), tenantID, req.SkillVersion)
+// ListRuns returns recent extraction runs (latest first).
+//
+// GET /api/v1/ojk/runs?limit=20
+// @Summary      List OJK runs
+// @Description  最近 extraction runs（含 KB 名与切片进度），供「最近生成」表使用。
+// @Tags         OJK
+// @Param        limit  query  int  false  "返回条数（默认 20，上限 100）"
+// @Success      200    {object}  map[string]interface{}
+// @Router       /api/v1/ojk/runs [get]
+func (h *OJKRunHandler) ListRuns(c *gin.Context) {
+	tenantID := types.MustTenantIDFromContext(c.Request.Context())
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	runs, err := h.svc.ListRuns(c.Request.Context(), tenantID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"run_id": runID})
+	c.JSON(http.StatusOK, gin.H{"runs": runs, "total": len(runs)})
 }
 
 // GetRun returns the current status of a run.

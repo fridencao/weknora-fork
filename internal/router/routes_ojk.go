@@ -16,6 +16,7 @@ func RegisterOJKRoutes(r *gin.RouterGroup, runH *handler.OJKRunHandler, itemsH *
 
 	// Run lifecycle
 	ojk.POST("/runs", g.Admin(), runH.CreateRun)
+	ojk.GET("/runs", g.Viewer(), runH.ListRuns)
 	ojk.GET("/runs/:run_id", g.Viewer(), runH.GetRun)
 	ojk.GET("/runs/:run_id/stats", g.Viewer(), itemsH.ItemStats)
 
