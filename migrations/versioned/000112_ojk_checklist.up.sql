@@ -24,7 +24,7 @@ COMMENT ON TABLE ojk_runs IS
   'One row per fp-rule-skill execution. Frontend polls status field.';
 
 CREATE INDEX IF NOT EXISTS idx_ojk_runs_tenant_status
-  ON ojk_runs (tenant_id, status) WHERE deleted_at IS NULL;
+  ON ojk_runs (tenant_id, status);
 
 CREATE TABLE IF NOT EXISTS ojk_checklist_items (
   id               TEXT PRIMARY KEY,

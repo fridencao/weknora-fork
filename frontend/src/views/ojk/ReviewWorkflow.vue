@@ -61,7 +61,7 @@
             rowKey="id"
             :pagination="pagination"
             @page-change="onPageChange"
-            scroll={{ x: 1600 }}
+            :scroll="{ x: 1600 }"
           >
             <template #severity="{ record }">
               <t-tag :theme="severityTheme(record.severity)" variant="light">

@@ -7535,6 +7535,7 @@ export default {
   menu: {
     sessionInProgress: '会话进行中',
     knowledgeBase: '知识库',
+    ojk: 'OJK 合规清单',
     agents: '智能体',
     artifacts: '产物',
     organizations: '共享空间',
@@ -7560,5 +7561,32 @@ export default {
     myChats: '我的对话',
     apiChats: 'API 会话',
     noSessions: '暂无对话'
-  }
+  },
+  ojk: {
+    ruleExtractor: {
+      title: '规则清单生成',
+      desc: '从 OJK 监管知识库中抽取可检验的合规要求，生成供人工复核的清单草案。',
+      createRun: '生成清单',
+      recentRuns: '最近生成',
+      noRuns: '暂无生成记录',
+      review: '复核',
+      refresh: '刷新',
+    },
+    reviewWorkflow: {
+      title: '清单复核',
+      refresh: '刷新',
+      back: '返回',
+      runId: '运行 ID',
+      version: '版本',
+      items: '条目总数',
+      flagged: '待关注',
+      createdAt: '创建时间',
+      error: '错误',
+      itemsTitle: '清单条目',
+      confirm: '确认',
+      reject: '驳回',
+      rejectTitle: '驳回条目',
+      reason: '理由',
+    },
+  },
 }

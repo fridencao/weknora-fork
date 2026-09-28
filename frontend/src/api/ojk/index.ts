@@ -1,4 +1,4 @@
-import { get, post, patch } from '@/api/utils/request'
+import { get, post, patch } from '@/utils/request'
 
 export interface OJKRun {
   run_id: string

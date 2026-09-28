@@ -19,7 +19,7 @@
             :columns="runColumns"
             rowKey="run_id"
             :pagination="false"
-            empty-text={{ $t('ojk.ruleExtractor.noRuns') }}
+            :empty-text="$t('ojk.ruleExtractor.noRuns')"
           >
             <template #status="{ record }">
               <t-tag :theme="runStatusTheme(record.status)" variant="light">

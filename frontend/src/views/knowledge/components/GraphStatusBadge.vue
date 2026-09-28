@@ -108,13 +108,13 @@ const tip = computed(() => t(`knowledgeBase.graphBadge.tip.${stateKey.value}`))
   padding: 0 6px;
   height: 20px;
   border-radius: var(--td-radius-small);
-  font-size: 11px;
+  font-size: var(--app-text-xs);
   line-height: 1;
   white-space: nowrap;
   cursor: default;
 
   .t-icon {
-    font-size: 12px;
+    font-size: var(--app-text-sm);
   }
 }
 
@@ -190,7 +190,7 @@ const tip = computed(() => t(`knowledgeBase.graphBadge.tip.${stateKey.value}`))
 
   &__msg {
     color: var(--td-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     line-height: 1.5;
     word-break: break-all;
     max-height: 140px;
@@ -199,7 +199,7 @@ const tip = computed(() => t(`knowledgeBase.graphBadge.tip.${stateKey.value}`))
 
   &__attempts {
     color: var(--td-text-color-placeholder);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
   }
 }
 </style>

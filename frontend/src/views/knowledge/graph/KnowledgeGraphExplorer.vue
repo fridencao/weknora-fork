@@ -895,9 +895,9 @@ watch(() => route.query.edge, (value) => {
     align-items: center;
     gap: 6px;
     padding: 3px 10px;
-    border: 1px solid var(--td-brand-color-4, #b5c7ff);
+    border: 1px solid var(--td-brand-color-4);
     border-radius: 6px;
-    background: var(--td-brand-color-1, #ecf2ff);
+    background: var(--td-brand-color-1);
     color: var(--td-text-color-primary);
     font-size: var(--app-text-sm, 13px);
   }

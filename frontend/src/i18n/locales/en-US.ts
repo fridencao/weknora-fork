@@ -166,6 +166,7 @@ export default {
   menu: {
     sessionInProgress: 'Conversation in progress',
     knowledgeBase: 'Knowledge Base',
+    ojk: 'OJK Compliance',
     agents: 'Agents',
     artifacts: 'Artifacts',
     organizations: 'Shared Spaces',
@@ -2380,6 +2381,15 @@ export default {
     healthOrphanSummary: 'Scanned {keys} evidence keys; {docs} dangling documents.',
   },
   graphSettings: {
+    workspaceModeLabel: "Graph workspace",
+    workspaceModeDescription: "Graph workspace policy for this KB: default = follow the system environment; isolated = dedicated graph space (physically isolated from other KBs); shared = merged into the global graph space (multi-KB merged graph, for legacy KBs). After switching, graph re-extraction must be triggered to match the new space.",
+    workspaceModeDefault: "Follow system default",
+    workspaceModeShared: "Shared global graph space",
+    workspaceModeKb: "Isolated per this KB",
+    engineHintTitle: "Parsing engine notice",
+    engineHintBody: "Only StarKB engine output writes graph contract packages; documents parsed by other engines (MinerU / anydoc / DocReader builtin etc.) never enter the graph. For stable graph-channel coverage, switch the parsing engine to the StarKB full pipeline.",
+    engineHintInconsistent: "This KB's parsing-engine rules are not all locked to StarKB — unify them under \"Parsing engine\" in the KB settings.",
+    engineHintUnsupCount: "Estimated {n} eligible documents will not be graphed (inferred engine ≠ starkb). They join after a reparse.",
     lightragTitle: 'LightRAG Knowledge Graph',
     lightragDescription: 'Knowledge-base-level LightRAG graph: documents are automatically turned into a knowledge graph after parsing and serve as the graph recall channel in retrieval and Q&A (with evidence provenance).',
     autoBuildLabel: 'Automatic graph building',
@@ -3199,6 +3209,19 @@ export default {
       }
     },
     wiki: {
+      batchIngestLabel: "Rebuild wiki pages in bulk",
+      batchIngestTip: "After a KB enables Wiki, existing parsed documents do not get wiki pages automatically. This button enqueues all enabled documents into wiki:ingest for async page generation — expect 30-90 minutes for ~14 large documents; watch progress live in the Wiki browser.",
+      batchIngestCta: "Regenerate wiki pages",
+      batchIngestPolling: "Generating, {n} documents remaining…",
+      batchIngestConfirmTitle: "Confirm bulk rebuild",
+      batchIngestConfirmBody: "Regenerate wiki pages for all parsed documents in KB \"{name}\". Existing wiki pages will be rebuilt to the latest summary; links are preserved.",
+      batchIngestConfirmHint: "New/unfinished documents are skipped automatically (not enqueued).",
+      batchIngestConfirmCost: "Duration scales with document count; medium scale (~50 docs) usually takes 30-90 minutes.",
+      batchIngestConfirmCta: "Start rebuild",
+      batchIngestNoKbId: "Save the knowledge base before rebuilding wiki pages.",
+      batchIngestSuccess: "Enqueued {queued}/{total} documents; processing.",
+      batchIngestFailed: "Bulk rebuild failed — try again later.",
+      batchIngestLastResult: "Last run: enqueued {queued} / skipped {skipped} / total {total}.",
       title: 'Wiki Settings',
       synthesisModelLabel: 'Wiki Synthesis Model',
       synthesisModelPlaceholder: 'Select the LLM model for Wiki generation',
@@ -3236,6 +3259,8 @@ export default {
       rebuildSkip: 'You can manually trigger a rebuild later from Data Sources'
     },
     wikiBrowser: {
+      entityGraphTab: "Entity graph",
+      entityGraphTabTip: "LLM-extracted entity–relation graph (standalone route page); shown only when the KB has a built graph",
       editBtn: 'Edit',
       historyBtn: 'History',
       historyTitle: 'Revision history · {title}',

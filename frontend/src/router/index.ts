@@ -149,6 +149,18 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'settings.sandbox' }
         },
         {
+          path: "ojk/rules",
+          name: "ojkRuleExtractor",
+          component: () => import("../views/ojk/RuleExtractor.vue"),
+          meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'settings.sandbox' }
+        },
+        {
+          path: "ojk/review/:id",
+          name: "ojkReviewWorkflow",
+          component: () => import("../views/ojk/ReviewWorkflow.vue"),
+          meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'settings.sandbox' }
+        },
+        {
           path: "agents",
           name: "agentList",
           component: () => import("../views/agent/AgentList.vue"),

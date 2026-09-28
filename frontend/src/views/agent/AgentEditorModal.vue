@@ -1660,7 +1660,7 @@
                打开 = 用本智能体的显式值。改造前这些字段恒为具体数值，
                后端 EnsureDefaults 又会补非 0 值，导致智能体永远覆盖、无法"继承"。 -->
           <div class="retrieval-override-hint">
-            <t-icon name="info-circle" size="14px" />
+            <t-icon name="info-circle" size="var(--app-icon-sm)" />
             <span>{{ t('agentEditor.retrieval.threeStateHint') }}</span>
           </div>
 
