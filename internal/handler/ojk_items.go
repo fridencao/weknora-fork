@@ -21,10 +21,13 @@ func NewOJKItemsHandler(svc *service.OJKService) *OJKItemsHandler {
 
 // ListItemsRequest query params for GET /api/v1/ojk/items
 type ListItemsRequest struct {
-	RunID  string `form:"run_id" binding:"required"`
-	Status *string `form:"status"`
-	Page   int    `form:"page" binding:"min=1"`
-	Size   int    `form:"page_size" binding:"min=1,max=100"`
+	RunID     string `form:"run_id" binding:"required"`
+	Status    *string `form:"status"`
+	Severity  *string `form:"severity"`
+	SortBy    *string `form:"sort_by" binding:"omitempty,oneof=severity status"`
+	SortOrder *string `form:"sort_order" binding:"omitempty,oneof=asc desc"`
+	Page      int    `form:"page" binding:"min=1"`
+	Size      int    `form:"page_size" binding:"min=1,max=100"`
 }
 
 // ListItems returns paginated checklist items.
@@ -48,7 +51,7 @@ func (h *OJKItemsHandler) ListItems(c *gin.Context) {
 		return
 	}
 
-	items, total, err := h.svc.ListItems(c.Request.Context(), tenantID, req.RunID, req.Status, req.Page, req.Size)
+	items, total, err := h.svc.ListItems(c.Request.Context(), tenantID, req.RunID, req.Status, req.Severity, req.SortBy, req.SortOrder, req.Page, req.Size)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

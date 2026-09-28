@@ -15,7 +15,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,21 +44,26 @@ type OJKRun struct {
 func (OJKRun) TableName() string { return "ojk_runs" }
 
 // OJKChecklistItem is one extracted requirement awaiting human review.
+//
+// applicable_roles / keywords 存 TEXT（PG 数组字面量 {a,b}，Scan 兼容 JSON）——
+// 不能用 text[]：pgx 把 Go string 参数绑成 text，服务器拒绝隐式转 text[]
+// （42804），曾致整版条目全部插入失败却记下 total_items 的假成功（migration 000113）。
+// requirement_id 的唯一性限定在 run 内（每个版本是同一定义的快照，跨 run 必然重复）。
 type OJKChecklistItem struct {
 	ID             string         `gorm:"primaryKey;type:text" json:"id"`
 	TenantID       uint64         `gorm:"type:integer;not null;index:idx_ojk_items_tenant_status" json:"tenant_id"`
-	RunID          string         `gorm:"type:text;not null;index:idx_ojk_items_run" json:"run_id"`
+	RunID          string         `gorm:"type:text;not null;index:idx_ojk_items_run;uniqueIndex:idx_ojk_items_run_req" json:"run_id"`
 	Regulation     string         `gorm:"type:text;not null" json:"regulation"`
 	Pasal          string         `gorm:"type:text;not null" json:"pasal"`
 	PasalText      string         `gorm:"type:text;not null" json:"pasal_text"`
 	Area           *string        `gorm:"type:text" json:"area"`
 	Requirement    string         `gorm:"type:text;not null" json:"requirement"`
-	RequirementID  *string        `gorm:"type:text;uniqueIndex" json:"requirement_id"`
+	RequirementID  *string        `gorm:"type:text;uniqueIndex:idx_ojk_items_run_req" json:"requirement_id"`
 	EvidenceType   *string        `gorm:"type:text" json:"evidence_type"`
 	CheckMethod    *string        `gorm:"type:text" json:"check_method"`
-	ApplicableRoles StrList       `gorm:"type:text[]" json:"applicable_roles"`
+	ApplicableRoles StrList       `gorm:"type:text" json:"applicable_roles"`
 	Severity       string         `gorm:"type:text;not null;default:'info'" json:"severity"`
-	Keywords       []string       `gorm:"type:text[]" json:"keywords"`
+	Keywords       StrList        `gorm:"type:text" json:"keywords"`
 	Source         string         `gorm:"type:text;not null;default:'normal'" json:"source"`
 	Flag           *string        `gorm:"column:_flag;type:text" json:"_flag"`
 	Status         string         `gorm:"type:text;not null;default:'pending'" json:"status"`
@@ -185,13 +192,18 @@ var (
 	// ErrOJKRunActive：互斥（2026-09-28 用户需求）——同一时刻只允许一个
 	// 抽取任务。并发 run 会叠加 LLM 调用并让 STAGING 卡无法如实展示。
 	ErrOJKRunActive = errors.New("another extraction run is already active")
+	// ErrOJKRunDeletingActive：进行中的版本不允许删除（先等它跑完/失败）
+	ErrOJKRunDeletingActive = errors.New("cannot delete a run that is pending or running")
+	// ErrOJKInvalidVersion：版本号重命名校验失败
+	ErrOJKInvalidVersion = errors.New("skill_version must be 1-32 characters after trimming")
 )
 
 // CreateRun 校验 KB 后落一条 pending run，并异步启动执行器
 // （重建全文 → Pasal 切片 → 分批调 LLM → 校验入库）。
+// skillVersion 留空时自动递增（2026-09-28 用户需求），不再固定 v1.0.0。
 func (s *OJKService) CreateRun(ctx context.Context, tenantID uint64, kbID, skillVersion string) (*RunStatus, error) {
 	if skillVersion == "" {
-		skillVersion = "1.0.0"
+		skillVersion = s.nextSkillVersion(ctx, tenantID)
 	}
 	var kb struct {
 		ID   string
@@ -343,6 +355,78 @@ func runToStatus(r OJKRun) RunStatus {
 	}
 }
 
+// nextSkillVersion 生成下一个版本号：取本租户历史版本里"点分数字"形态
+// （如 1.0.0 / 2.1，容忍 v 前缀）的最大值末段 +1；无可解析历史则从 1.0.0 起步。
+// 非数字形态（如重命名过的 2026.09-review）不参与递增。
+func (s *OJKService) nextSkillVersion(ctx context.Context, tenantID uint64) string {
+	var versions []string
+	if err := s.db.WithContext(ctx).Model(&OJKRun{}).
+		Where("tenant_id = ?", tenantID).
+		Distinct().Pluck("skill_version", &versions).Error; err != nil {
+		return "1.0.0"
+	}
+	var max []int
+	for _, v := range versions {
+		nums := parseVersionTuple(v)
+		if nums == nil {
+			continue
+		}
+		if versionLess(max, nums) {
+			max = nums
+		}
+	}
+	if max == nil {
+		return "1.0.0"
+	}
+	max[len(max)-1]++
+	out := make([]string, len(max))
+	for i, n := range max {
+		out[i] = strconv.Itoa(n)
+	}
+	return strings.Join(out, ".")
+}
+
+// parseVersionTuple 把 "v1.0.2" 解析成 [1,0,2]；非纯点分数字返回 nil。
+func parseVersionTuple(v string) []int {
+	parts := strings.Split(strings.TrimPrefix(strings.TrimSpace(v), "v"), ".")
+	if len(parts) == 0 || len(parts) > 4 {
+		return nil
+	}
+	nums := make([]int, 0, len(parts))
+	for _, p := range parts {
+		n, err := strconv.Atoi(strings.TrimSpace(p))
+		if err != nil || n < 0 {
+			return nil
+		}
+		nums = append(nums, n)
+	}
+	return nums
+}
+
+// versionLess 按 数值/缺段补 0 比较；a 为 nil 表示"尚无最大值"，恒小于 b。
+func versionLess(a, b []int) bool {
+	if a == nil {
+		return b != nil
+	}
+	n := len(a)
+	if len(b) > n {
+		n = len(b)
+	}
+	for i := 0; i < n; i++ {
+		av, bv := 0, 0
+		if i < len(a) {
+			av = a[i]
+		}
+		if i < len(b) {
+			bv = b[i]
+		}
+		if av != bv {
+			return av < bv
+		}
+	}
+	return false
+}
+
 // ResumeInterrupted 在进程启动时调用：上次进程中断留下的 running 标记为失败；
 // pending（含旧版无 KB 绑定的遗留行）重新驱动或显式失败。
 func (s *OJKService) ResumeInterrupted(ctx context.Context) {
@@ -391,6 +475,51 @@ func (s *OJKService) GetRun(ctx context.Context, tenantID uint64, runID string) 
 	return &st, nil
 }
 
+// DeleteRun 删除一个历史版本（run + 其全部条目，同事务）。
+// pending/running 的抽取不允许删——它还在被执行器推进，删了只会产生僵尸写入。
+func (s *OJKService) DeleteRun(ctx context.Context, tenantID uint64, runID string) error {
+	var run OJKRun
+	if err := s.db.WithContext(ctx).
+		Where("run_id = ? AND tenant_id = ?", runID, tenantID).
+		First(&run).Error; err != nil {
+		return fmt.Errorf("get ojk run: %w", err)
+	}
+	if run.Status == "pending" || run.Status == "running" {
+		return ErrOJKRunDeletingActive
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("run_id = ? AND tenant_id = ?", runID, tenantID).
+			Delete(&OJKChecklistItem{}).Error; err != nil {
+			return fmt.Errorf("delete ojk checklist items: %w", err)
+		}
+		if err := tx.Where("run_id = ? AND tenant_id = ?", runID, tenantID).
+			Delete(&OJKRun{}).Error; err != nil {
+			return fmt.Errorf("delete ojk run: %w", err)
+		}
+		return nil
+	})
+}
+
+// UpdateRunVersion 重命名一个版本的 skill_version 标签。
+// 去掉首字母 v（展示层统一补 v），并限制 1-32 字符。
+func (s *OJKService) UpdateRunVersion(ctx context.Context, tenantID uint64, runID, skillVersion string) (*RunStatus, error) {
+	skillVersion = strings.TrimSpace(skillVersion)
+	skillVersion = strings.TrimPrefix(skillVersion, "v")
+	if skillVersion == "" || len(skillVersion) > 32 {
+		return nil, ErrOJKInvalidVersion
+	}
+	res := s.db.WithContext(ctx).Model(&OJKRun{}).
+		Where("run_id = ? AND tenant_id = ?", runID, tenantID).
+		Update("skill_version", skillVersion)
+	if res.Error != nil {
+		return nil, fmt.Errorf("update ojk run version: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("get ojk run: not found")
+	}
+	return s.GetRun(ctx, tenantID, runID)
+}
+
 // UpdateRunStatus updates the status fields of a run.
 func (s *OJKService) UpdateRunStatus(ctx context.Context, runID string, updates map[string]interface{}) error {
 	if err := s.db.WithContext(ctx).Model(&OJKRun{}).
@@ -425,7 +554,7 @@ type ItemStatus struct {
 }
 
 // ListItems returns paginated checklist items for a run.
-func (s *OJKService) ListItems(ctx context.Context, tenantID uint64, runID string, status *string, page, pageSize int) ([]ItemStatus, int64, error) {
+func (s *OJKService) ListItems(ctx context.Context, tenantID uint64, runID string, status *string, severity *string, sortBy *string, sortOrder *string, page, pageSize int) ([]ItemStatus, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -438,6 +567,25 @@ func (s *OJKService) ListItems(ctx context.Context, tenantID uint64, runID strin
 	if status != nil && *status != "" {
 		query = query.Where("status = ?", *status)
 	}
+	if severity != nil && *severity != "" {
+		query = query.Where("severity = ?", *severity)
+	}
+	// 排序：severity/status 按业务等级（critical > clarification > info、
+	// pending > confirmed > rejected），sort_by 白名单之外的值不排序
+	if sortBy != nil && (*sortBy == "severity" || *sortBy == "status") {
+		order := "ASC"
+		if sortOrder != nil && *sortOrder == "desc" {
+			order = "DESC"
+		}
+		if *sortBy == "severity" {
+			query = query.Order(
+				"CASE severity WHEN 'critical' THEN 0 WHEN 'clarification' THEN 1 ELSE 2 END " + order)
+		} else {
+			query = query.Order(
+				"CASE status WHEN 'pending' THEN 0 WHEN 'confirmed' THEN 1 ELSE 2 END " + order)
+		}
+	}
+	query = query.Order("created_at ASC") // 稳定次序兜底
 
 	var total int64
 	if err := query.Model(&OJKChecklistItem{}).Count(&total).Error; err != nil {
@@ -467,7 +615,7 @@ func (s *OJKService) ListItems(ctx context.Context, tenantID uint64, runID strin
 			CheckMethod:     stringPtr(it.CheckMethod),
 			ApplicableRoles: it.ApplicableRoles,
 			Severity:        it.Severity,
-			Keywords:        it.Keywords,
+			Keywords:        []string(it.Keywords),
 			Source:          it.Source,
 			Flag:            stringPtr(it.Flag),
 			Status:          it.Status,
@@ -555,8 +703,22 @@ STRICT RULES:
   (pasal_text) verbatim.
 - R4: If a Pasal contains multiple distinct testable requirements,
   split them into separate ChecklistItems, each citing the same Pasal.
-- R5: If a Pasal is procedural/administrative (not a testable
-  requirement on a candidate), skip it.
+- R5: ONLY extract requirements whose obligation falls on the
+  CANDIDATE (the person being assessed: Direktur, Komisaris,
+  Direktur Utama, Pemegang Saham Pengendali, Pejabat Puncak) or that
+  can be verified from documents the candidate personally submits
+  (appointment letters, certificates, financial statements,
+  compliance statements).
+  SKIP entirely:
+  * obligations on the BANK as an institution ("Bank wajib ...",
+    "Bank harus ...") — IT governance, reporting procedures,
+    internal committees, infrastructure requirements;
+  * procedural/administrative clauses addressed to the bank's
+    organs as bodies (Dewan Komisaris charter contents, committee
+    meeting rules, report delivery addresses);
+  * penalty and sanction mechanics between OJK and the Bank.
+  These are institutional duties: no candidate material can ever
+  prove them, so they MUST NOT become ChecklistItems.
 - R6: Classify compliance area strictly as one of:
   "Integrity" | "Financial Reputation" | "Competence" |
   "Structure" | "Completeness"
@@ -572,6 +734,24 @@ STRICT RULES:
   If applies to all, use ["*"].
 - R11: keywords — extract 2-5 distinctive terms from regulation text.
 - R12: Output ONLY valid JSON conforming to the schema. No markdown fences.
+
+OUTPUT SCHEMA — a JSON array of ChecklistItem objects, each with EXACTLY
+these keys:
+  "pasal"             string, REQUIRED, MUST be non-empty: the exact Pasal
+                      reference the requirement comes from (e.g.
+                      "Pasal 5 ayat (2)"). Copy it from the section header
+                      shown in PASAL SECTIONS. NEVER null, never "".
+  "pasal_text"        string: verbatim key phrase from that Pasal.
+  "area"              "Integrity" | "Financial Reputation" | "Competence"
+                      | "Structure" | "Completeness" — always fill one.
+  "requirement"       string: one testable requirement.
+  "severity"          "critical" | "clarification" | "info"
+  "check_method"      "document_presence" | "cross_document" | "rule_computation"
+  "evidence_type"     string: concrete document or data source name.
+  "applicable_roles"  array of strings (see R10).
+  "keywords"          array of 2-5 strings.
+An object missing "pasal" or leaving it empty is INVALID — omit it
+instead of emitting it.
 
 If a Pasal yields zero requirements, omit it silently.`
 
@@ -656,8 +836,13 @@ func (s *OJKService) processRun(runID string, tenantID uint64, kbID, kbName stri
 	}
 
 	type ojkItem = map[string]interface{}
-	var allItems []ojkItem
-	var allFlags []string
+	// flags 必须逐条随身携带：此前用全局 allFlags 收集再拼成一条长串盖到
+	// 每一行，导致所有条目的 Flag 都是全 run 校验告警的重复拼接。
+	type ojkExtracted struct {
+		item  ojkItem
+		flags []string
+	}
+	var allItems []ojkExtracted
 	skippedBatches := 0
 	for i, batch := range batches {
 		var pasals strings.Builder
@@ -707,8 +892,7 @@ func (s *OJKService) processRun(runID string, tenantID uint64, kbID, kbName stri
 		}
 		for _, item := range items {
 			v, flags := validateOJKItem(item, refs)
-			allItems = append(allItems, v)
-			allFlags = append(allFlags, flags...)
+			allItems = append(allItems, ojkExtracted{item: v, flags: flags})
 		}
 		done := i + 1
 		s.db.Model(&OJKRun{}).Where("run_id = ?", runID).
@@ -717,114 +901,169 @@ func (s *OJKService) processRun(runID string, tenantID uint64, kbID, kbName stri
 
 	// 去重（requirement_id）
 	seen := map[string]bool{}
-	var deduped []ojkItem
-	for _, item := range allItems {
-		rid, _ := item["requirement_id"].(string)
+	var deduped []ojkExtracted
+	for _, it := range allItems {
+		rid, _ := it.item["requirement_id"].(string)
 		if rid != "" && seen[rid] {
 			continue
 		}
 		if rid != "" {
 			seen[rid] = true
 		}
-		deduped = append(deduped, item)
+		deduped = append(deduped, it)
 	}
 
-	now := time.Now()
-	for idx, item := range deduped {
-		itemID := fmt.Sprintf("c-%s-%04d", runID, idx+1)
-		reg, _ := item["regulation"].(string)
-		pasal, _ := item["pasal"].(string)
-		pasalText, _ := item["pasal_text"].(string)
-		area, _ := item["area"].(string)
-		requirement, _ := item["requirement"].(string)
-		reqID, _ := item["requirement_id"].(string)
-		evidence, _ := item["evidence_type"].(string)
-		checkMethod, _ := item["check_method"].(string)
-		severity, _ := item["severity"].(string)
-		if severity == "" {
-			severity = "info"
-		}
-		source := "normal"
-		if strings.Contains(pasal, "Penjelasan") {
-			source = "penjelasan"
-		}
-		roles, _ := item["applicable_roles"].([]interface{})
-		roleStrings := StrList{}
-		for _, r := range roles {
-			if rs, ok := r.(string); ok {
-				roleStrings = append(roleStrings, rs)
+	// R2 强制：引用不出 Pasal 的条目不落库（与 run.py 契约一致——
+	// "If you cannot cite a Pasal, do not create the item"）。
+	// 此前空 pasal 条目照收，导致 512/529 条无法溯源。
+	droppedNoPasal := 0
+	persistedCount := 0
+	persistedFlagged := 0
+	if err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		persisted := 0
+		for _, it := range deduped {
+			item := it.item
+			pasal0, _ := item["pasal"].(string)
+			if strings.TrimSpace(pasal0) == "" {
+				droppedNoPasal++
+				continue
 			}
-		}
-		keywords, _ := item["keywords"].([]interface{})
-		kwStrings := StrList{}
-		for _, k := range keywords {
-			if ks, ok := k.(string); ok {
-				kwStrings = append(kwStrings, ks)
+			persisted++
+			itemID := fmt.Sprintf("c-%s-%04d", runID, persisted)
+			pasal := pasal0
+			reg, _ := item["regulation"].(string)
+			pasalText, _ := item["pasal_text"].(string)
+			area, _ := item["area"].(string)
+			requirement, _ := item["requirement"].(string)
+			reqID, _ := item["requirement_id"].(string)
+			evidence, _ := item["evidence_type"].(string)
+			checkMethod, _ := item["check_method"].(string)
+			severity, _ := item["severity"].(string)
+			if severity == "" {
+				severity = "info"
 			}
+			source := "normal"
+			if strings.Contains(pasal, "Penjelasan") {
+				source = "penjelasan"
+			}
+			roles, _ := item["applicable_roles"].([]interface{})
+			roleStrings := StrList{}
+			for _, r := range roles {
+				if rs, ok := r.(string); ok {
+					roleStrings = append(roleStrings, rs)
+				}
+			}
+			keywords, _ := item["keywords"].([]interface{})
+			kwStrings := StrList{}
+			for _, k := range keywords {
+				if ks, ok := k.(string); ok {
+					kwStrings = append(kwStrings, ks)
+				}
+			}
+			var flag *string
+			if len(it.flags) > 0 {
+				f := strings.Join(it.flags, "; ")
+				flag = &f
+			}
+			row := OJKChecklistItem{
+				ID: itemID, TenantID: tenantID, RunID: runID,
+				Regulation: reg, Pasal: pasal, PasalText: pasalText,
+				Requirement: requirement, Severity: severity,
+				ApplicableRoles: roleStrings, Keywords: kwStrings,
+				Source: source, Status: "pending", Flag: flag,
+			}
+			if area != "" {
+				row.Area = &area
+			}
+			if reqID != "" {
+				row.RequirementID = &reqID
+			}
+			if evidence != "" {
+				row.EvidenceType = &evidence
+			}
+			if checkMethod != "" {
+				row.CheckMethod = &checkMethod
+			}
+			if err := tx.Create(&row).Error; err != nil {
+				return fmt.Errorf("persist checklist item %s: %w", itemID, err)
+			}
+			if len(it.flags) > 0 {
+				persistedFlagged++
+			}
+			_ = pasalText
 		}
-		var flag *string
-		if len(allFlags) > 0 {
-			f := strings.Join(allFlags, "; ")
-			flag = &f
-		}
-		row := OJKChecklistItem{
-			ID: itemID, TenantID: tenantID, RunID: runID,
-			Regulation: reg, Pasal: pasal, PasalText: pasalText,
-			Requirement: requirement, Severity: severity,
-			ApplicableRoles: roleStrings, Keywords: kwStrings,
-			Source: source, Status: "pending", Flag: flag,
-		}
-		if area != "" {
-			row.Area = &area
-		}
-		if reqID != "" {
-			row.RequirementID = &reqID
-		}
-		if evidence != "" {
-			row.EvidenceType = &evidence
-		}
-		if checkMethod != "" {
-			row.CheckMethod = &checkMethod
-		}
-		if err := s.db.Create(&row).Error; err != nil {
-			// 幂等：同 id 冲突跳过（重跑同 run 时）
-			s.db.Exec(
-				"INSERT INTO ojk_checklist_items (id,tenant_id,run_id,created_at,updated_at) "+
-					"VALUES (?,?,?,?,?) ON CONFLICT (id) DO NOTHING",
-				itemID, tenantID, runID, now, now)
-		}
-		_ = pasalText
+		persistedCount = persisted
+		return nil
+	}); err != nil {
+		fail("persist checklist items: %v", err)
+		return
 	}
 
 	finalStatus := "done"
 	finalErr := ""
+	notes := []string{}
 	if skippedBatches > 0 {
-		finalErr = fmt.Sprintf("%d/%d batches skipped (invalid LLM output)", skippedBatches, total)
+		notes = append(notes, fmt.Sprintf("%d/%d batches skipped (invalid LLM output)", skippedBatches, total))
 	}
+	if droppedNoPasal > 0 {
+		notes = append(notes, fmt.Sprintf("%d items dropped without Pasal anchor (R2)", droppedNoPasal))
+	}
+	finalErr = strings.Join(notes, "; ")
+	// flagged_items 统计"带告警的落库条数"而非告警总次数
 	s.db.Model(&OJKRun{}).Where("run_id = ?", runID).
 		Updates(map[string]interface{}{
 			"status":        finalStatus,
-			"total_items":   len(deduped),
-			"flagged_items": len(allFlags),
+			"total_items":   persistedCount,
+			"flagged_items": persistedFlagged,
 			"slices_done":   total,
 			"error":         finalErr,
 		})
+}
+
+// ojkDocFilter 返回法规文档标题的关键词白名单（不区分大小写子串匹配）。
+// 默认只抽 Fit & Proper 核心法规（POJK 27/2016 FitProper + SEOJK 39/2016 FPT）：
+// 全量抽取会把与候选人无关的银行机构义务条款（POJK 11/2022 IT 治理等）带进来，
+// 这类条款无法用申请人材料核验。OJK_DOC_FILTER=- 关闭过滤；逗号分隔自定义关键词。
+func ojkDocFilter() []string {
+	v := os.Getenv("OJK_DOC_FILTER")
+	if v == "-" {
+		return nil
+	}
+	if v == "" {
+		v = "FitProper,FPT"
+	}
+	return strings.Split(v, ",")
 }
 
 // loadRegulationText 从 chunks 重建法规全文（与 run.py 同口径：冲突检测 + 按
 // start_at 拼接；过滤 sbk_method=failed 与已删除 chunk）。
 func (s *OJKService) loadRegulationTextFromDB(ctx context.Context, tenantID uint64, kbID string) (string, error) {
 	var rows []struct {
-		Content string
-		StartAt int64
-		EndAt   int64
+		Content   string
+		StartAt   int64
+		EndAt     int64
+		DocTitle  string
 	}
 	if err := s.db.WithContext(ctx).Raw(
-		"SELECT content, start_at, end_at FROM chunks "+
-			"WHERE knowledge_base_id = ? AND tenant_id = ? AND deleted_at IS NULL "+
-			"AND coalesce(metadata->>'sbk_method','') != 'failed' "+
-			"ORDER BY start_at", kbID, tenantID).Scan(&rows).Error; err != nil {
+		"SELECT c.content, c.start_at, c.end_at, k.title AS doc_title "+
+			"FROM chunks c LEFT JOIN knowledges k ON k.id = c.knowledge_id "+
+			"WHERE c.knowledge_base_id = ? AND c.tenant_id = ? AND c.deleted_at IS NULL "+
+			"AND coalesce(c.metadata->>'sbk_method','') != 'failed' "+
+			"ORDER BY c.start_at", kbID, tenantID).Scan(&rows).Error; err != nil {
 		return "", err
+	}
+	if kw := ojkDocFilter(); len(kw) > 0 {
+		filtered := rows[:0]
+		for _, r := range rows {
+			title := strings.ToLower(r.DocTitle)
+			for _, k := range kw {
+				if k != "" && strings.Contains(title, strings.ToLower(k)) {
+					filtered = append(filtered, r)
+					break
+				}
+			}
+		}
+		rows = filtered
 	}
 	if len(rows) == 0 {
 		return "", nil
@@ -939,6 +1178,9 @@ func batchSlices(slices []OJKSlice, maxChars int) [][]OJKSlice {
 func validateOJKItem(item map[string]interface{}, allRefs map[string]bool) (map[string]interface{}, []string) {
 	var flags []string
 	str := func(k string) string { v, _ := item[k].(string); return v }
+	if str("area") == "" {
+		flags = append(flags, "area_missing")
+	}
 	if a := str("area"); a != "" && !map[string]bool{
 		"Integrity": true, "Financial Reputation": true, "Competence": true,
 		"Structure": true, "Completeness": true,
@@ -956,7 +1198,18 @@ func validateOJKItem(item map[string]interface{}, allRefs map[string]bool) (map[
 		flags = append(flags, "invalid_check_method")
 	}
 	if pasal := str("pasal"); pasal != "" && !allRefs[pasal] {
-		flags = append(flags, "pasal_unverified")
+		// 前缀归一：LLM 常返回比切片锚点更细的引用（"Pasal 19 ayat (2) huruf c"
+		// vs 切片 ref "Pasal 19"）——前缀命中即视为已验证，避免误报
+		verified := false
+		for ref := range allRefs {
+			if ref != "" && strings.HasPrefix(pasal, ref) {
+				verified = true
+				break
+			}
+		}
+		if !verified {
+			flags = append(flags, "pasal_unverified")
+		}
 	}
 	roles, _ := item["applicable_roles"].([]interface{})
 	if len(roles) == 0 {
@@ -1075,4 +1328,9 @@ func (s *OJKService) EnsureTables(db *gorm.DB) error {
 		fmt.Printf("[ojk] automigrate warn (tables managed by migration 000112): %v\n", err)
 	}
 	return nil
+}
+
+// NextSkillVersion 导出给 handler/测试用的下一个版本号推导。
+func (s *OJKService) NextSkillVersion(ctx context.Context, tenantID uint64) (string, error) {
+	return s.nextSkillVersion(ctx, tenantID), nil
 }

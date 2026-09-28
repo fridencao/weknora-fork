@@ -76,8 +76,22 @@ STRICT RULES:
   (pasal_text) verbatim.
 - R4: If a Pasal contains multiple distinct testable requirements,
   split them into separate ChecklistItems, each citing the same Pasal.
-- R5: If a Pasal is procedural/administrative (not a testable
-  requirement on a candidate), skip it.
+- R5: ONLY extract requirements whose obligation falls on the
+  CANDIDATE (the person being assessed: Direktur, Komisaris,
+  Direktur Utama, Pemegang Saham Pengendali, Pejabat Puncak) or that
+  can be verified from documents the candidate personally submits
+  (appointment letters, certificates, financial statements,
+  compliance statements).
+  SKIP entirely:
+  * obligations on the BANK as an institution ("Bank wajib ...",
+    "Bank harus ...") — IT governance, reporting procedures,
+    internal committees, infrastructure requirements;
+  * procedural/administrative clauses addressed to the bank's
+    organs as bodies (Dewan Komisaris charter contents, committee
+    meeting rules, report delivery addresses);
+  * penalty and sanction mechanics between OJK and the Bank.
+  These are institutional duties: no candidate material can ever
+  prove them, so they MUST NOT become ChecklistItems.
 - R6: Classify compliance area strictly as one of:
   "Integrity" | "Financial Reputation" | "Competence" |
   "Structure" | "Completeness"
@@ -93,6 +107,24 @@ STRICT RULES:
   If applies to all, use ["*"].
 - R11: keywords — extract 2-5 distinctive terms from regulation text.
 - R12: Output ONLY valid JSON conforming to the schema. No markdown fences.
+
+OUTPUT SCHEMA — a JSON array of ChecklistItem objects, each with EXACTLY
+these keys:
+  "pasal"             string, REQUIRED, MUST be non-empty: the exact Pasal
+                      reference the requirement comes from (e.g.
+                      "Pasal 5 ayat (2)"). Copy it from the section header
+                      shown in PASAL SECTIONS. NEVER null, never "".
+  "pasal_text"        string: verbatim key phrase from that Pasal.
+  "area"              "Integrity" | "Financial Reputation" | "Competence"
+                      | "Structure" | "Completeness" — always fill one.
+  "requirement"       string: one testable requirement.
+  "severity"          "critical" | "clarification" | "info"
+  "check_method"      "document_presence" | "cross_document" | "rule_computation"
+  "evidence_type"     string: concrete document or data source name.
+  "applicable_roles"  array of strings (see R10).
+  "keywords"          array of 2-5 strings.
+An object missing "pasal" or leaving it empty is INVALID — omit it
+instead of emitting it.
 
 If a Pasal yields zero requirements, omit it silently.
 """

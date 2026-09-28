@@ -151,12 +151,18 @@ func TestOJKValidateItem(t *testing.T) {
 		"check_method": "document_presence",
 	}
 	got, flags := service.ValidateOJKItem(item, refs)
-	assert.Empty(t, flags)
+	// area 缺失现在会打 area_missing（校验收紧：R6 五分类必须有归属）
+	assert.ElementsMatch(t, []string{"area_missing"}, flags)
 	assert.Equal(t, []interface{}{"*"}, got["applicable_roles"], "roles 兜底 *")
 
 	bad := map[string]interface{}{"pasal": "Pasal 99", "severity": "nope", "area": "??", "check_method": "??"}
 	_, flags = service.ValidateOJKItem(bad, refs)
 	assert.ElementsMatch(t, []string{"invalid_area", "invalid_severity", "invalid_check_method", "pasal_unverified"}, flags)
+
+	// 前缀归一：LLM 细化引用（Pasal 2 ayat (1)）相对切片 ref（Pasal 2）不误报
+	prefixed := map[string]interface{}{"pasal": "Pasal 2 ayat (1)", "severity": "critical", "area": "Integrity", "check_method": "document_presence"}
+	_, flags = service.ValidateOJKItem(prefixed, refs)
+	assert.Empty(t, flags)
 }
 
 func TestOJKCreateRunValidatesKB(t *testing.T) {
@@ -267,7 +273,7 @@ func TestOJKExecutorEndToEnd(t *testing.T) {
 	assert.Equal(t, 1, st.TotalItems)
 	assert.Equal(t, 1, batchCount)
 
-	items, total, err := svc.ListItems(context.Background(), 10011, st.RunID, nil, 1, 20)
+	items, total, err := svc.ListItems(context.Background(), 10011, st.RunID, nil, nil, nil, nil, 1, 20)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
 	assert.Equal(t, "Pasal 1", items[0].Pasal)

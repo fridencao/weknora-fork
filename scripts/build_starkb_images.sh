@@ -38,13 +38,14 @@ prefetch nginx:1.30.3-alpine 0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399
 
 echo "== 2/3 构建 app（Go 后端）=="
 eval "$(./scripts/get_version.sh env)"
+# apt 源默认阿里云：http 直连；腾讯源现对 http 302 跳 https，runtime 装证书前必握手失败
 docker build \
   --build-arg VERSION_ARG="$VERSION" \
   --build-arg COMMIT_ID_ARG="$COMMIT_ID" \
   --build-arg BUILD_TIME_ARG="$BUILD_TIME" \
   --build-arg GO_VERSION_ARG="$GO_VERSION" \
   --build-arg GOPROXY_ARG="https://goproxy.cn,direct" \
-  --build-arg APK_MIRROR_ARG="${APK_MIRROR_ARG:-mirrors.tencent.com}" \
+  --build-arg APK_MIRROR_ARG="${APK_MIRROR_ARG:-mirrors.aliyun.com}" \
   --build-arg PIP_INDEX_ARG="${PIP_INDEX_ARG:-https://pypi.tuna.tsinghua.edu.cn/simple}" \
   --build-arg WITH_ANYDOC="${WITH_ANYDOC:-0}" \
   --build-arg WITH_BROWSERSKILL="${WITH_BROWSERSKILL:-0}" \

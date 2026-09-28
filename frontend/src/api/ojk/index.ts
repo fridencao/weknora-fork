@@ -1,4 +1,4 @@
-import { get, post, patch } from '@/utils/request'
+import { get, post, patch, del } from '@/utils/request'
 
 export interface OJKRun {
   run_id: string
@@ -50,8 +50,11 @@ export interface OJKItemListResponse {
   page_size: number
 }
 
-export function createOJKRun(kbId: string, skillVersion = '1.0.0'): Promise<OJKRun> {
-  return post<OJKRun>('/api/v1/ojk/runs', { kb_id: kbId, skill_version: skillVersion })
+// skillVersion 不传时由后端自动递增（取历史最大点分数字版本末段 +1）
+export function createOJKRun(kbId: string, skillVersion?: string): Promise<OJKRun> {
+  const body: Record<string, string> = { kb_id: kbId }
+  if (skillVersion) body.skill_version = skillVersion
+  return post<OJKRun>('/api/v1/ojk/runs', body)
 }
 
 export function listOJKRuns(limit = 20): Promise<{ runs: OJKRun[]; total: number }> {
@@ -79,9 +82,30 @@ export function getOJKRun(runId: string): Promise<OJKRun> {
   return get<OJKRun>(`/api/v1/ojk/runs/${runId}`)
 }
 
-export function listOJKItems(runId: string, status?: string, page = 1, pageSize = 20): Promise<OJKItemListResponse> {
+export function renameOJKRun(runId: string, skillVersion: string): Promise<OJKRun> {
+  return patch<OJKRun>(`/api/v1/ojk/runs/${runId}`, { skill_version: skillVersion })
+}
+
+export function deleteOJKRun(runId: string): Promise<{ deleted: string }> {
+  return del<{ deleted: string }>(`/api/v1/ojk/runs/${runId}`)
+}
+
+export function listOJKItems(
+  runId: string,
+  status?: string,
+  page = 1,
+  pageSize = 20,
+  severity?: string,
+  sortBy?: string,
+  sortOrder?: string,
+): Promise<OJKItemListResponse> {
   const params = new URLSearchParams({ run_id: runId, page: String(page), page_size: String(pageSize) })
   if (status) params.append('status', status)
+  if (severity) params.append('severity', severity)
+  if (sortBy) {
+    params.append('sort_by', sortBy)
+    params.append('sort_order', sortOrder || 'asc')
+  }
   return get<OJKItemListResponse>(`/api/v1/ojk/items?${params}`)
 }
 

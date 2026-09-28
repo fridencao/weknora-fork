@@ -20,6 +20,9 @@ func RegisterOJKRoutes(r *gin.RouterGroup, runH *handler.OJKRunHandler, itemsH *
 	ojk.GET("/preflight", g.Viewer(), runH.Preflight)
 	ojk.GET("/runs/:run_id", g.Viewer(), runH.GetRun)
 	ojk.GET("/runs/:run_id/stats", g.Viewer(), itemsH.ItemStats)
+	// 版本治理：重命名 / 删除历史版本（2026-09-28 用户需求）
+	ojk.PATCH("/runs/:run_id", g.Admin(), runH.UpdateRun)
+	ojk.DELETE("/runs/:run_id", g.Admin(), runH.DeleteRun)
 
 	// Checklist items (review workflow)
 	ojk.GET("/items", g.Viewer(), itemsH.ListItems)

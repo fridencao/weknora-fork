@@ -3,23 +3,28 @@
     <!-- 四阶段 Tab 导航（原型样式：编号圆点 + 选中态下划线） -->
     <nav class="stage-tabs">
       <div class="stage-crumb">StarKB / {{ $t('menu.ojk') }}</div>
-      <div class="stage-tab active">
+      <div class="stage-tab" :class="{ active: activeStage === 1 }" @click="activeStage = 1">
         <span class="stage-num">1</span>{{ $t('ojk.stage1.stageKb') }}
       </div>
-      <div class="stage-tab todo" @click="stageTodo">
+      <div class="stage-tab" :class="{ active: activeStage === 2 }" @click="activeStage = 2">
         <span class="stage-num">2</span>{{ $t('ojk.stage1.stageMaterial') }}
       </div>
-      <div class="stage-tab todo" @click="stageTodo">
+      <div class="stage-tab" :class="{ active: activeStage === 3 }" @click="activeStage = 3">
         <span class="stage-num">3</span>{{ $t('ojk.stage1.stageAiCheck') }}
       </div>
-      <div class="stage-tab" :class="{ disabled: !currentDoneRun }" @click="goReview(currentDoneRun?.run_id)">
+      <div
+        class="stage-tab"
+        :class="{ active: activeStage === 4, disabled: !currentDoneRun }"
+        @click="currentDoneRun && (activeStage = 4)"
+      >
         <span class="stage-num">4</span>{{ $t('ojk.stage1.stageWorkbench') }}
       </div>
-      <div class="stage-tab todo" @click="stageTodo">
+      <div class="stage-tab" :class="{ active: activeStage === 5, disabled: !currentDoneRun }" @click="currentDoneRun && (activeStage = 5)">
         <span class="stage-num">5</span>{{ $t('ojk.stage1.stageReport') }}
       </div>
     </nav>
 
+    <template v-if="activeStage === 1">
     <!-- 零幻觉协议 -->
     <t-card :bordered="false" class="block zhp">
       <div class="zhp-row">
@@ -80,7 +85,7 @@
         </t-tooltip>
       </template>
       <t-loading :loading="runsLoading">
-        <t-row :gutter="16">
+        <t-row :gutter="16" class="ver-row">
           <!-- CURRENT -->
           <t-col :span="6">
             <div class="ver-card ver-card--current" :class="{ selected: viewRunId === currentDoneRun?.run_id }" @click="viewRunId = currentDoneRun?.run_id">
@@ -91,7 +96,7 @@
               </div>
               <template v-if="currentDoneRun">
                 <div class="ver-body">{{ $t('ojk.stage1.currentBody', { items: currentDoneRun.total_items, flagged: currentDoneRun.flagged_items }) }}</div>
-                <div class="ver-dims">
+                <div v-if="dimSummary.length" class="ver-dims">
                   <span v-for="d in dimSummary" :key="d.area" class="dim-chip">
                     {{ d.area }} · {{ d.count }}
                   </span>
@@ -134,7 +139,7 @@
             </div>
           </t-col>
         </t-row>
-        <div v-if="doneRunsHistory.length > 1" class="ver-history">
+        <div v-if="doneRunsHistory.length" class="ver-history">
           <span class="ver-history-title">{{ $t('ojk.stage1.versionHistory') }}</span>
           <t-tag
             v-for="r in doneRunsHistory"
@@ -145,8 +150,12 @@
             class="ver-history-chip"
             @click="viewRunId = r.run_id"
           >
-            v{{ r.skill_version }} · {{ formatTime(r.updated_at) }} · {{ r.total_items }}
+            v{{ r.skill_version }}
           </t-tag>
+          <t-button size="small" variant="text" theme="default" class="ver-history-manage" @click="manageVisible = true">
+            <template #icon><t-icon name="setting" /></template>
+            {{ $t('ojk.stage1.manageVersions') }}
+          </t-button>
         </div>
       </t-loading>
     </t-card>
@@ -157,6 +166,15 @@
         <div class="store-title">
           <t-icon name="view-list" />
           <span>{{ $t('ojk.stage1.detailTitle') }}</span>
+          <t-tag v-if="viewedRun" theme="primary" variant="light" size="small">
+            v{{ viewedRun.skill_version }} · {{ formatTime(viewedRun.updated_at) }} · {{ $t('ojk.stage1.itemCountN', { n: viewedRun.total_items }) }}
+          </t-tag>
+          <t-tag
+            v-if="viewedRun && currentDoneRun && viewedRun.run_id !== currentDoneRun.run_id"
+            theme="warning" variant="light" size="small"
+          >
+            {{ $t('ojk.stage1.viewingHistory') }}
+          </t-tag>
         </div>
       </template>
       <template #actions>
@@ -168,29 +186,32 @@
         </t-space>
       </template>
       <t-loading :loading="itemsLoading">
+        <!-- data 传全量：排序/筛选要作用整个版本，分页由 TDesign 内部切片 -->
         <t-table
-          :data="pagedItems"
+          :data="filteredItems"
           :columns="itemColumns"
           row-key="id"
           :pagination="itemPagination"
           @page-change="onItemPage"
+          @filter-change="onItemFilterChange"
+          @sort-change="onItemSortChange"
         >
-          <template #dim="{ record }">
-            <t-tag v-if="record.area" theme="primary" variant="light" size="small">{{ record.area }}</t-tag>
+          <template #dim="{ row }">
+            <t-tag v-if="row.area" theme="primary" variant="light" size="small">{{ row.area }}</t-tag>
             <span v-else>-</span>
           </template>
-          <template #severity="{ record }">
-            <t-tag :theme="record.severity === 'critical' ? 'danger' : (record.severity === 'clarification' ? 'warning' : 'default')" variant="light" size="small">
-              {{ record.severity }}
+          <template #severity="{ row }">
+            <t-tag :theme="row.severity === 'critical' ? 'danger' : (row.severity === 'clarification' ? 'warning' : 'default')" variant="light" size="small">
+              {{ row.severity }}
             </t-tag>
           </template>
-          <template #status="{ record }">
-            <t-tag :theme="itemStatusTheme(record.status)" variant="light" size="small">
-              {{ itemStatusLabel(record.status) }}
+          <template #status="{ row }">
+            <t-tag :theme="itemStatusTheme(row.status)" variant="light" size="small">
+              {{ itemStatusLabel(row.status) }}
             </t-tag>
           </template>
-          <template #action="{ record }">
-            <t-button size="small" theme="default" variant="text" @click="goReview(record.run_id)">
+          <template #action="{ row }">
+            <t-button size="small" theme="default" variant="text" @click="goReview(row.run_id)">
               {{ $t('ojk.stage1.actionReview') }}
             </t-button>
           </template>
@@ -234,22 +255,128 @@
         <t-alert v-if="!regulationKbs.length" theme="warning" :message="$t('ojk.wizard.noRegulationKb')" />
       </t-form>
     </t-dialog>
+
+    <!-- 版本管理对话框：浏览 / 评审 / 重命名 / 删除 -->
+    <t-dialog
+      v-model:visible="manageVisible"
+      :header="$t('ojk.stage1.manageTitle')"
+      :footer="false"
+      width="760px"
+    >
+      <t-table :data="doneRunsHistory" :columns="manageColumns" row-key="run_id" size="medium">
+        <template #mVersion="{ row }">
+          <t-space size="small">
+            <t-tag v-if="row.run_id === currentDoneRun?.run_id" theme="primary" variant="light" size="small">
+              {{ $t('ojk.stage1.currentProd') }}
+            </t-tag>
+            <span>v{{ row.skill_version }}</span>
+          </t-space>
+        </template>
+        <template #mTime="{ row }">{{ formatTime(row.updated_at) }}</template>
+        <template #mOp="{ row }">
+          <t-space size="small">
+            <t-link theme="primary" @click="viewRunId = row.run_id; manageVisible = false">
+              {{ $t('ojk.stage1.opBrowse') }}
+            </t-link>
+            <t-link theme="default" @click="manageVisible = false; goReview(row.run_id)">{{ $t('ojk.stage1.opReview') }}</t-link>
+            <t-link theme="warning" @click="openRename(row)">{{ $t('ojk.stage1.opRename') }}</t-link>
+            <t-link
+              v-if="row.status === 'running' || row.status === 'pending'"
+              theme="danger" :disabled="true"
+            >
+              {{ $t('ojk.stage1.opDelete') }}
+            </t-link>
+            <t-popconfirm
+              v-else
+              :content="$t('ojk.stage1.deleteConfirm', { items: row.total_items })"
+              @confirm="removeRun(row)"
+            >
+              <t-link theme="danger">{{ $t('ojk.stage1.opDelete') }}</t-link>
+            </t-popconfirm>
+          </t-space>
+        </template>
+      </t-table>
+    </t-dialog>
+
+    <!-- 重命名版本对话框 -->
+    <t-dialog
+      v-model:visible="renameVisible"
+      :header="$t('ojk.stage1.renameTitle')"
+      :confirm-btn="{ content: $t('ojk.stage1.renameConfirm'), loading: renaming }"
+      @confirm="submitRename"
+    >
+      <t-form layout="vertical">
+        <t-form-item :label="$t('ojk.stage1.renameLabel')">
+          <t-input v-model="renameValue" :placeholder="$t('ojk.stage1.renamePlaceholder')" maxlength="32" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+
+    </template>
+
+    <!-- 阶段 2：材料摄入与规则配置 -->
+    <MaterialStage
+      v-else-if="activeStage === 2"
+      :kb-name="regKbMeta?.kb_name ?? '—'"
+      :sections="regKbMeta?.pasal_sections ?? 0"
+      :docs="regKbMeta?.docs ?? 0"
+      :titles="regKbMeta?.titles ?? []"
+      @prev="activeStage = 1"
+    />
+
+    <!-- 阶段 3：智能核验调度与候选人比对中心 -->
+    <VerificationStage
+      v-else-if="activeStage === 3"
+      @open-review="openWorkbench"
+    />
+
+    <!-- 阶段 4：审查工作台与溯源（分组清单 + Pasal 原文对照 + 裁定） -->
+    <WorkbenchStage
+      v-else-if="activeStage === 4 && currentDoneRun"
+      :run-id="currentDoneRun.run_id"
+    />
+
+    <!-- 阶段 5：成果交付与双人复核 -->
+    <DeliverableStage
+      v-else-if="activeStage === 5 && currentDoneRun"
+      :run-id="currentDoneRun.run_id"
+    />
+    <!-- 溯源审核右侧滑窗 -->
+    <ReviewDrawer
+      v-model:visible="reviewVisible"
+      :run-id="reviewRunId"
+      @close="onReviewClosed"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { listKnowledgeBases } from '@/api/knowledge-base'
+import ReviewDrawer from '@/views/ojk/ReviewDrawer.vue'
+import MaterialStage from '@/views/ojk/MaterialStage.vue'
+import VerificationStage from '@/views/ojk/VerificationStage.vue'
+import WorkbenchStage from '@/views/ojk/WorkbenchStage.vue'
+import DeliverableStage from '@/views/ojk/DeliverableStage.vue'
 import {
   createOJKRun, getOJKRun, listOJKRuns, listOJKItems, preflightOJK,
+  renameOJKRun, deleteOJKRun,
   type OJKRun, type OJKItem, type OJKPreflight,
 } from '@/api/ojk'
 
-const router = useRouter()
 const { t } = useI18n()
+const route = useRoute()
+// 阶段深链：?stage=2 直达材料摄入与规则配置
+const activeStage = ref([2, 3, 4, 5].includes(Number(route.query.stage)) ? Number(route.query.stage) : 1)
+// 阶段 3「进入审查工作台」→ 右侧滑窗打开最新定版的清单复核
+function openWorkbench() {
+  if (!currentDoneRun.value) return
+  reviewRunId.value = currentDoneRun.value.run_id
+  reviewVisible.value = true
+}
 
 // ---- 知识库（角色分拣：只有法规库进入本页面语义）----
 const kbs = ref<Array<{ id: string; name: string; description?: string }>>([])
@@ -289,25 +416,44 @@ const stagingPct = computed(() => {
 
 // ---- 明细表：当前查看版本的全体条目（全量拉取，客户端过滤/分页/导出）----
 const viewRunId = ref('')
+const viewedRun = computed(() => runs.value.find(r => r.run_id === viewRunId.value) || null)
 const items = ref<OJKItem[]>([])
 const itemsLoading = ref(false)
 const itemSearch = ref('')
 const itemPage = ref(1)
 const PAGE_SIZE = 20
+// 列头筛选（severity/status）：TDesign 只渲染筛选 UI，谓词由我们接进数据链
+const severityFilter = ref<string[]>([])
+const statusFilter = ref<string[]>([])
+// 列头排序：sorter:true 只出 UI（远程排序模式），排序由我们应用在数据上，
+// 不依赖 TDesign 内部排序与内部分页的配合
+const itemSort = ref<{ sortBy: string; descending: boolean } | null>(null)
 
 const filteredItems = computed(() => {
+  let list = items.value
+  if (severityFilter.value.length) {
+    list = list.filter(it => severityFilter.value.includes(it.severity))
+  }
+  if (statusFilter.value.length) {
+    list = list.filter(it => statusFilter.value.includes(it.status))
+  }
+  const { sortBy, descending } = itemSort.value || {}
+  if (sortBy) {
+    const rank = sortBy === 'severity' ? severityRank : statusRank
+    list = [...list].sort((a, b) => {
+      const r = (rank[a[sortBy]] ?? 9) - (rank[b[sortBy]] ?? 9)
+      return descending ? -r : r
+    })
+  }
   const q = itemSearch.value.trim().toLowerCase()
-  if (!q) return items.value
-  return items.value.filter(it =>
+  if (!q) return list
+  return list.filter(it =>
     [it.pasal, it.requirement, it.area, it.regulation, it.id]
       .some(v => (v || '').toLowerCase().includes(q)))
 })
 
-const pagedItems = computed(() => {
-  const start = (itemPage.value - 1) * PAGE_SIZE
-  return filteredItems.value.slice(start, start + PAGE_SIZE)
-})
-
+// 分页切片由 TDesign 内部完成（data 长度 > pageSize 时自动启用），
+// 这里只维护受控的当前页码
 const itemPagination = computed(() => ({
   current: itemPage.value,
   pageSize: PAGE_SIZE,
@@ -315,8 +461,25 @@ const itemPagination = computed(() => ({
   showJumper: true,
 }))
 
-function onItemPage(page: number) {
-  itemPage.value = page
+// TDesign page-change 回调传的是 { current, previous, pageSize } 对象，
+// 不是页码数字——之前当数字赋给 itemPage，切片算出 NaN 导致翻页后表格永远为空
+function onItemPage(pageInfo: { current?: number }) {
+  itemPage.value = pageInfo?.current ?? 1
+}
+
+// filter-change 回调传整个 filterValue 映射 { colKey: 选中值数组 }
+function onItemFilterChange(filterValue: Record<string, string[]>) {
+  severityFilter.value = filterValue?.severity || []
+  statusFilter.value = filterValue?.status || []
+  itemPage.value = 1
+}
+
+// sort-change 回调传 { sortBy, descending }；取消排序时 sortBy 为 undefined
+function onItemSortChange(sort: { sortBy?: string; descending?: boolean } | undefined) {
+  itemSort.value = sort?.sortBy
+    ? { sortBy: sort.sortBy, descending: !!sort.descending }
+    : null
+  itemPage.value = 1
 }
 
 watch(viewRunId, () => { itemPage.value = 1; loadItems() })
@@ -325,8 +488,10 @@ watch(itemSearch, () => { itemPage.value = 1 })
 const dimSummary = computed(() => {
   const counts = new Map<string, number>()
   for (const it of items.value) {
-    const key = it.area || '—'
-    counts.set(key, (counts.get(key) || 0) + 1)
+    // 空维度（"无锚定维度"的条目）不进分布：只有真实维度才有展示价值，
+    // 否则 area 全空时会退化成孤零零的 "— · N"（与正文条数重复）
+    if (!it.area) continue
+    counts.set(it.area, (counts.get(it.area) || 0) + 1)
   }
   return [...counts.entries()]
     .map(([area, count]) => ({ area, count }))
@@ -334,14 +499,32 @@ const dimSummary = computed(() => {
     .slice(0, 5)
 })
 
+// 严重程度/状态的业务排序（表头 sort 图标触发，TDesign 本地排序在分页前生效）
+const severityRank: Record<string, number> = { critical: 0, clarification: 1, info: 2 }
+const statusRank: Record<string, number> = { pending: 0, confirmed: 1, rejected: 2 }
+
 const itemColumns = [
   { colKey: 'id', title: t('ojk.stage1.colId'), width: 150 },
   { colKey: 'area', title: t('ojk.stage1.colDim'), width: 130, cell: 'dim' },
   { colKey: 'pasal', title: t('ojk.stage1.colAnchor'), width: 200 },
   { colKey: 'requirement', title: t('ojk.stage1.colCriteria'), ellipsis: true },
   { colKey: 'evidence_type', title: t('ojk.stage1.colEvidence'), width: 160 },
-  { colKey: 'severity', title: t('ojk.stage1.colSeverity'), width: 100, cell: 'severity' },
-  { colKey: 'status', title: t('ojk.stage1.colStatus'), width: 110, cell: 'status' },
+  {
+    colKey: 'severity', title: t('ojk.stage1.colSeverity'), width: 130, cell: 'severity',
+    sorter: true,
+    filter: {
+      list: ['critical', 'clarification', 'info'].map(v => ({ label: v, value: v })),
+      type: 'multiple',
+    },
+  },
+  {
+    colKey: 'status', title: t('ojk.stage1.colStatus'), width: 130, cell: 'status',
+    sorter: true,
+    filter: {
+      list: ['pending', 'confirmed', 'rejected'].map(v => ({ label: itemStatusLabel(v), value: v })),
+      type: 'multiple',
+    },
+  },
   { colKey: 'action', title: t('ojk.stage1.colAction'), width: 100, cell: 'action' },
 ]
 
@@ -353,7 +536,8 @@ function itemStatusTheme(status: string): string {
 }
 
 function itemStatusLabel(status: string): string {
-  return t(`ojk.status.${status}`)
+  // 条目级状态（pending/confirmed/rejected）与 run 级状态字典分开
+  return t(`ojk.itemStatus.${status}`)
 }
 
 function formatTime(iso: string): string {
@@ -475,6 +659,69 @@ async function createDraft() {
   }
 }
 
+// ---- 版本管理（浏览/评审/重命名/删除）----
+// ---- 溯源审核右侧滑窗 ----
+const reviewVisible = ref(false)
+const reviewRunId = ref('')
+function onReviewClosed() {
+  // 复核可能改动了条目状态，关闭时刷新明细
+  loadItems()
+}
+
+const manageVisible = ref(false)
+const renameVisible = ref(false)
+const renameTarget = ref<OJKRun | null>(null)
+const renameValue = ref('')
+const renaming = ref(false)
+const deletingId = ref('')
+
+const manageColumns = [
+  { colKey: 'skill_version', title: t('ojk.stage1.colVersion'), cell: 'mVersion', width: 200 },
+  { colKey: 'updated_at', title: t('ojk.stage1.colSignedAt'), cell: 'mTime', width: 170 },
+  { colKey: 'total_items', title: t('ojk.stage1.colItems'), width: 100 },
+  { colKey: 'op', title: t('ojk.stage1.colOp'), cell: 'mOp' },
+]
+
+function openRename(run: OJKRun) {
+  renameTarget.value = run
+  renameValue.value = run.skill_version
+  renameVisible.value = true
+}
+
+async function submitRename() {
+  if (!renameTarget.value) return
+  renaming.value = true
+  try {
+    const updated = await renameOJKRun(renameTarget.value.run_id, renameValue.value)
+    const idx = runs.value.findIndex(r => r.run_id === updated.run_id)
+    if (idx >= 0) runs.value[idx] = updated
+    MessagePlugin.success(t('ojk.stage1.renamedOk'))
+    renameVisible.value = false
+  } catch (e: any) {
+    MessagePlugin.error(e?.error || e?.message || 'Failed to rename version')
+  } finally {
+    renaming.value = false
+  }
+}
+
+async function removeRun(run: OJKRun) {
+  deletingId.value = run.run_id
+  try {
+    await deleteOJKRun(run.run_id)
+    runs.value = runs.value.filter(r => r.run_id !== run.run_id)
+    // 删除的是正在查看的版本 → 回退到最新定版（watch 触发明细重载）
+    if (viewRunId.value === run.run_id) {
+      viewRunId.value = currentDoneRun.value?.run_id || ''
+      if (!viewRunId.value) { items.value = []; loadItems() }
+    }
+    MessagePlugin.success(t('ojk.stage1.deletedOk'))
+  } catch (e: any) {
+    MessagePlugin.error(e?.error || e?.message || 'Failed to delete version')
+  } finally {
+    deletingId.value = ''
+  }
+}
+
 // ---- 导出 ----
 function download(name: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
@@ -526,7 +773,9 @@ function stageTodo() {
 
 function goReview(runId?: string) {
   if (!runId) return
-  router.push(`/platform/ojk/review/${runId}`)
+  // 溯源审核改为右侧滑窗（不再整页跳转）
+  reviewRunId.value = runId
+  reviewVisible.value = true
 }
 
 onMounted(async () => {
@@ -542,6 +791,15 @@ onUnmounted(stopPolling)
   display: flex;
   flex-direction: column;
   gap: var(--app-space-md, 16px);
+  /* 父级 .platform-route-outlet 是 flex 列 + overflow:hidden（滚动交给页面自己）。
+     页面根必须占满并自滚动，否则首屏之外的内容（明细表的行）永远滚不出来。 */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* 卡片保持自然高度溢出滚动，禁止被 flex 压扁 */
+  > * {
+    flex-shrink: 0;
+  }
 }
 
 /* 四阶段 Tab 栏（原型样式）：负 margin 出血到容器两侧，贴住页面顶 */
@@ -623,12 +881,31 @@ onUnmounted(stopPolling)
 .pill--ok { color: var(--td-success-color); border-color: var(--td-success-color); }
 
 .store-title { display: flex; align-items: center; gap: var(--app-space-xs, 6px); }
+/* TDesign 行默认 align-top：两列不等高。覆盖为 stretch，让右卡跟随左卡高度；
+   列设为 flex、卡片 flex:1 填充（height:100% 在这层嵌套里会溢出压住历史行） */
+.ver-row {
+  align-items: stretch;
+}
+.ver-row .t-col {
+  display: flex;
+}
 .ver-card {
   border: 1px solid var(--td-component-stroke);
   border-radius: var(--app-radius-md, 8px);
-  padding: var(--app-space-md, 12px);
+  padding: var(--app-space-sm, 10px) var(--app-space-md, 12px);
   cursor: pointer;
-  min-height: 150px;
+  /* 跟随同行另一张卡的高度（左卡内容多，右卡等高拉伸），内容垂直居中 */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* 压缩空态占位（默认 empty 图 + 文案会把卡片撑到 ~270px 高） */
+.ver-card :deep(.t-empty) {
+  padding: 10px 0;
+}
+.ver-card :deep(.t-empty__image) {
+  display: none;
 }
 .ver-card--current { border-color: var(--td-brand-color); }
 .ver-card.selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--td-brand-color) 25%, transparent); }
@@ -667,6 +944,7 @@ onUnmounted(stopPolling)
 .ver-history-chip {
   cursor: pointer;
 }
+.ver-history-manage { margin-left: auto; }
 .footer-current { display: flex; align-items: center; gap: var(--app-space-xs, 6px); font-size: var(--app-text-sm, 12px); color: var(--td-text-color-secondary); }
 .draft-kb-list { display: flex; flex-direction: column; gap: var(--app-space-xs, 4px); }
 </style>

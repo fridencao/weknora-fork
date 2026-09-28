@@ -55,3 +55,11 @@
 .t-select-option.t-is-selected:not(.t-is-disabled):not(:has(.t-checkbox)) {
   gap: 8px;
 }
+
+// 页码很多时（如 27 页）分页条会宽过容器：.t-pagination 是 flex-end 右对齐且
+// nowrap，溢出方向朝左，会把最前面的页码/箭头裁出容器外。允许换行消除裁剪。
+.t-table__pagination .t-pagination {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  white-space: normal;
+}
