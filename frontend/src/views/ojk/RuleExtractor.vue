@@ -1,18 +1,21 @@
 <template>
   <div class="ojk-stage1">
-    <!-- 四阶段导航 -->
-    <t-card :bordered="false" class="block">
-      <t-steps :current="0" readonly>
-        <t-step-item :title="$t('ojk.stage1.stageKb')" />
-        <t-step-item :title="$t('ojk.stage1.stageMaterial')" />
-        <t-step-item :title="$t('ojk.stage1.stageAiCheck')" />
-        <t-step-item
-          :title="$t('ojk.stage1.stageWorkbench')"
-          :style="{ cursor: currentDoneRun ? 'pointer' : 'default' }"
-          @click="goReview(currentDoneRun?.run_id)"
-        />
-      </t-steps>
-    </t-card>
+    <!-- 四阶段 Tab 导航（原型样式：编号圆点 + 选中态下划线） -->
+    <nav class="stage-tabs">
+      <div class="stage-crumb">StarKB / Fit &amp; Proper</div>
+      <div class="stage-tab active">
+        <span class="stage-num">1</span>{{ $t('ojk.stage1.stageKb') }}
+      </div>
+      <div class="stage-tab todo" @click="stageTodo">
+        <span class="stage-num">2</span>{{ $t('ojk.stage1.stageMaterial') }}
+      </div>
+      <div class="stage-tab todo" @click="stageTodo">
+        <span class="stage-num">3</span>{{ $t('ojk.stage1.stageAiCheck') }}
+      </div>
+      <div class="stage-tab" :class="{ disabled: !currentDoneRun }" @click="goReview(currentDoneRun?.run_id)">
+        <span class="stage-num">4</span>{{ $t('ojk.stage1.stageWorkbench') }}
+      </div>
+    </nav>
 
     <!-- 零幻觉协议 -->
     <t-card :bordered="false" class="block zhp">
@@ -490,6 +493,10 @@ function reloadAll() {
   loadItems()
 }
 
+function stageTodo() {
+  MessagePlugin.info(t('ojk.stage1.nextStageTip'))
+}
+
 function goReview(runId?: string) {
   if (!runId) return
   router.push(`/platform/ojk/review/${runId}`)
@@ -509,6 +516,65 @@ onUnmounted(stopPolling)
   flex-direction: column;
   gap: var(--app-space-md, 16px);
   padding-bottom: 72px;
+}
+
+/* 四阶段 Tab 栏（原型样式）：负 margin 出血到容器两侧，贴住页面顶 */
+.stage-tabs {
+  display: flex;
+  align-items: stretch;
+  margin: calc(-1 * var(--app-space-md, 16px)) calc(-1 * var(--app-space-md, 16px)) 0;
+  padding: 0 var(--app-space-lg, 20px);
+  background: var(--td-bg-color-container);
+  border-bottom: 1px solid var(--td-component-stroke);
+}
+.stage-crumb {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--app-space-lg, 20px) 0 0;
+  margin-right: var(--app-space-md, 12px);
+  border-right: 1px solid var(--td-component-stroke);
+  font-weight: 600;
+  font-size: var(--app-text-base, 14px);
+  white-space: nowrap;
+}
+.stage-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs, 6px);
+  padding: 14px 18px;
+  font-size: var(--app-text-base, 14px);
+  color: var(--td-text-color-secondary);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.stage-tab.active {
+  color: var(--td-brand-color);
+  font-weight: 600;
+  border-bottom-color: var(--td-brand-color);
+}
+.stage-tab.todo {
+  color: var(--td-text-color-placeholder);
+}
+.stage-tab.disabled {
+  color: var(--td-text-color-placeholder);
+  cursor: not-allowed;
+}
+.stage-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: var(--app-text-xs, 11px);
+  background: var(--td-bg-color-secondarycontainer);
+  color: var(--td-text-color-secondary);
+}
+.stage-tab.active .stage-num {
+  background: var(--td-brand-color);
+  color: #fff;
 }
 .block { border-radius: var(--app-radius-md, 8px); }
 
