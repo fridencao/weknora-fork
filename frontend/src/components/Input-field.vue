@@ -1877,6 +1877,14 @@ onMounted(() => {
     });
   }
 
+  // 预填挂载的知识库（OJK「AI 核验」跳转：法规库 + 本案材料库）
+  const prefillKbIds = menuStore.consumePrefillKbIds();
+  for (const id of prefillKbIds) {
+    if (id && !selectedKbIds.value.includes(id)) {
+      settingsStore.addKnowledgeBase(id);
+    }
+  }
+
   // 监听点击外部关闭下拉菜单
   document.addEventListener('click', closeAgentModeSelector);
   document.addEventListener('click', closeModelSelector);

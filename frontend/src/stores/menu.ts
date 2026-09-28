@@ -149,6 +149,20 @@ export const useMenuStore = defineStore('menuStore', () => {
     return q
   }
 
+  // OJK 复核「AI 核验」（2026-09-28）：跳转对话时随问题一起挂载的知识库清单
+  // （法规库 + 本案材料库）。Input-field 挂载时消费并加入会话已选 KB。
+  const prefillKbIds = ref<string[]>([])
+
+  const setPrefillKbIds = (ids: string[]) => {
+    prefillKbIds.value = [...ids]
+  }
+
+  const consumePrefillKbIds = () => {
+    const ids = [...prefillKbIds.value]
+    prefillKbIds.value = []
+    return ids
+  }
+
   return {
     menuArr,
     visibleMenuArr,
@@ -160,6 +174,8 @@ export const useMenuStore = defineStore('menuStore', () => {
     firstAttachmentFiles,
     firstQuestionOrigin,
     prefillQuery,
+    setPrefillKbIds,
+    consumePrefillKbIds,
     clearMenuArr,
     updatemenuArr,
     updataMenuChildren,

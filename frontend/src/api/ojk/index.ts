@@ -63,6 +63,18 @@ export interface OJKRunsResponse {
   total: number
 }
 
+
+export interface OJKPreflight {
+  kb_id: string
+  kb_name: string
+  docs: number
+  pasal_sections: number
+}
+
+export function preflightOJK(kbId: string): Promise<OJKPreflight> {
+  return get<OJKPreflight>(`/api/v1/ojk/preflight?kb_id=${kbId}`)
+}
+
 export function getOJKRun(runId: string): Promise<OJKRun> {
   return get<OJKRun>(`/api/v1/ojk/runs/${runId}`)
 }

@@ -269,6 +269,45 @@ func (s *OJKService) ListRuns(ctx context.Context, tenantID uint64, limit int) (
 	return out, nil
 }
 
+// PreflightResult 是向导确认步的预检结论。
+type PreflightResult struct {
+	KBID          string `json:"kb_id"`
+	KBName        string `json:"kb_name"`
+	Docs          int64  `json:"docs"`
+	PasalSections int    `json:"pasal_sections"`
+}
+
+// Preflight 对指定 KB 做轻量预检：文档数 + Pasal 段数。
+// pasal_sections=0 意味着该库没有法规结构（多为申请人材料库），
+// 前端在确认步直接拦下，避免跑到一半才失败。
+func (s *OJKService) Preflight(ctx context.Context, tenantID uint64, kbID string) (*PreflightResult, error) {
+	var kb struct {
+		ID   string
+		Name string
+	}
+	if err := s.db.WithContext(ctx).Raw(
+		"SELECT id, name FROM knowledge_bases WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL",
+		kbID, tenantID).Scan(&kb).Error; err != nil {
+		return nil, fmt.Errorf("check knowledge base: %w", err)
+	}
+	if kb.ID == "" {
+		return nil, ErrOJKKBNotFound
+	}
+	out := &PreflightResult{KBID: kb.ID, KBName: kb.Name}
+	if err := s.db.WithContext(ctx).Raw(
+		"SELECT count(*) FROM knowledges WHERE knowledge_base_id = ? AND deleted_at IS NULL "+
+			"AND (parse_status = 'completed' OR parse_status = 'finished' OR parse_status = '')",
+		kbID).Scan(&out.Docs).Error; err != nil {
+		return nil, fmt.Errorf("count kb documents: %w", err)
+	}
+	text, err := s.LoadRegulationTextFn(ctx, tenantID, kbID)
+	if err != nil {
+		return nil, fmt.Errorf("rebuild regulation text: %w", err)
+	}
+	out.PasalSections = len(slicePasal(text, kb.Name, kb.Name))
+	return out, nil
+}
+
 func runToStatus(r OJKRun) RunStatus {
 	return RunStatus{
 		RunID:        r.RunID,
@@ -580,7 +619,7 @@ func (s *OJKService) processRun(runID string, tenantID uint64, kbID, kbName stri
 	regName = strings.TrimSpace(regName)
 	slices := slicePasal(text, kbName, regName)
 	if len(slices) == 0 {
-		fail("no Pasal sections found in knowledge base %q", kbName)
+		fail("no regulation sections (Pasal) in knowledge base %q — pick the KB that contains regulation full texts; candidate-material KBs are review subjects, not extraction sources", kbName)
 		return
 	}
 	refs := make(map[string]bool, len(slices))

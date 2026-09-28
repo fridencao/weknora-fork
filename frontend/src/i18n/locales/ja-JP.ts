@@ -7562,6 +7562,8 @@ export default {
   },
   ojk: {
     wizard: {
+    preflightOk: "{docs} 件の解析済みドキュメントから {sections} 個の Pasal 段落を検出——抽出可能です。",
+    preflightNone: "このナレッジベースには法规構造（Pasal）がありません。規制本文を保管するナレッジベースを選択してください。候補者資料（履歴書・様式等）はレビュー対象であり、抽出源ではありません。",
     stepKb: "ナレッジベース選択",
     stepConfirm: "確認",
     stepRun: "生成",
@@ -7607,6 +7609,11 @@ export default {
       refresh: '更新',
     },
     reviewWorkflow: {
+      caseKbPlaceholder: "案件資料 KB（AI 検証用）",
+      caseKbRequired: "先に案件資料 KB を選択してください——AI 検証はここから候補者資料を読みます。",
+      aiCheck: "AI 検証",
+      aiCheckAgain: "AI 検証",
+      aiCheckPrompt: "【AI 検証 · OJK Fit & Proper】チェックリスト項目 {reqId}\n法规根拠：{pasal}（{regulation}）\n要件：{requirement}\n検証方法：{method}（証拠タイプ：{evidence}）\n対象：{roles}\n重大度：{severity}\n\nナレッジベース「{caseKb}」の候補者資料と突き合わせて検証してください：\n1) 判定：適合 / 不適合 / 証拠不足；\n2) 資料のファイル名と原文の引用を証拠として示す；\n3) 当該要件の法規本文を引用する。\n最後に結論と理由を示してください。",
       title: 'チェックリストレビュー',
       refresh: '更新',
       back: '戻る',

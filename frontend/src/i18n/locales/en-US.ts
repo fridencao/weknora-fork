@@ -7563,6 +7563,8 @@ export default {
 
   ojk: {
     wizard: {
+    preflightOk: "Detected {sections} Pasal sections across {docs} parsed documents — ready to extract.",
+    preflightNone: "No regulation structure (Pasal) in this KB. Pick the KB holding regulation full texts — candidate materials (CVs, forms) are review subjects, not extraction sources.",
     stepKb: "Choose knowledge base",
     stepConfirm: "Confirm",
     stepRun: "Generate",
@@ -7608,6 +7610,11 @@ export default {
       refresh: 'Refresh',
     },
     reviewWorkflow: {
+      caseKbPlaceholder: "Case material KB (for AI check)",
+      caseKbRequired: "Pick the case material KB first — AI check reads candidate documents from it.",
+      aiCheck: "AI Check",
+      aiCheckAgain: "AI Check",
+      aiCheckPrompt: "【AI Verification · OJK Fit & Proper】Checklist item {reqId}\nRegulation basis: {pasal} ({regulation})\nRequirement: {requirement}\nCheck method: {method} (evidence type: {evidence})\nApplicable roles: {roles}\nSeverity: {severity}\n\nPlease verify against the candidate materials in knowledge base \"{caseKb}\":\n1) Verdict: compliant / non-compliant / insufficient evidence;\n2) Cite the exact file and quote the original text snippet as evidence;\n3) Quote the regulation text for the requirement.\nEnd with the conclusion and reasoning.",
       title: 'Checklist Review',
       refresh: 'Refresh',
       back: 'Back',

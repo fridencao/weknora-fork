@@ -41,6 +41,20 @@
 
     <!-- Step 2 · 确认配置 -->
     <t-card v-show="currentStep === 1" :title="$t('ojk.wizard.stepConfirm')" :bordered="false" class="wizard-card">
+      <t-loading :loading="preflightLoading" size="small">
+        <t-alert
+          v-if="preflight && preflight.pasal_sections === 0"
+          theme="warning"
+          :message="$t('ojk.wizard.preflightNone')"
+          class="wizard-alert"
+        />
+        <t-alert
+          v-else-if="preflight"
+          theme="success"
+          :message="$t('ojk.wizard.preflightOk', { sections: preflight.pasal_sections, docs: preflight.docs })"
+          class="wizard-alert"
+        />
+      </t-loading>
       <t-descriptions :column="1" bordered>
         <t-descriptions-item :label="$t('ojk.wizard.confirmKb')">{{ selectedKbName }}</t-descriptions-item>
         <t-descriptions-item :label="$t('ojk.wizard.confirmScope')">{{ $t('ojk.wizard.confirmScopeValue') }}</t-descriptions-item>
@@ -49,7 +63,7 @@
       <template #footer>
         <t-space>
           <t-button theme="default" @click="currentStep = 0">{{ $t('ojk.wizard.back') }}</t-button>
-          <t-button theme="primary" :loading="creating" @click="handleCreateRun">
+          <t-button theme="primary" :loading="creating" :disabled="!preflight || preflight.pasal_sections === 0" @click="handleCreateRun">
             {{ $t('ojk.ruleExtractor.createRun') }}
           </t-button>
         </t-space>
@@ -153,14 +167,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
 import { listKnowledgeBases } from '@/api/knowledge-base'
 import {
-  createOJKRun, getOJKRun, listOJKRuns,
-  type OJKRun,
+  createOJKRun, getOJKRun, listOJKRuns, preflightOJK,
+  type OJKRun, type OJKPreflight,
 } from '@/api/ojk'
 
 const router = useRouter()
@@ -174,6 +188,28 @@ const creating = ref(false)
 
 const activeRun = ref<OJKRun | null>(null)
 let pollTimer: number | null = null
+
+const preflight = ref<OJKPreflight | null>(null)
+const preflightLoading = ref(false)
+const preflightError = ref('')
+
+async function runPreflight() {
+  if (!selectedKbId.value) return
+  preflight.value = null
+  preflightError.value = ''
+  preflightLoading.value = true
+  try {
+    preflight.value = await preflightOJK(selectedKbId.value)
+  } catch (e: any) {
+    preflightError.value = e?.message || 'Preflight failed'
+  } finally {
+    preflightLoading.value = false
+  }
+}
+
+watch(currentStep, (step) => {
+  if (step === 1) runPreflight()
+})
 
 const runs = ref<OJKRun[]>([])
 const loading = ref(false)

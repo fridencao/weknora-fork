@@ -7562,6 +7562,8 @@ export default {
   },
   ojk: {
     wizard: {
+    preflightOk: "파싱된 {docs}개 문서에서 {sections}개 Pasal 구역을 감지했습니다——추출 가능합니다.",
+    preflightNone: "이 지식베이스에는法规 구조(Pasal)가 없습니다. 규제 본문을 담은 지식베이스를 선택하세요. 피검증자 자료(이력서, 양식 등)는 검토 대상이며 추출 원본이 아닙니다.",
     stepKb: "지식베이스 선택",
     stepConfirm: "확인",
     stepRun: "생성",
@@ -7607,6 +7609,11 @@ export default {
       refresh: '새로 고침',
     },
     reviewWorkflow: {
+      caseKbPlaceholder: "케이스 자료 KB(AI 검증용)",
+      caseKbRequired: "먼저 케이스 자료 KB를 선택하세요——AI 검증은 여기서 피검증자 자료를 읽습니다.",
+      aiCheck: "AI 검증",
+      aiCheckAgain: "AI 검증",
+      aiCheckPrompt: "【AI 검증 · OJK Fit & Proper】체크리스트 항목 {reqId}\n법규 근거: {pasal}({regulation})\n요건: {requirement}\n검증 방법: {method}(증거 유형: {evidence})\n대상: {roles}\n심각도: {severity}\n\n지식베이스 \"{caseKb}\"의 피검증자 자료와 대조하여 검증하세요:\n1) 판정: 적합 / 부적합 / 증거 부족；\n2) 자료의 파일명과 원문 인용을 증거로 제시；\n3) 해당 요건의 법규 본문을 인용。\n마지막에 결론과 근거를 제시하세요.",
       title: '체크리스트 검토',
       refresh: '새로 고침',
       back: '뒤로',

@@ -7564,6 +7564,8 @@ export default {
   },
   ojk: {
     wizard: {
+    preflightOk: "检测到 {sections} 个 Pasal 段 / {docs} 篇已解析文档——可以抽取。",
+    preflightNone: "该知识库没有法规结构（Pasal 段）。请选择存放法规原文的知识库；申请人材料（简历、表格等）是复核阶段核验的对象，不是抽取来源。",
     stepKb: "选择知识库",
     stepConfirm: "确认配置",
     stepRun: "生成清单",
@@ -7609,6 +7611,11 @@ export default {
       refresh: '刷新',
     },
     reviewWorkflow: {
+      caseKbPlaceholder: "本案材料库（AI 核验用）",
+      caseKbRequired: "请先选择本案材料库——AI 核验要从其中读取申请人材料。",
+      aiCheck: "AI 核验",
+      aiCheckAgain: "AI 核验",
+      aiCheckPrompt: "【AI 核验 · OJK Fit & Proper】清单条目 {reqId}\n法规依据：{pasal}（{regulation}）\n要求：{requirement}\n核验方式：{method}（证据类型：{evidence}）\n适用对象：{roles}\n严重程度：{severity}\n\n请对照知识库「{caseKb}」中的申请人材料逐项核验：\n1) 给出判定：符合 / 不符合 / 材料不足；\n2) 引用材料中的具体文件名与原文片段作为证据；\n3) 引用该要求的法条原文。\n最后给出结论与理由。",
       title: '清单复核',
       refresh: '刷新',
       back: '返回',

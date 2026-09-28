@@ -61,6 +61,35 @@ func (h *OJKRunHandler) CreateRun(c *gin.Context) {
 	c.JSON(http.StatusCreated, status)
 }
 
+
+// Preflight validates a KB for checklist extraction before the run starts.
+//
+// GET /api/v1/ojk/preflight?kb_id=...
+// @Summary      OJK 抽取预检
+// @Description  返回文档数与 Pasal 段数；pasal_sections=0 表示该库无法规结构。
+// @Tags         OJK
+// @Param        kb_id  query  string  true  "Knowledge base ID"
+// @Success      200    {object}  service.PreflightResult
+// @Router       /api/v1/ojk/preflight [get]
+func (h *OJKRunHandler) Preflight(c *gin.Context) {
+	tenantID := types.MustTenantIDFromContext(c.Request.Context())
+	kbID := c.Query("kb_id")
+	if kbID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kb_id is required"})
+		return
+	}
+	out, err := h.svc.Preflight(c.Request.Context(), tenantID, kbID)
+	if err != nil {
+		if errors.Is(err, service.ErrOJKKBNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // ListRuns returns recent extraction runs (latest first).
 //
 // GET /api/v1/ojk/runs?limit=20

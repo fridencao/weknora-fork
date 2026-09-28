@@ -16,6 +16,22 @@
         </template>
         <template #extra>
           <t-space>
+            <t-select
+              v-model="caseKbId"
+              :placeholder="$t('ojk.reviewWorkflow.caseKbPlaceholder')"
+              :loading="kbLoading"
+              @change="onCaseKbChange"
+              clearable
+              filterable
+              style="width: 220px"
+            >
+              <t-option
+                v-for="kb in kbOptions"
+                :key="kb.id"
+                :value="kb.id"
+                :label="kb.name"
+              />
+            </t-select>
             <t-button @click="loadRun" :loading="loadingRun">
               {{ $t('ojk.reviewWorkflow.refresh') }}
             </t-button>
@@ -81,6 +97,9 @@
             </template>
             <template #actions="{ record }">
               <t-space v-if="record.status === 'pending'">
+                <t-button theme="primary" size="small" @click="aiCheck(record)">
+                  {{ $t('ojk.reviewWorkflow.aiCheck') }}
+                </t-button>
                 <t-button theme="success" size="small" @click="resolveItem(record, 'confirmed')">
                   {{ $t('ojk.reviewWorkflow.confirm') }}
                 </t-button>
@@ -88,7 +107,12 @@
                   {{ $t('ojk.reviewWorkflow.reject') }}
                 </t-button>
               </t-space>
-              <span v-else class="text-muted">{{ record.status }}</span>
+              <t-space v-else>
+                <t-button theme="default" size="small" @click="aiCheck(record)">
+                  {{ $t('ojk.reviewWorkflow.aiCheckAgain') }}
+                </t-button>
+                <span class="text-muted">{{ record.status }}</span>
+              </t-space>
             </template>
           </t-table>
         </t-loading>
@@ -115,6 +139,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { getOJKRun, listOJKItems, resolveOJKItem, getOJKItemStats, type OJKRun, type OJKItem } from '@/api/ojk'
+import { listKnowledgeBases } from '@/api/knowledge-base'
+import { useMenuStore } from '@/stores/menu'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -129,6 +156,61 @@ const pageSize = ref(20)
 const total = ref(0)
 const loadingRun = ref(false)
 const loadingItems = ref(false)
+
+// ---- AI 核验（2026-09-28）：挂本案材料库 + 法规库跳对话预填核验问题 ----
+const { t } = useI18n()
+const menuStore = useMenuStore()
+const kbOptions = ref<Array<{ id: string; name: string }>>([])
+const kbLoading = ref(false)
+const CASE_KB_STORE_KEY = 'ojk-review-case-kb'
+
+const caseKbId = ref('')
+
+async function loadKbOptions() {
+  kbLoading.value = true
+  try {
+    const res = await listKnowledgeBases()
+    const payload = (res as any)?.data
+    kbOptions.value = (Array.isArray(payload) ? payload : payload?.items || [])
+      .map((kb: any) => ({ id: kb.id, name: kb.name }))
+    // 记忆上次选择（同一批复核通常对应同一个案件材料库）
+    const saved = localStorage.getItem(CASE_KB_STORE_KEY)
+    if (saved && kbOptions.value.some(kb => kb.id === saved)) {
+      caseKbId.value = saved
+    }
+  } catch { /* 选择器失败不打断复核 */ } finally {
+    kbLoading.value = false
+  }
+}
+
+function onCaseKbChange(id: string) {
+  if (id) localStorage.setItem(CASE_KB_STORE_KEY, id)
+}
+
+function aiCheck(item: OJKItem) {
+  if (!caseKbId.value) {
+    MessagePlugin.warning(t('ojk.reviewWorkflow.caseKbRequired'))
+    return
+  }
+  localStorage.setItem(CASE_KB_STORE_KEY, caseKbId.value)
+  const caseKbName = kbOptions.value.find(kb => kb.id === caseKbId.value)?.name || caseKbId.value
+  const question = t('ojk.reviewWorkflow.aiCheckPrompt', {
+    pasal: item.pasal || '-',
+    regulation: item.regulation || '-',
+    requirement: item.requirement,
+    method: item.check_method || 'document_presence',
+    evidence: item.evidence_type || '-',
+    roles: (item.applicable_roles || []).join(', ') || '*',
+    severity: item.severity,
+    caseKb: caseKbName,
+    reqId: item.requirement_id || item.id,
+  })
+  // 双库挂载：法规库（run 抽取来源）+ 本案材料库
+  const kbIds = [run.value?.kb_id, caseKbId.value].filter(Boolean) as string[]
+  menuStore.setPrefillKbIds(kbIds)
+  menuStore.setPrefillQuery(question)
+  void router.push('/platform/creatChat')
+}
 
 const pagination = computed(() => ({
   current: page.value,
@@ -246,7 +328,7 @@ function startPolling() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadRun(), loadItems(), loadStats()])
+  await Promise.all([loadRun(), loadItems(), loadStats(), loadKbOptions()])
   startPolling()
 })
 
