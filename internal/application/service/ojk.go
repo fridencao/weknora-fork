@@ -530,6 +530,131 @@ func (s *OJKService) UpdateRunStatus(ctx context.Context, runID string, updates 
 	return nil
 }
 
+// OJKCandidate 登记一位 fit & proper 候选人：材料进入其专属知识库
+// （kb_id），文件走 WeKnora 现成的上传→解析→向量化管线。
+type OJKCandidate struct {
+	ID          string    `gorm:"primaryKey;type:text" json:"id"`
+	TenantID    uint64    `gorm:"type:integer;not null;index:idx_ojk_candidates_tenant" json:"tenant_id"`
+	Name        string    `gorm:"type:text;not null" json:"name"`
+	NIK         *string   `gorm:"type:text" json:"nik"`
+	Position    *string   `gorm:"type:text" json:"position"`
+	Institution *string   `gorm:"type:text" json:"institution"`
+	KBID        string    `gorm:"type:text;not null" json:"kb_id"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+func (OJKCandidate) TableName() string { return "ojk_candidates" }
+
+// CandidateStatus 候选人列表/详情视图（材料解析态由 knowledges 聚合派生）。
+type CandidateStatus struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	NIK         string `json:"nik"`
+	Position    string `json:"position"`
+	Institution string `json:"institution"`
+	KBID        string `json:"kb_id"`
+	Status      string `json:"status"`           // queued | parsing | parsed | failed
+	Docs        int    `json:"docs"`             // 已上传材料份数
+	Parsed      int    `json:"parsed"`           // 已解析份数
+	ParsePct    int    `json:"parse_pct"`        // 解析进度百分比
+	CreatedAt   string `json:"created_at"`
+}
+
+// deriveCandidateStatus 从文档解析态聚合候选人状态：
+// 无材料=queued；任一在解析=parsing；任一失败=failed；全部解析完=parsed。
+func deriveCandidateStatus(docs, parsed, failed int) string {
+	switch {
+	case docs == 0:
+		return "queued"
+	case failed > 0:
+		return "failed"
+	case parsed < docs:
+		return "parsing"
+	default:
+		return "parsed"
+	}
+}
+
+// CreateCandidate 登记候选人并落库（KB 由 handler 先行创建后传入 kb_id）。
+func (s *OJKService) CreateCandidate(ctx context.Context, cand *OJKCandidate) error {
+	cand.ID = fmt.Sprintf("cand-%d-%d", cand.TenantID, time.Now().UnixNano())
+	return s.db.WithContext(ctx).Create(cand).Error
+}
+
+// ListCandidates 返回候选人列表（按创建时间倒序），解析态实时聚合。
+func (s *OJKService) ListCandidates(ctx context.Context, tenantID uint64) ([]CandidateStatus, error) {
+	var cands []OJKCandidate
+	if err := s.db.WithContext(ctx).
+		Where("tenant_id = ?", tenantID).
+		Order("created_at DESC").Find(&cands).Error; err != nil {
+		return nil, fmt.Errorf("list ojk candidates: %w", err)
+	}
+	out := make([]CandidateStatus, 0, len(cands))
+	for _, c := range cands {
+		docs, parsed, failed := s.candidateDocStats(ctx, c.KBID, tenantID)
+		out = append(out, CandidateStatus{
+			ID: c.ID, Name: c.Name,
+			NIK: stringPtr(c.NIK), Position: stringPtr(c.Position),
+			Institution: stringPtr(c.Institution), KBID: c.KBID,
+			Status:  deriveCandidateStatus(docs, parsed, failed),
+			Docs:    docs, Parsed: parsed,
+			ParsePct: func() int {
+				if docs == 0 {
+					return 0
+				}
+				return parsed * 100 / docs
+			}(),
+			CreatedAt: c.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	return out, nil
+}
+
+// GetCandidate 单个候选人详情（同列表聚合口径）。
+func (s *OJKService) GetCandidate(ctx context.Context, tenantID uint64, id string) (*CandidateStatus, error) {
+	var c OJKCandidate
+	if err := s.db.WithContext(ctx).
+		Where("id = ? AND tenant_id = ?", id, tenantID).
+		First(&c).Error; err != nil {
+		return nil, fmt.Errorf("get ojk candidate: %w", err)
+	}
+	docs, parsed, failed := s.candidateDocStats(ctx, c.KBID, tenantID)
+	st := deriveCandidateStatus(docs, parsed, failed)
+	pct := 0
+	if docs > 0 {
+		pct = parsed * 100 / docs
+	}
+	return &CandidateStatus{
+		ID: c.ID, Name: c.Name,
+		NIK: stringPtr(c.NIK), Position: stringPtr(c.Position),
+		Institution: stringPtr(c.Institution), KBID: c.KBID,
+		Status: st, Docs: docs, Parsed: parsed, ParsePct: pct,
+		CreatedAt: c.CreatedAt.Format(time.RFC3339),
+	}, nil
+}
+
+// candidateDocStats 聚合候选人材料 KB 的文档解析态。
+func (s *OJKService) candidateDocStats(ctx context.Context, kbID string, tenantID uint64) (docs, parsed, failed int) {
+	var rows []struct {
+		ParseStatus string
+	}
+	s.db.WithContext(ctx).Raw(
+		"SELECT parse_status FROM knowledges "+
+			"WHERE knowledge_base_id = ? AND tenant_id = ? AND deleted_at IS NULL",
+		kbID, tenantID).Scan(&rows)
+	for _, r := range rows {
+		switch r.ParseStatus {
+		case "completed", "finished":
+			parsed++
+		case "failed":
+			failed++
+		}
+		docs++
+	}
+	return
+}
+
 // ItemStatus represents a checklist item for the review workflow.
 type ItemStatus struct {
 	ID              string   `json:"id"`
@@ -1324,7 +1449,7 @@ func ojkTruncate(s string, n int) string {
 // gorm 对已有唯一约束的命名与迁移不一致会报 DROP CONSTRAINT 失败——
 // 这里降级为日志告警，不让插件表把整个进程拖死。
 func (s *OJKService) EnsureTables(db *gorm.DB) error {
-	if err := db.AutoMigrate(&OJKRun{}, &OJKChecklistItem{}); err != nil {
+	if err := db.AutoMigrate(&OJKRun{}, &OJKChecklistItem{}, &OJKCandidate{}); err != nil {
 		fmt.Printf("[ojk] automigrate warn (tables managed by migration 000112): %v\n", err)
 	}
 	return nil

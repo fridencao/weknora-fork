@@ -14,7 +14,7 @@
           <template #icon><t-icon name="cloud-download" /></template>
           {{ $t('ojk.stage2.templateZip') }}
         </t-button>
-        <t-button theme="primary" @click="demo('batchIngest')">
+        <t-button theme="primary" @click="openImport()">
           <template #icon><t-icon name="upload" /></template>
           {{ $t('ojk.stage2.batchIngest') }}
         </t-button>
@@ -23,7 +23,7 @@
 
     <!-- 摄入枢纽 + 吞吐面板 -->
     <div class="cq-hub">
-      <div class="cq-drop" @click="demo('chooseLocal')">
+      <div class="cq-drop" @click="openImport()">
         <t-icon name="upload" class="cq-drop-icon" />
         <div class="cq-drop-text">
           <div>
@@ -32,7 +32,7 @@
           </div>
           <div class="cq-drop-sub">{{ $t('ojk.stage2.dropSub') }}</div>
         </div>
-        <t-button theme="default" @click.stop="demo('chooseLocal')">{{ $t('ojk.stage2.chooseLocal') }}</t-button>
+        <t-button theme="default" @click.stop="openImport()">{{ $t('ojk.stage2.chooseLocal') }}</t-button>
       </div>
       <div class="cq-tp">
         <div class="cq-tp-head">
@@ -45,7 +45,7 @@
         </div>
         <div class="cq-tp-row">
           <span>{{ $t('ojk.stage2.tpQueue') }}</span>
-          <span>{{ $t('ojk.stage2.tpQueueVal') }}</span>
+          <span>{{ parsingCount }} {{ $t('ojk.stage2.tpProcessing') }}</span>
         </div>
         <div class="cq-tp-row">
           <span>GPU</span>
@@ -64,18 +64,19 @@
         <t-radio-button value="parsed">{{ $t('ojk.stage2.tabParsed', { n: countBy('parsed') }) }}</t-radio-button>
         <t-radio-button value="parsing">{{ $t('ojk.stage2.tabParsing', { n: countBy('parsing') }) }}</t-radio-button>
         <t-radio-button value="queued">{{ $t('ojk.stage2.tabQueued', { n: countBy('queued') }) }}</t-radio-button>
+        <t-radio-button v-if="countBy('failed')" value="failed">{{ $t('ojk.stage2.tabFailed', { n: countBy('failed') }) }}</t-radio-button>
       </t-radio-group>
       <t-select v-model="instFilter" clearable :placeholder="$t('ojk.stage2.instFilter')" style="width: 160px">
         <t-option v-for="inst in institutions" :key="inst" :value="inst" :label="inst" />
       </t-select>
       <span class="cq-checked">{{ $t('ojk.stage2.checkedN', { n: selected.size }) }}</span>
-      <t-button theme="primary" style="margin-left: auto" :disabled="selected.size === 0" @click="demo('batchParse')">
+      <t-button theme="primary" style="margin-left: auto" :disabled="selected.size === 0" @click="refreshSelected">
         <template #icon><t-icon name="play-circle" /></template>
         {{ $t('ojk.stage2.execBatch') }}
       </t-button>
     </div>
 
-    <!-- 候选人表格 -->
+    <!-- 候选人表格（真实数据） -->
     <t-table
       :data="pagedCandidates"
       :columns="columns"
@@ -83,68 +84,53 @@
       :selected-row-keys="[...selected]"
       @select-change="onSelectChange"
       :pagination="pagination"
-      @page-change="onPageChange"
+      @page-change="p => (page = p?.current ?? 1)"
       size="small"
+      :loading="loading"
     >
       <template #candidate="{ row }">
         <div class="cq-cand">
           <div class="cq-avatar" :class="{ sel: selected.has(row.id) }">{{ avatar(row.name) }}</div>
           <div>
-            <div class="cq-cand-name">
-              {{ row.name }}
-              <t-icon v-if="row.status === 'parsed'" name="check-circle" theme="success" />
-            </div>
-            <div class="cq-cand-nik">NIK: {{ row.nik }}</div>
+            <div class="cq-cand-name">{{ row.name }}</div>
+            <div class="cq-cand-nik">NIK: {{ row.nik || '—' }}</div>
           </div>
         </div>
       </template>
       <template #position="{ row }">
-        <div class="cq-pos">
-          <div class="cq-pos-main">{{ row.position }}</div>
-          <div class="cq-pos-sub">{{ row.positionSub }}</div>
-        </div>
+        <span>{{ row.position || '—' }}</span>
       </template>
       <template #institution="{ row }">
-        <div class="cq-pos">
-          <div class="cq-pos-main">{{ row.institution }}</div>
-          <div class="cq-pos-sub">{{ row.instSub }}</div>
-        </div>
+        <span>{{ row.institution || '—' }}</span>
       </template>
       <template #dossier="{ row }">
         <template v-if="row.status === 'parsed'">
           <t-tag theme="success" variant="light" size="small">
-            ● {{ row.pages }}{{ $t('ojk.stage2.pagesShort') }} / {{ row.files }}{{ $t('ojk.stage2.filesShort') }} · {{ $t('ojk.stage2.parsedDone') }}
+            ● {{ row.docs }} {{ $t('ojk.stage2.filesShort') }} · {{ $t('ojk.stage2.parsedDone') }}
           </t-tag>
-          <div class="cq-cell-sub">{{ row.statusNote }}</div>
         </template>
         <template v-else-if="row.status === 'parsing'">
           <t-tag theme="primary" variant="light" size="small">
-            ⋛ {{ $t('ojk.stage2.parsingN', { pct: row.progress, pages: row.pages }) }}
+            ⋛ {{ $t('ojk.stage2.parsingN', { pct: row.parse_pct, pages: row.parsed }) }}
           </t-tag>
-          <div class="cq-progress"><t-progress :percentage="row.progress" :stroke-width="6" /></div>
         </template>
-        <template v-else-if="row.status === 'queued'">
-          <t-tag theme="default" variant="light" size="small">
-            ● {{ row.pages }}{{ $t('ojk.stage2.pagesShort') }} · {{ $t('ojk.stage2.queuedNote') }}
-          </t-tag>
-          <div class="cq-cell-sub">{{ row.statusNote }}</div>
+        <template v-else-if="row.status === 'failed'">
+          <t-tag theme="danger" variant="light" size="small">⚠ {{ $t('ojk.stage2.parseFailed') }}</t-tag>
         </template>
         <template v-else>
-          <t-tag theme="danger" variant="light" size="small">⚠ {{ $t('ojk.stage2.missingDoc') }}</t-tag>
-          <div class="cq-cell-sub">{{ row.pages }}{{ $t('ojk.stage2.parsedPageShort') }} / 1{{ $t('ojk.stage2.missingOne') }}</div>
+          <t-tag theme="default" variant="light" size="small">{{ $t('ojk.stage2.queuedNote') }}</t-tag>
         </template>
       </template>
       <template #rules="{ row }">
-        <t-tag variant="outline" size="small">{{ row.rules }} {{ $t('ojk.stage2.rulesCell') }}</t-tag>
+        <t-tag variant="outline" size="small">—</t-tag>
+      </template>
+      <template #updated="{ row }">
+        <span class="cq-cell-sub">{{ formatTime(row.created_at) }}</span>
       </template>
       <template #actions="{ row }">
         <t-space size="small">
-          <t-button
-            :theme="row.status === 'parsed' ? 'primary' : 'default'"
-            size="small"
-            @click="openDossier(row)"
-          >
-            {{ actionLabel(row) }}
+          <t-button theme="primary" size="small" @click="openDossier(row)">
+            {{ $t('ojk.stage2.actView') }}
           </t-button>
           <t-button variant="text" shape="square" size="small" @click="demo('rowMore')">
             <template #icon><t-icon name="ellipsis" /></template>
@@ -156,13 +142,42 @@
     <!-- 页脚汇总 -->
     <div class="cq-foot">
       <span>{{ $t('ojk.stage2.tableSummary', { from: 1, to: pagedCandidates.length, n: filteredCandidates.length }) }}</span>
-      <span class="cq-foot-mid">{{ $t('ojk.stage2.totalParsed', { pages: totalPages, files: totalFiles }) }}</span>
-      <t-space>
-        <t-button variant="outline" size="small" disabled><template #icon><t-icon name="chevron-left" /></template></t-button>
-        <t-button variant="outline" size="small" disabled>1</t-button>
-        <t-button variant="outline" size="small" disabled><template #icon><t-icon name="chevron-right" /></template></t-button>
-      </t-space>
+      <span class="cq-foot-mid">{{ $t('ojk.stage2.totalParsedFiles', { files: totalFiles }) }}</span>
     </div>
+
+    <!-- 导入对话框：登记候选人 + 多文件上传 -->
+    <t-dialog
+      v-model:visible="importVisible"
+      :header="$t('ojk.stage2.batchIngest')"
+      :confirm-btn="{ content: $t('ojk.stage2.importGo'), loading: importing }"
+      width="560px"
+      @confirm="submitImport"
+    >
+      <t-form layout="vertical">
+        <t-form-item :label="$t('ojk.stage2.formName')" required-mark>
+          <t-input v-model="form.name" :placeholder="$t('ojk.stage2.formNamePh')" />
+        </t-form-item>
+        <t-form-item :label="$t('ojk.stage2.formNik')">
+          <t-input v-model="form.nik" />
+        </t-form-item>
+        <t-form-item :label="$t('ojk.stage2.formPosition')">
+          <t-input v-model="form.position" :placeholder="$t('ojk.stage2.formPositionPh')" />
+        </t-form-item>
+        <t-form-item :label="$t('ojk.stage2.formInst')">
+          <t-input v-model="form.institution" />
+        </t-form-item>
+        <t-form-item :label="$t('ojk.stage2.formFiles')">
+          <input
+            ref="fileInputRef"
+            type="file"
+            multiple
+            accept=".pdf,.zip,.rar"
+            @change="onFileChosen"
+          />
+          <span class="cq-file-hint">{{ $t('ojk.stage2.fileHint') }}</span>
+        </t-form-item>
+      </t-form>
+    </t-dialog>
 
     <!-- 候选人卷宗滑窗 -->
     <DossierDrawer v-model:visible="drawerVisible" :candidate="drawerCandidate" />
@@ -170,77 +185,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
-import DossierDrawer, { type DossierCandidate } from '@/views/ojk/DossierDrawer.vue'
+import DossierDrawer, { type DossierCandidate, type DossierFile } from '@/views/ojk/DossierDrawer.vue'
+import {
+  listOJKCandidates, createOJKCandidate, getOJKCandidate,
+  type OJKCandidate,
+} from '@/api/ojk'
 
 const { t } = useI18n()
-const route = useRoute()
 
-interface CandidateRow extends DossierCandidate {
-  id: string
-  positionSub: string
-  instSub: string
-  status: 'parsed' | 'parsing' | 'queued' | 'incomplete'
-  statusNote: string
-  progress?: number
-  updated: string
-}
-
-// ---- 原型演示数据：候选人批次卷宗（候选人/材料后端模型建设中）----
-const candidates = ref<CandidateRow[]>([
-  {
-    id: 'rina', name: 'Rina Wijaya', nik: '3174055209840003',
-    position: 'Direktur IT', positionSub: 'Fit & Proper Grade: Key Dir',
-    institution: 'PT Bank Nusantara Digital Tbk', instSub: 'KBMI 2 · Digital Bank',
-    status: 'parsed', statusNote: 'VLM 4.1 多模态要素 100% 就绪',
-    pages: 158, files: 7, rules: 82, updated: t('ojk.stage2.upd10m'),
-    ocrAvg: '99.4',
-  },
-  {
-    id: 'bambang', name: 'Bambang Soedarmono', nik: '3273101504780001',
-    position: 'Direktur Kepatuhan & Risiko', positionSub: 'Statutory Compliance Mandate',
-    institution: 'PT Bank Mandiri (Persero) Tbk', instSub: 'KBMI 4 · SOE Commercial',
-    status: 'parsing', statusNote: '', progress: 68,
-    pages: 92, files: 63, rules: 78, updated: t('ojk.stage2.upd25m'),
-  },
-  {
-    id: 'sri', name: 'Sri Mulyani P.', nik: '3171056209700004',
-    position: 'Komisaris Utama (Independent)', positionSub: 'Governance Supervision',
-    institution: 'PT Bank Central Asia Tbk', instSub: 'KBMI 4 · Private Commercial',
-    status: 'queued', statusNote: t('ojk.stage2.hashVerified'),
-    pages: 130, files: 8, rules: 64, updated: t('ojk.stage2.upd1h'),
-  },
-  {
-    id: 'hendra', name: 'Hendra Gunawan', nik: '3578011203790008',
-    position: 'Direktur Keuangan & Operasi', positionSub: 'CFO Mandate',
-    institution: 'PT Bank Mega Tbk', instSub: 'KBMI 3 · Private Commercial',
-    status: 'incomplete', statusNote: '',
-    pages: 84, files: 6, rules: 80, updated: t('ojk.stage2.upd3h'),
-  },
-  {
-    id: 'dewi', name: 'Dewi Lestari', nik: '3175024806820005',
-    position: 'Komisaris Independen', positionSub: 'Independent Committee Chair',
-    institution: 'PT Bank BTPN Syariah Tbk', instSub: 'Syariah Banking Mandate',
-    status: 'parsed', statusNote: t('ojk.stage2.syariahReady'),
-    pages: 112, files: 6, rules: 69, updated: t('ojk.stage2.updYesterday'),
-  },
-])
-
-// ---- 筛选/选择/分页 ----
+// ---- 真实候选人数据 ----
+const candidates = ref<OJKCandidate[]>([])
+const loading = ref(false)
 const search = ref('')
 const statusTab = ref('')
 const instFilter = ref('')
 const page = ref(1)
 const pageSize = 5
-const selected = ref<Set<string>>(new Set(['rina']))
+const selected = ref<Set<string>>(new Set())
 
-const institutions = computed(() => [...new Set(candidates.value.map(c => c.institution))])
+async function loadCandidates() {
+  loading.value = true
+  try {
+    const res = await listOJKCandidates()
+    candidates.value = res.candidates || []
+  } catch (e: any) {
+    MessagePlugin.error(e?.message || 'Failed to load candidates')
+  } finally {
+    loading.value = false
+  }
+}
+loadCandidates()
+
+const institutions = computed(() => [...new Set(candidates.value.map(c => c.institution).filter(Boolean))])
 function countBy(status: string) {
   return candidates.value.filter(c => c.status === status).length
 }
+const parsingCount = computed(() => countBy('parsing'))
 
 const filteredCandidates = computed(() => {
   let list = candidates.value
@@ -265,61 +248,123 @@ const pagination = computed(() => ({
   total: filteredCandidates.value.length,
 }))
 
-function onPageChange(p: { current?: number }) {
-  page.value = p?.current ?? 1
-}
+const totalFiles = computed(() => candidates.value.reduce((s, c) => s + c.docs, 0))
 
 function onSelectChange(keys: unknown[]) {
   selected.value = new Set((keys as string[]) || [])
 }
 
-const totalPages = computed(() => candidates.value.reduce((s, c) => s + c.pages, 0))
-const totalFiles = computed(() => candidates.value.reduce((s, c) => s + c.files, 0))
+function refreshSelected() {
+  // 上传即自动解析——此处刷新各候选人解析状态
+  loadCandidates()
+  MessagePlugin.success(t('ojk.stage2.statusRefreshed'))
+}
 
-// ---- 列定义 ----
 const columns = [
   { colKey: 'row-select', width: 46 },
   { colKey: 'candidate', title: t('ojk.stage2.colCand'), minWidth: 210, cell: 'candidate' },
-  { colKey: 'position', title: t('ojk.stage2.colPosition'), minWidth: 160, cell: 'position' },
-  { colKey: 'institution', title: t('ojk.stage2.colInst'), minWidth: 160, cell: 'institution' },
-  { colKey: 'dossier', title: t('ojk.stage2.colDossier'), minWidth: 220, cell: 'dossier' },
-  { colKey: 'rules', title: t('ojk.stage2.colRules'), width: 100, cell: 'rules' },
-  { colKey: 'updated', title: t('ojk.stage2.colUpdated'), width: 95 },
-  { colKey: 'actions', title: t('ojk.stage2.colActions'), width: 160, cell: 'actions' },
+  { colKey: 'position', title: t('ojk.stage2.colPosition'), minWidth: 150 },
+  { colKey: 'institution', title: t('ojk.stage2.colInst'), minWidth: 170 },
+  { colKey: 'dossier', title: t('ojk.stage2.colDossier'), minWidth: 190, cell: 'dossier' },
+  { colKey: 'rules', title: t('ojk.stage2.colRules'), width: 90, cell: 'rules' },
+  { colKey: 'updated', title: t('ojk.stage2.colUpdated'), width: 120, cell: 'updated' },
+  { colKey: 'actions', title: t('ojk.stage2.colActions'), width: 130, cell: 'actions' },
 ]
+
+// ---- 导入对话框：登记候选人 + 多文件上传到其专属 KB ----
+const importVisible = ref(false)
+const importing = ref(false)
+const form = ref({ name: '', nik: '', position: '', institution: '' })
+const chosenFiles = ref<File[]>([])
+
+function openImport(files?: File[]) {
+  form.value = { name: '', nik: '', position: '', institution: '' }
+  chosenFiles.value = files ? [...files] : []
+  importVisible.value = true
+}
+
+function onFileChosen(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (input.files) chosenFiles.value = [...input.files]
+}
+
+async function submitImport() {
+  if (!form.value.name.trim()) {
+    MessagePlugin.warning(t('ojk.stage2.formNameRequired'))
+    return
+  }
+  importing.value = true
+  try {
+    // 1) 登记候选人（自动创建专属材料 KB）
+    const cand = await createOJKCandidate({
+      name: form.value.name.trim(),
+      nik: form.value.nik.trim() || undefined,
+      position: form.value.position.trim() || undefined,
+      institution: form.value.institution.trim() || undefined,
+    })
+    // 2) 逐份上传材料到其专属 KB（走现成的解析→向量化管线）
+    let uploaded = 0
+    for (const f of chosenFiles.value) {
+      const fd = new FormData()
+      fd.append('file', f)
+      const resp = await fetch(`/api/v1/knowledge-bases/${cand.kb_id}/knowledge/file`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('weknora_token')}` },
+        body: fd,
+      })
+      if (resp.ok) uploaded++
+    }
+    MessagePlugin.success(t('ojk.stage2.importDone', { name: cand.name, files: uploaded }))
+    importVisible.value = false
+    chosenFiles.value = []
+    await loadCandidates()
+  } catch (e: any) {
+    MessagePlugin.error(e?.message || 'Import failed')
+  } finally {
+    importing.value = false
+  }
+}
 
 // ---- 滑窗 ----
 const drawerVisible = ref(false)
 const drawerCandidate = ref<DossierCandidate | null>(null)
 
-function openDossier(row: CandidateRow) {
-  drawerCandidate.value = row
+async function openDossier(row: OJKCandidate) {
+  let files: DossierFile[] = []
+  try {
+    const detail = await getOJKCandidate(row.id)
+    files = (detail.documents || []).map(doc => ({
+      name: doc.Title,
+      pages: '—',
+      pageCount: 0,
+      desc: `${t('ojk.stage2.parseStatusLabel')}: ${parseStatusZh(doc.ParseStatus)}`,
+      statusText: parseStatusZh(doc.ParseStatus),
+      statusTheme: doc.ParseStatus === 'completed' ? 'success' : (doc.ParseStatus === 'failed' ? 'danger' : 'primary'),
+      token: '—',
+      icon: 'file',
+    }))
+  } catch { /* 拉取失败按空态展示 */ }
+  drawerCandidate.value = {
+    id: row.id, name: row.name, nik: row.nik,
+    position: row.position || '', institution: row.institution || '',
+    pages: row.docs, files: row.docs, rules: 0,
+    files_detail: files,
+  }
   drawerVisible.value = true
 }
 
-// 深链：?stage=2&open=rina 直开候选人卷宗滑窗
-if (route.query.open) {
-  const target = candidates.value.find(c => c.id === String(route.query.open))
-  if (target) {
-    drawerCandidate.value = target
-    // TDesign Drawer 对"挂载时即 visible=true"不会渲染内容体——
-    // 必须先挂载（visible=false）再在下一帧置 true 触发打开
-    nextTick(() => { drawerVisible.value = true })
-  }
+function parseStatusZh(s: string): string {
+  return ({
+    completed: '已解析', finished: '已解析',
+    processing: '解析中', pending: '排队中', finalizing: '解析中',
+    failed: '解析失败',
+  } as Record<string, string>)[s] || s
 }
 
-function actionLabel(row: CandidateRow): string {
-  if (row.status === 'parsed') return t('ojk.stage2.actView')
-  if (row.status === 'parsing') return t('ojk.stage2.actConfig')
-  if (row.status === 'queued') return t('ojk.stage2.actStart')
-  return t('ojk.stage2.actRemediate')
+function formatTime(iso: string): string {
+  return (iso || '').replace('T', ' ').slice(5, 16)
 }
 
-function avatar(name: string): string {
-  return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-}
-
-// ---- 演示动作 ----
 function demo(key: string) {
   MessagePlugin.info(t('ojk.stage2.demoAction', { action: t(`ojk.stage2.demo_${key}`) }))
 }
@@ -360,6 +405,7 @@ function demo(key: string) {
 /* 工具条 */
 .cq-toolbar { display: flex; align-items: center; gap: var(--app-space-sm, 10px); flex-wrap: wrap; }
 .cq-checked { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); }
+.cq-file-hint { margin-left: 10px; color: var(--td-text-color-placeholder); font-size: var(--app-text-xs, 11px); }
 
 /* 表格单元格 */
 .cq-cand { display: flex; align-items: center; gap: 10px; }
@@ -370,12 +416,9 @@ function demo(key: string) {
   display: flex; align-items: center; justify-content: center;
 }
 .cq-avatar.sel { background: var(--td-brand-color); color: #fff; }
-.cq-cand-name { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.cq-cand-name { font-weight: 600; }
 .cq-cand-nik { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); font-family: var(--td-font-family, monospace); }
-.cq-pos-main { font-weight: 600; }
-.cq-pos-sub { color: var(--td-text-color-placeholder); font-size: var(--app-text-xs, 11px); }
 .cq-cell-sub { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); margin-top: 2px; }
-.cq-progress { width: 150px; }
 
 /* 页脚 */
 .cq-foot {

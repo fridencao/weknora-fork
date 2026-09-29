@@ -11,7 +11,7 @@ import (
 // These routes are gated by the existing API-key / auth middleware chain.
 // No new auth mechanisms are introduced here — they inherit the workspace's
 // existing RBAC so that only viewers can list and admins can trigger runs.
-func RegisterOJKRoutes(r *gin.RouterGroup, runH *handler.OJKRunHandler, itemsH *handler.OJKItemsHandler, g *rbacGuards) {
+func RegisterOJKRoutes(r *gin.RouterGroup, runH *handler.OJKRunHandler, itemsH *handler.OJKItemsHandler, candH *handler.OJKCandidateHandler, g *rbacGuards) {
 	ojk := g.apiKeyGroup(r.Group("/ojk"), apiKeyFullAccess())
 
 	// Run lifecycle
@@ -27,4 +27,10 @@ func RegisterOJKRoutes(r *gin.RouterGroup, runH *handler.OJKRunHandler, itemsH *
 	// Checklist items (review workflow)
 	ojk.GET("/items", g.Viewer(), itemsH.ListItems)
 	ojk.PATCH("/items/:item_id/resolve", g.Admin(), itemsH.ResolveItem)
+
+	// 阶段 2：候选人材料摄入（创建=登记+自动建专属材料 KB；文件上传走
+	// /knowledge-bases/:kb_id/knowledge/file 现成管线）
+	ojk.POST("/candidates", g.Admin(), candH.Create)
+	ojk.GET("/candidates", g.Viewer(), candH.List)
+	ojk.GET("/candidates/:id", g.Viewer(), candH.Get)
 }

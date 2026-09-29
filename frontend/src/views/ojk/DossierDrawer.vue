@@ -149,6 +149,7 @@ export interface DossierFile {
 }
 
 export interface DossierCandidate {
+  id?: string
   name: string
   nik: string
   position: string

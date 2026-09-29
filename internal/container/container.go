@@ -543,6 +543,7 @@ func BuildContainer(container *dig.Container) *dig.Container {
 		return svc
 	}))
 	must(container.Provide(handler.NewOJKRunHandler))
+	must(container.Provide(handler.NewOJKCandidateHandler))
 	must(container.Provide(handler.NewOJKItemsHandler))
 	must(container.Provide(session.NewHandler))
 	must(container.Provide(handler.NewMessageHandler))

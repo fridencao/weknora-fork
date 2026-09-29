@@ -77,6 +77,7 @@ type RouterParams struct {
 	FAQHandler                   *handler.FAQHandler
 	TagHandler                   *handler.TagHandler
 	OJKRunHandler                  *handler.OJKRunHandler
+	OJKCandidateHandler            *handler.OJKCandidateHandler
 	OJKItemsHandler                *handler.OJKItemsHandler
 	CustomAgentHandler           *handler.CustomAgentHandler
 	UserFavoriteHandler          *handler.UserResourceFavoriteHandler
@@ -321,7 +322,7 @@ func NewRouter(params RouterParams) *gin.Engine {
 		RegisterDataSourceRoutes(v1, params.DataSourceHandler, params.DataSourceCredentialsHandler, rbacGuards)
 		RegisterWikiPageRoutes(v1, params.WikiPageHandler, rbacGuards)
 		RegisterMemoryRoutes(v1, params.MemoryHandler, rbacGuards)
-		RegisterOJKRoutes(v1, params.OJKRunHandler, params.OJKItemsHandler, rbacGuards)
+		RegisterOJKRoutes(v1, params.OJKRunHandler, params.OJKItemsHandler, params.OJKCandidateHandler, rbacGuards)
 		RegisterChunkerDebugRoutes(v1, rbacGuards)
 
 		// Fail fast if any declared API-key policy points at a route

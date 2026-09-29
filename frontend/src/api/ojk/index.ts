@@ -113,6 +113,40 @@ export function resolveOJKItem(itemId: string, status: 'confirmed' | 'rejected',
   return patch(`/api/v1/ojk/items/${itemId}/resolve`, { status, note })
 }
 
+export interface OJKCandidate {
+  id: string
+  name: string
+  nik: string
+  position: string
+  institution: string
+  kb_id: string
+  status: 'queued' | 'parsing' | 'parsed' | 'failed'
+  docs: number
+  parsed: number
+  parse_pct: number
+  created_at: string
+}
+
+export interface OJKCandidateDoc {
+  ID: string
+  Title: string
+  ParseStatus: string
+}
+
+export function listOJKCandidates(): Promise<{ candidates: OJKCandidate[]; total: number }> {
+  return get<{ candidates: OJKCandidate[]; total: number }>('/api/v1/ojk/candidates')
+}
+
+export function createOJKCandidate(body: {
+  name: string; nik?: string; position?: string; institution?: string
+}): Promise<OJKCandidate> {
+  return post<OJKCandidate>('/api/v1/ojk/candidates', body)
+}
+
+export function getOJKCandidate(id: string): Promise<{ candidate: OJKCandidate; documents: OJKCandidateDoc[] }> {
+  return get<{ candidate: OJKCandidate; documents: OJKCandidateDoc[] }>(`/api/v1/ojk/candidates/${id}`)
+}
+
 export function getOJKItemStats(runId: string): Promise<OJKItemStats> {
   return get<OJKItemStats>(`/api/v1/ojk/runs/${runId}/stats`)
 }
