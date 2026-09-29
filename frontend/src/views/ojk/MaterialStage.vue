@@ -154,7 +154,7 @@
       width="560px"
       @confirm="submitImport"
     >
-      <t-form layout="vertical">
+      <t-form layout="vertical" label-width="96">
         <t-form-item :label="$t('ojk.stage2.formName')" required-mark>
           <t-input v-model="form.name" :placeholder="$t('ojk.stage2.formNamePh')" />
         </t-form-item>
