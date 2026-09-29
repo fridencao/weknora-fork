@@ -369,6 +369,10 @@ function parseStatusZh(s: string): string {
   } as Record<string, string>)[s] || s
 }
 
+function avatar(name: string): string {
+  return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+}
+
 function formatTime(iso: string): string {
   return (iso || '').replace('T', ' ').slice(5, 16)
 }
