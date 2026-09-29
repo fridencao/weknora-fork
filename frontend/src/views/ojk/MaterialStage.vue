@@ -168,14 +168,33 @@
           <t-input v-model="form.institution" />
         </t-form-item>
         <t-form-item :label="$t('ojk.stage2.formFiles')">
-          <input
-            ref="fileInputRef"
-            type="file"
-            multiple
-            accept=".pdf,.zip,.rar"
-            @change="onFileChosen"
-          />
-          <span class="cq-file-hint">{{ $t('ojk.stage2.fileHint') }}</span>
+          <div class="cq-file-row">
+            <input
+              ref="fileInputRef"
+              type="file"
+              multiple
+              accept=".pdf,.zip,.rar"
+              style="display: none"
+              @change="onFileChosen"
+            />
+            <t-button theme="default" @click="fileInputRef?.click()">
+              <template #icon><t-icon name="attach" /></template>
+              {{ $t('ojk.stage2.chooseFilesBtn') }}
+            </t-button>
+            <div class="cq-file-list">
+              <t-tag
+                v-for="f in chosenFiles"
+                :key="f.name"
+                theme="primary" variant="light" size="medium"
+                closable
+                @close="removeFile(f.name)"
+              >
+                {{ f.name }}
+              </t-tag>
+              <span v-if="!chosenFiles.length" class="cq-file-none">{{ $t('ojk.stage2.noFileChosen') }}</span>
+            </div>
+          </div>
+          <div class="cq-file-hint">{{ $t('ojk.stage2.fileHint') }}</div>
         </t-form-item>
       </t-form>
     </t-dialog>
@@ -294,6 +313,10 @@ function openImport(files?: File[]) {
 function onFileChosen(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files) chosenFiles.value = [...input.files]
+}
+
+function removeFile(name: string) {
+  chosenFiles.value = chosenFiles.value.filter(f => f.name !== name)
 }
 
 async function submitImport() {
@@ -417,7 +440,10 @@ function demo(key: string) {
 /* 工具条 */
 .cq-toolbar { display: flex; align-items: center; gap: var(--app-space-sm, 10px); flex-wrap: wrap; }
 .cq-checked { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); }
-.cq-file-hint { margin-left: 10px; color: var(--td-text-color-placeholder); font-size: var(--app-text-xs, 11px); }
+.cq-file-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.cq-file-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cq-file-none { color: var(--td-text-color-placeholder); font-size: var(--app-text-xs, 11px); }
+.cq-file-hint { color: var(--td-text-color-placeholder); font-size: var(--app-text-xs, 11px); }
 
 /* 表格单元格 */
 .cq-cand { display: flex; align-items: center; gap: 10px; }

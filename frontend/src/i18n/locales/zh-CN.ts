@@ -8010,6 +8010,8 @@ export default {
     demo_addFile: "补充单份文件",
     demo_customConfig: "自定义配置",
     demo_saveConfig: "保存配置并关闭",
+    chooseFilesBtn: "选择文件",
+    noFileChosen: "未选择任何文件",
     },
     reviewWorkflow: {
       caseKbPlaceholder: "本案材料库（AI 核验用）",

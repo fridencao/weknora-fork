@@ -8011,6 +8011,8 @@ export default {
     demo_addFile: "단일 파일 추가",
     demo_customConfig: "사용자 정의",
     demo_saveConfig: "설정 저장 후 닫기",
+    chooseFilesBtn: "파일 선택",
+    noFileChosen: "선택된 파일 없음",
     },
     reviewWorkflow: {
       caseKbPlaceholder: "케이스 자료 KB(AI 검증용)",

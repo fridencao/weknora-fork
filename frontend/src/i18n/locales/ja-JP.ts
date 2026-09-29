@@ -8008,6 +8008,8 @@ export default {
     demo_addFile: "単一ファイル追加",
     demo_customConfig: "カスタマイズ",
     demo_saveConfig: "設定を保存して閉じる",
+    chooseFilesBtn: "ファイル選択",
+    noFileChosen: "ファイル未選択",
     },
     reviewWorkflow: {
       caseKbPlaceholder: "案件資料 KB（AI 検証用）",

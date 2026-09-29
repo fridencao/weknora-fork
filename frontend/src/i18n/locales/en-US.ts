@@ -8009,6 +8009,8 @@ export default {
     demo_addFile: "Add single file",
     demo_customConfig: "Customize",
     demo_saveConfig: "Save config & close",
+    chooseFilesBtn: "Choose files",
+    noFileChosen: "No files selected",
     },
     reviewWorkflow: {
       caseKbPlaceholder: "Case material KB (for AI check)",

@@ -8008,6 +8008,8 @@ export default {
     demo_addFile: "Добавить файл",
     demo_customConfig: "Настроить",
     demo_saveConfig: "Сохранить и закрыть",
+    chooseFilesBtn: "Выбрать файлы",
+    noFileChosen: "Файлы не выбраны",
     },
     reviewWorkflow: {
       caseKbPlaceholder: "База материалов дела (для AI-проверки)",
