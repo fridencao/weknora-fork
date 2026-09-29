@@ -170,10 +170,10 @@ const initials = computed(() =>
   (c.value?.name || '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())
 
 const ocrAvg = computed(() => c.value?.ocrAvg || '99.4')
-const rulesBound = computed(() => {
-  // 勾选的法规模块条数合计（默认全选）
-  return policies.value.filter(p => p.checked).reduce((s, p) => s + p.count, 0)
-})
+// 勾选中的法规模块（模板"已绑定 N 部法规"引用）
+const checkedPolicies = computed(() => policies.value.filter(p => p.checked))
+
+const rulesBound = computed(() => checkedPolicies.value.reduce((s, p) => s + p.count, 0))
 
 // 法规匹配（演示数据：按候选人岗位默认编排，可勾选调整）
 const policies = ref([
