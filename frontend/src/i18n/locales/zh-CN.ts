@@ -7824,6 +7824,7 @@ export default {
     tabBlocked: "缺件受阻 {n}",
     tabPassed: "无异常已通过 {n}",
     tabQueued: "待启动 {n}",
+    drawerIdle: "暂无候选人卷宗——点击上方「批量导入候选人」开始摄入",
     searchCand: "搜索候选人姓名、NIK、机构或申请职位...",
     selectedHint: "已勾选 {n} 位候选人 ({names}) 可以执行批量 AI 语义比对或导出报告",
     runSelected: "立即执行 AI 智能核验",

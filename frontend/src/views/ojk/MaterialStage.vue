@@ -76,68 +76,69 @@
       </t-button>
     </div>
 
-    <!-- 候选人表格（真实数据） -->
-    <t-table
-      :data="pagedCandidates"
-      :columns="columns"
-      row-key="id"
-      :selected-row-keys="[...selected]"
-      @select-change="onSelectChange"
-      :pagination="pagination"
-      @page-change="p => (page = p?.current ?? 1)"
-      size="small"
-      :loading="loading"
-    >
-      <template #candidate="{ row }">
-        <div class="cq-cand">
-          <div class="cq-avatar" :class="{ sel: selected.has(row.id) }">{{ avatar(row.name) }}</div>
-          <div>
-            <div class="cq-cand-name">{{ row.name }}</div>
-            <div class="cq-cand-nik">NIK: {{ row.nik || '—' }}</div>
+    <!-- 候选人表格（自绘行） -->
+    <div class="cq-table">
+      <div class="cq-tr cq-tr--head">
+        <div class="cq-td cq-td--check">
+          <t-checkbox :checked="allChecked" @change="(v: unknown) => toggleAll(v)" />
+        </div>
+        <div class="cq-td">{{ $t('ojk.stage2.colCand') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colPosition') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colInst') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colDossier') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colRules') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colUpdated') }}</div>
+        <div class="cq-td">{{ $t('ojk.stage2.colActions') }}</div>
+      </div>
+      <div
+        v-for="row in pagedCandidates"
+        :key="row.id"
+        class="cq-tr"
+        :class="{ sel: selected.has(row.id) }"
+      >
+        <div class="cq-td cq-td--check">
+          <t-checkbox :checked="selected.has(row.id)" @change="(v: unknown) => toggleOne(row.id, v)" />
+        </div>
+        <div class="cq-td">
+          <div class="cq-cand">
+            <div class="cq-avatar">{{ avatar(row.name) }}</div>
+            <div>
+              <div class="cq-cand-name">
+                {{ row.name }}
+                <t-icon v-if="row.status === 'parsed'" name="check-circle" theme="success" />
+              </div>
+              <div class="cq-cand-nik">NIK: {{ row.nik || '—' }}</div>
+            </div>
           </div>
         </div>
-      </template>
-      <template #position="{ row }">
-        <span>{{ row.position || '—' }}</span>
-      </template>
-      <template #institution="{ row }">
-        <span>{{ row.institution || '—' }}</span>
-      </template>
-      <template #dossier="{ row }">
-        <template v-if="row.status === 'parsed'">
-          <t-tag theme="success" variant="light" size="small">
-            ● {{ row.docs }} {{ $t('ojk.stage2.filesShort') }} · {{ $t('ojk.stage2.parsedDone') }}
+        <div class="cq-td">{{ row.position || '—' }}</div>
+        <div class="cq-td">{{ row.institution || '—' }}</div>
+        <div class="cq-td">
+          <t-tag
+            :theme="row.status === 'parsed' ? 'success' : (row.status === 'parsing' ? 'primary' : (row.status === 'failed' ? 'danger' : 'default'))"
+            variant="light" size="small"
+          >
+            {{ statusText(row) }}
           </t-tag>
-        </template>
-        <template v-else-if="row.status === 'parsing'">
-          <t-tag theme="primary" variant="light" size="small">
-            ⋛ {{ $t('ojk.stage2.parsingN', { pct: row.parse_pct, pages: row.parsed }) }}
-          </t-tag>
-        </template>
-        <template v-else-if="row.status === 'failed'">
-          <t-tag theme="danger" variant="light" size="small">⚠ {{ $t('ojk.stage2.parseFailed') }}</t-tag>
-        </template>
-        <template v-else>
-          <t-tag theme="default" variant="light" size="small">{{ $t('ojk.stage2.queuedNote') }}</t-tag>
-        </template>
-      </template>
-      <template #rules="{ row }">
-        <t-tag variant="outline" size="small">—</t-tag>
-      </template>
-      <template #updated="{ row }">
-        <span class="cq-cell-sub">{{ formatTime(row.created_at) }}</span>
-      </template>
-      <template #actions="{ row }">
-        <t-space size="small">
-          <t-button theme="primary" size="small" @click="openDossier(row)">
-            {{ $t('ojk.stage2.actView') }}
-          </t-button>
-          <t-button variant="text" shape="square" size="small" @click="demo('rowMore')">
-            <template #icon><t-icon name="ellipsis" /></template>
-          </t-button>
-        </t-space>
-      </template>
-    </t-table>
+        </div>
+        <div class="cq-td">—</div>
+        <div class="cq-td cq-cell-sub">{{ formatTime(row.created_at) }}</div>
+        <div class="cq-td">
+          <t-space size="small">
+            <t-button theme="primary" size="small" @click="openDossier(row)">
+              {{ $t('ojk.stage2.actView') }}
+            </t-button>
+            <t-button variant="text" shape="square" size="small" @click="demo('rowMore')">
+              <template #icon><t-icon name="ellipsis" /></template>
+            </t-button>
+          </t-space>
+        </div>
+      </div>
+      <div v-if="!pagedCandidates.length" class="cq-empty">
+        <t-empty :description="$t('ojk.stage2.drawerIdle')" />
+      </div>
+    </div>
+
 
     <!-- 页脚汇总 -->
     <div class="cq-foot">
@@ -250,9 +251,25 @@ const pagination = computed(() => ({
 
 const totalFiles = computed(() => candidates.value.reduce((s, c) => s + c.docs, 0))
 
-function onSelectChange(keys: unknown[]) {
-  selected.value = new Set((keys as string[]) || [])
+function toggleAll(v: unknown) {
+  selected.value = v ? new Set(pagedCandidates.value.map(c => c.id)) : new Set()
 }
+function toggleOne(id: string, v: unknown) {
+  const next = new Set(selected.value)
+  if (v) next.add(id)
+  else next.delete(id)
+  selected.value = next
+}
+
+function statusText(row: OJKCandidate): string {
+  if (row.status === 'parsed') return `${t('ojk.stage2.parsedDone')} · ${row.docs}${t('ojk.stage2.filesShort')}`
+  if (row.status === 'parsing') return `${t('ojk.stage2.parsingN', { pct: row.parse_pct, pages: row.parsed })}`
+  if (row.status === 'failed') return t('ojk.stage2.parseFailed')
+  return t('ojk.stage2.queuedNote')
+}
+
+const allChecked = computed(() =>
+  pagedCandidates.value.length > 0 && pagedCandidates.value.every(c => selected.value.has(c.id)))
 
 function refreshSelected() {
   // 上传即自动解析——此处刷新各候选人解析状态
@@ -260,16 +277,7 @@ function refreshSelected() {
   MessagePlugin.success(t('ojk.stage2.statusRefreshed'))
 }
 
-const columns = [
-  { colKey: 'row-select', width: 46 },
-  { colKey: 'candidate', title: t('ojk.stage2.colCand'), minWidth: 210, cell: 'candidate' },
-  { colKey: 'position', title: t('ojk.stage2.colPosition'), minWidth: 150 },
-  { colKey: 'institution', title: t('ojk.stage2.colInst'), minWidth: 170 },
-  { colKey: 'dossier', title: t('ojk.stage2.colDossier'), minWidth: 190, cell: 'dossier' },
-  { colKey: 'rules', title: t('ojk.stage2.colRules'), width: 90, cell: 'rules' },
-  { colKey: 'updated', title: t('ojk.stage2.colUpdated'), width: 120, cell: 'updated' },
-  { colKey: 'actions', title: t('ojk.stage2.colActions'), width: 130, cell: 'actions' },
-]
+
 
 // ---- 导入对话框：登记候选人 + 多文件上传到其专属 KB ----
 const importVisible = ref(false)
@@ -426,4 +434,36 @@ function demo(key: string) {
   color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px);
 }
 .cq-foot-mid { margin-right: auto; }
+</style>
+
+<style scoped>
+/* 自绘表格（t-table 在本页曾稳定失效，改自绘行——与阶段4工作台同思路） */
+.cq-table { border: 1px solid var(--td-component-stroke); border-radius: var(--app-radius-md, 8px); overflow: hidden; background: var(--td-bg-color-container); }
+.cq-tr {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 1.2fr) minmax(120px, 1fr) minmax(150px, 1fr) minmax(160px, 1.1fr) 80px 100px 130px;
+  align-items: center;
+  gap: var(--app-space-sm, 10px);
+  padding: var(--app-space-sm, 10px) var(--app-space-md, 12px);
+  border-bottom: 1px solid var(--td-component-stroke);
+}
+.cq-tr--head {
+  background: var(--td-bg-color-secondarycontainer);
+  color: var(--td-text-color-secondary);
+  font-size: var(--app-text-xs, 11px);
+  font-weight: 600;
+}
+.cq-tr.sel { background: color-mix(in srgb, var(--td-brand-color) 8%, transparent); }
+.cq-td--check { display: flex; align-items: center; }
+.cq-cand { display: flex; align-items: center; gap: 10px; }
+.cq-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: color-mix(in srgb, var(--td-brand-color) 14%, transparent);
+  color: var(--td-brand-color); font-weight: 700; font-size: var(--app-text-xs, 11px);
+  display: flex; align-items: center; justify-content: center;
+}
+.cq-cand-name { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.cq-cand-nik { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); font-family: var(--td-font-family, monospace); }
+.cq-cell-sub { color: var(--td-text-color-secondary); font-size: var(--app-text-xs, 11px); }
+.cq-empty { padding: 40px; display: flex; justify-content: center; }
 </style>

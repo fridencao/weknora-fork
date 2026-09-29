@@ -7822,6 +7822,7 @@ export default {
     tabBlocked: "書類不足 {n}",
     tabPassed: "異常なし {n}",
     tabQueued: "待機 {n}",
+    drawerIdle: "候補者卷宗はまだありません — 上の一括取り込みから開始",
     searchCand: "候補者名・NIK・機関・役職で検索...",
     selectedHint: "{n} 名を選択中 ({names}) — 一括 AI 検証またはブリーフ出力が可能",
     runSelected: "AI 検証を今すぐ実行",

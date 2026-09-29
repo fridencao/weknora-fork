@@ -7825,6 +7825,7 @@ export default {
     tabBlocked: "서류 미비 {n}",
     tabPassed: "이상 없음 {n}",
     tabQueued: "대기 {n}",
+    drawerIdle: "후보자 서류가 없습니다 — 위의 일괄 수집으로 시작",
     searchCand: "후보자명·NIK·기관·직위 검색...",
     selectedHint: "{n}명 선택됨 ({names}) — 일괄 AI 검증 또는 브리프 내보내기 가능",
     runSelected: "AI 검증 지금 실행",

@@ -7822,6 +7822,7 @@ export default {
     tabBlocked: "Заблокировано {n}",
     tabPassed: "Пройдено {n}",
     tabQueued: "В очереди {n}",
+    drawerIdle: "Досье пока нет — начните с пакетной загрузки выше",
     searchCand: "Поиск по имени, NIK, организации...",
     selectedHint: "Выбрано {n} ({names}) — доступна пакетная проверка или экспорт",
     runSelected: "Запустить AI-проверку",

@@ -7823,6 +7823,7 @@ export default {
     tabBlocked: "Blocked {n}",
     tabPassed: "Passed {n}",
     tabQueued: "Queued {n}",
+    drawerIdle: "No candidate dossiers yet — click Batch Ingest above to start",
     searchCand: "Search candidates by name, NIK, institution or role...",
     selectedHint: "{n} candidates selected ({names}) — run batch AI verification or export a brief",
     runSelected: "Run AI verification now",
