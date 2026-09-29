@@ -6,7 +6,6 @@
     :header="false"
     :footer="false"
     :close-btn="false"
-    destroy-on-close
     @close="emitClose"
   >
     <div class="dd" v-if="c">
